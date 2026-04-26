@@ -66,7 +66,7 @@ export default function PendingApprovalPage() {
           {/* Title */}
           <div>
             <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--surface-text)' }}>
-              Akun dalam Karantina
+              Menunggu Persetujuan
             </h1>
             <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
               Akun Anda sedang dalam status <span className="font-semibold text-amber-600">Menunggu Persetujuan</span>.
@@ -83,7 +83,7 @@ export default function PendingApprovalPage() {
               <div>
                 <p className="text-xs font-semibold" style={{ color: 'var(--surface-text)' }}>Status Akun</p>
                 <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                  🔒 Tamu (Karantina) — akses ditangguhkan
+                  🔒 Guest (Menunggu Aktivasi) — akses ditangguhkan
                 </p>
               </div>
             </div>
