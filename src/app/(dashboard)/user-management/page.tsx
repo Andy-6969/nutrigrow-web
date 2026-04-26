@@ -553,6 +553,9 @@ export default function UserManagementPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
       {/* Assign Zones Modal */}
       {assignZonesModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
