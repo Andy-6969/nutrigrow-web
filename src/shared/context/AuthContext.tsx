@@ -155,9 +155,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resolveSession(initialSession);
     });
 
-    // 2. Listen to auth state changes (login, logout, token refresh)
+    // 2. Listen to auth state changes (login, logout, token refresh, recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, changedSession) => {
+        if (_event === 'PASSWORD_RECOVERY') {
+          // Force redirect to update-password page immediately
+          if (typeof window !== 'undefined') {
+            window.location.href = '/update-password';
+          }
+          return;
+        }
         resolveSession(changedSession);
       }
     );
