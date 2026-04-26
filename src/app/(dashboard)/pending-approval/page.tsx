@@ -83,7 +83,7 @@ export default function PendingApprovalPage() {
               <div>
                 <p className="text-xs font-semibold" style={{ color: 'var(--surface-text)' }}>Status Akun</p>
                 <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                  🔒 Guest (Menunggu Aktivasi) — akses ditangguhkan
+                  🔒 Guest (Menunggu Aktivasi) akses ditangguhkan
                 </p>
               </div>
             </div>
