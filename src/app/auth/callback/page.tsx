@@ -47,11 +47,9 @@ export default function AuthCallbackPage() {
         //   1. Fetch user_profiles to get role
         //   2. Set cookie via setAuthCookie()
         //
-        // We redirect to /overview regardless of role.
-        // If role === 'guest' → DashboardLayout renders <PendingApprovalPage>
-        // If role === 'super_admin' | 'pemilik_kebun' → normal dashboard
-
-        router.replace('/overview');
+        // Redirect to 'next' if specified, otherwise /overview.
+        const next = urlParams.get('next');
+        router.replace(next || '/overview');
       } catch (err: any) {
         console.error('[auth/callback] Error:', err);
         setErrorMsg(err.message ?? 'Autentikasi gagal.');
