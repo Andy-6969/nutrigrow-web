@@ -9,10 +9,11 @@ export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3002';
 
 // Zone status colors
 export const ZONE_STATUS = {
-  irrigating: { label: 'Aktif Menyiram', color: '#10B981', bg: 'bg-primary-500', icon: '🟢' },
-  idle:       { label: 'Idle', color: '#3B82F6', bg: 'bg-secondary-500', icon: '🔵' },
-  delayed:    { label: 'Ditunda (Smart Delay)', color: '#F59E0B', bg: 'bg-accent-500', icon: '🟡' },
-  error:      { label: 'Error / Offline', color: '#EF4444', bg: 'bg-danger-500', icon: '🔴' },
+  irrigating:  { label: 'Air Biasa', color: '#3B82F6', bg: 'bg-primary-500', icon: '💧' },
+  fertigating: { label: 'Air + Nutrisi', color: '#8B5CF6', bg: 'bg-purple-500', icon: '🧪' },
+  idle:        { label: 'Idle', color: '#9CA3AF', bg: 'bg-secondary-500', icon: '💤' },
+  delayed:     { label: 'Ditunda (Hujan)', color: '#F59E0B', bg: 'bg-accent-500', icon: '🟡' },
+  error:       { label: 'Offline / Error', color: '#EF4444', bg: 'bg-danger-500', icon: '🔴' },
 } as const;
 
 // Sensor thresholds

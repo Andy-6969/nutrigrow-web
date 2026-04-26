@@ -4,7 +4,7 @@ import type { OverrideLog } from '@/shared/types/global.types';
 export interface IOverrideService {
   getActiveOverrides(): Promise<OverrideLog[]>;
   getOverrideHistory(): Promise<OverrideLog[]>;
-  startOverride(zoneId: string, durationMinutes: number, reason?: string): Promise<void>;
+  startOverride(zoneId: string, durationMinutes: number, reason?: string, mode?: 'water' | 'fertigation'): Promise<void>;
   stopOverride(overrideId: string): Promise<void>;
   subscribeToOverrides(callback: (payload: any) => void): void;
   unsubscribeFromOverrides(): void;
@@ -42,7 +42,7 @@ export class SupabaseOverrideService implements IOverrideService {
     return (data ?? []) as OverrideLog[];
   }
 
-  async startOverride(zoneId: string, durationMinutes: number, reason?: string): Promise<void> {
+  async startOverride(zoneId: string, durationMinutes: number, reason?: string, mode: 'water' | 'fertigation' = 'water'): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const userName = session?.user?.user_metadata?.full_name || session?.user?.email || 'System User';
 
@@ -50,6 +50,7 @@ export class SupabaseOverrideService implements IOverrideService {
       zone_id: zoneId,
       zone_name: `Zone ${zoneId}`, // Typically, you'd fetch the zone name first or join
       user_name: userName,
+      mode,
       duration_minutes: durationMinutes,
       reason,
       status: 'active'

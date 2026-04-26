@@ -13,6 +13,7 @@ import { useRBAC } from '@/shared/hooks/useRBAC';
 export default function OverridePage() {
   const [selectedZone, setSelectedZone] = useState('');
   const [duration, setDuration] = useState(30);
+  const [overrideMode, setOverrideMode] = useState<'water' | 'fertigation'>('water');
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
   const [activeOverrides, setActiveOverrides] = useState<OverrideLog[]>([]);
@@ -88,7 +89,7 @@ export default function OverridePage() {
     if (!selectedZone) return;
     setIsActivating(true);
     try {
-      await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard");
+      await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard", overrideMode);
     } catch (e) {
       console.error("Failed to start override:", e);
     } finally {
@@ -177,6 +178,37 @@ export default function OverridePage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Mode Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>Mode Penyiraman</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setOverrideMode('water')}
+                disabled={isOverrideActive}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
+                  overrideMode === 'water' ? 'border-primary-500 bg-primary-50/50 text-primary-700' : 'border-transparent bg-white/20 hover:bg-white/40',
+                  isOverrideActive && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <span className="text-2xl">💧</span>
+                <span className="text-xs font-bold">Air Biasa</span>
+              </button>
+              <button
+                onClick={() => setOverrideMode('fertigation')}
+                disabled={isOverrideActive}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
+                  overrideMode === 'fertigation' ? 'border-purple-500 bg-purple-50/50 text-purple-700' : 'border-transparent bg-white/20 hover:bg-white/40',
+                  isOverrideActive && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <span className="text-2xl">🧪</span>
+                <span className="text-xs font-bold">Air + Nutrisi</span>
+              </button>
             </div>
           </div>
 
@@ -275,6 +307,12 @@ export default function OverridePage() {
                       log.status === 'active' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
                     )}>
                       {log.status === 'active' ? 'Aktif' : 'Selesai'}
+                    </span>
+                    <span className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
+                      log.mode === 'fertigation' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
+                    )}>
+                      {log.mode === 'fertigation' ? '🧪 Nutrisi' : '💧 Air Saja'}
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>

@@ -84,7 +84,7 @@ async function fetchUserProfile(
       is_active: data.is_active ?? true,
       avatar_url: data.avatar_url ?? null,
       farm_id: data.farm_id ?? null,
-      assigned_zones: data.assigned_zones ?? [],
+      assigned_zones: data.zona_akses ?? [],
       created_at: data.created_at ?? '',
     };
 

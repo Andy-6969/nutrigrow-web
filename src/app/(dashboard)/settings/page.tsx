@@ -1,9 +1,64 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, User, Bell, Shield, Monitor, Save, Moon, Sun, Globe, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, User, Bell, Shield, Monitor, Save, Moon, Sun, Globe, Lock, Smartphone, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { useAuth } from '@/shared/context/AuthContext';
+import { saveExpoPushToken } from '@/shared/services/expoNotificationService';
 
+// ─── Expo token input helper ──────────────────────────────────
+function ExpoTokenSection({ userId }: { userId: string }) {
+  const [token, setToken] = useState('');
+  const [status, setStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
+
+  const handleSave = async () => {
+    if (!token.startsWith('ExponentPushToken[')) {
+      setStatus('err');
+      return;
+    }
+    setStatus('saving');
+    await saveExpoPushToken(userId, token);
+    setStatus('ok');
+    setTimeout(() => setStatus('idle'), 3000);
+  };
+
+  return (
+    <div className="p-4 glass-sm rounded-xl space-y-3">
+      <div className="flex items-center gap-2">
+        <Smartphone className="w-4 h-4 text-primary-500" />
+        <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Expo Push Token</p>
+      </div>
+      <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
+        Daftarkan token notifikasi dari aplikasi mobile NutriGrow agar bisa menerima push notification di HP.
+      </p>
+      <div className="flex gap-2">
+        <input
+          value={token}
+          onChange={e => setToken(e.target.value)}
+          placeholder="ExponentPushToken[xxxxxxxxxxxxxx]"
+          className="flex-1 px-3 py-2 rounded-xl glass-sm text-xs outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+          style={{ color: 'var(--surface-text)' }}
+        />
+        <button
+          onClick={handleSave}
+          disabled={status === 'saving' || !token}
+          className="px-4 py-2 bg-primary-500 text-white rounded-xl text-xs font-semibold hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center gap-1.5"
+        >
+          {status === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          Simpan
+        </button>
+      </div>
+      {status === 'ok' && (
+        <p className="text-xs text-primary-600 flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5" /> Token berhasil disimpan!</p>
+      )}
+      {status === 'err' && (
+        <p className="text-xs text-danger-600 flex items-center gap-1"><XCircle className="w-3.5 h-3.5" /> Format token tidak valid. Harus diawali ExponentPushToken[</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [darkMode, setDarkMode] = useState(false);
@@ -13,6 +68,22 @@ export default function SettingsPage() {
     device_alert: true,
     override: false,
   });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ok'>('idle');
+
+  const { profile } = useAuth();
+
+  // Sync dark mode from DOM
+  useEffect(() => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    setDarkMode(theme === 'dark');
+  }, []);
+
+  const handleSaveProfile = async () => {
+    setSaveStatus('saving');
+    await new Promise(r => setTimeout(r, 800)); // Simulate API call
+    setSaveStatus('ok');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
 
   const tabs = [
     { id: 'profile', label: 'Profil', icon: User },
@@ -39,9 +110,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-left text-sm',
-                  activeTab === tab.id
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'hover:bg-white/30'
+                  activeTab === tab.id ? 'bg-primary-500 text-white shadow-md' : 'hover:bg-white/30'
                 )}
                 style={activeTab !== tab.id ? { color: 'var(--surface-text)' } : undefined}
               >
@@ -54,53 +123,64 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="lg:col-span-3 glass p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
-          {/* Profile Tab */}
+
+          {/* ── Profile Tab ── */}
           {activeTab === 'profile' && (
             <div className="space-y-5">
               <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>👤 Profil Pengguna</h3>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                  B
-                </div>
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.full_name} referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary-200 shadow-lg" />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                    {profile?.full_name?.[0]?.toUpperCase() ?? 'U'}
+                  </div>
+                )}
                 <div>
-                  <p className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>Pak Budi</p>
-                  <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>Manager • Lahan Bitanic</p>
+                  <p className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{profile?.full_name || 'Pengguna'}</p>
+                  <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
+                    {profile?.role === 'super_admin' ? '⭐ Super Admin' : profile?.role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : '👤 Tamu'} • Bitanic
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Nama Lengkap</label>
-                  <input defaultValue="Budi Santoso" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                  <input defaultValue={profile?.full_name ?? ''} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Email</label>
-                  <input defaultValue="budi@nutrigrow.id" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                  <input defaultValue={profile?.email ?? ''} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Peran</label>
-                  <input defaultValue="Manager" disabled className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm opacity-60" style={{ color: 'var(--surface-text)' }} />
+                  <input defaultValue={profile?.role ?? ''} disabled className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm opacity-60" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Lahan</label>
                   <input defaultValue="Lahan Pertanian Bitanic" disabled className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm opacity-60" style={{ color: 'var(--surface-text)' }} />
                 </div>
               </div>
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm">
-                <Save className="w-4 h-4" /> Simpan Perubahan
+              <button onClick={handleSaveProfile} disabled={saveStatus === 'saving'}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm disabled:opacity-70">
+                {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saveStatus === 'ok' ? '✅ Tersimpan!' : 'Simpan Perubahan'}
               </button>
             </div>
           )}
 
-          {/* Notifications Tab */}
+          {/* ── Notifications Tab ── */}
           {activeTab === 'notifications' && (
             <div className="space-y-5">
               <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔔 Preferensi Notifikasi</h3>
-              <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>Kelola jenis notifikasi yang ingin Anda terima.</p>
+              <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>Kelola jenis notifikasi push yang dikirim ke perangkat mobile kamu.</p>
+
               <div className="space-y-3">
                 {[
                   { key: 'smart_delay', label: '⏸️ Smart Delay', desc: 'Notifikasi saat penyiraman ditunda karena prediksi hujan' },
                   { key: 'cycle_complete', label: '✅ Siklus Selesai', desc: 'Notifikasi saat siklus penyiraman otomatis selesai' },
-                  { key: 'device_alert', label: '🔴 Alert Perangkat', desc: 'Notifikasi darurat saat sensor/aktuator offline' },
+                  { key: 'device_alert', label: '🔴 Alert Perangkat', desc: 'Notifikasi darurat saat sensor/aktuator offline >5 menit' },
                   { key: 'override', label: '🔧 Manual Override', desc: 'Notifikasi saat operator mengaktifkan override' },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between p-4 glass-sm rounded-xl">
@@ -110,23 +190,31 @@ export default function SettingsPage() {
                     </div>
                     <button
                       onClick={() => setNotifications(p => ({ ...p, [item.key]: !p[item.key as keyof typeof p] }))}
-                      className={cn(
-                        'w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5 shrink-0',
-                        notifications[item.key as keyof typeof notifications] ? 'bg-primary-500' : 'bg-gray-300'
-                      )}
+                      className={cn('w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5 shrink-0',
+                        notifications[item.key as keyof typeof notifications] ? 'bg-primary-500' : 'bg-gray-300')}
                     >
-                      <div className={cn(
-                        'w-5 h-5 rounded-full bg-white shadow transition-transform duration-300',
-                        notifications[item.key as keyof typeof notifications] ? 'translate-x-4' : 'translate-x-0'
-                      )} />
+                      <div className={cn('w-5 h-5 rounded-full bg-white shadow transition-transform duration-300',
+                        notifications[item.key as keyof typeof notifications] ? 'translate-x-4' : 'translate-x-0')} />
                     </button>
                   </div>
                 ))}
               </div>
+
+              {/* Expo Push Token Section */}
+              <div className="pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+                <p className="text-xs font-bold mb-3 uppercase tracking-wider" style={{ color: 'var(--surface-text-muted)' }}>
+                  📱 Perangkat Mobile
+                </p>
+                {profile?.id ? (
+                  <ExpoTokenSection userId={profile.id} />
+                ) : (
+                  <p className="text-xs text-center py-4" style={{ color: 'var(--surface-text-muted)' }}>Login terlebih dahulu untuk mendaftarkan perangkat.</p>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Appearance Tab */}
+          {/* ── Appearance Tab ── */}
           {activeTab === 'appearance' && (
             <div className="space-y-5">
               <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🎨 Tampilan</h3>
@@ -141,8 +229,9 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => {
-                      setDarkMode(!darkMode);
-                      document.documentElement.setAttribute('data-theme', darkMode ? 'light' : 'dark');
+                      const next = !darkMode;
+                      setDarkMode(next);
+                      document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
                     }}
                     className={cn('w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5', darkMode ? 'bg-primary-500' : 'bg-gray-300')}
                   >
@@ -166,7 +255,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Security Tab */}
+          {/* ── Security Tab ── */}
           {activeTab === 'security' && (
             <div className="space-y-5">
               <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔒 Keamanan</h3>
@@ -187,8 +276,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="p-4 glass-sm rounded-xl">
                   <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Sesi Aktif</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>Login dari Chrome di Windows • IP: 192.168.1.100</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--surface-text-subtle)' }}>Aktif sejak 18 April 2026, 09:00</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>Login via Supabase Auth • {profile?.email}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--surface-text-subtle)' }}>Sesi diperbarui otomatis setiap 7 hari</p>
                 </div>
               </div>
             </div>
