@@ -580,7 +580,7 @@ export default function UserManagementPage() {
             
             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
               {[1, 2, 3, 4, 5].map(num => {
-                const z = `zone_${num}`;
+                const z = `z${num}`;
                 const isSelected = assignZonesModal.selectedZones.includes(z);
                 return (
                   <label key={z} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/30 cursor-pointer border border-transparent transition-colors">
