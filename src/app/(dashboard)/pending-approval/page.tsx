@@ -69,7 +69,7 @@ export default function PendingApprovalPage() {
               Menunggu Persetujuan
             </h1>
             <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
-              Akun Anda sedang dalam status <span className="font-semibold text-amber-600">Menunggu Persetujuan</span>.
+              Akun Anda sedang dalam status <span className="font-semibold text-amber-600">Menunggu Aktivasi</span>.
               Super Admin perlu mengaktifkan akses Anda sebelum dapat menggunakan dashboard.
             </p>
           </div>
