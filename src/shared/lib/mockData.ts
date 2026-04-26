@@ -17,7 +17,7 @@ export const mockZones: Zone[] = [
   { id: 'z2', farm_id: 'f1', name: 'Zona 2 - Kebun Timur', area_ha: 1.8, crop_type: 'Jagung', status: 'idle', latitude: -6.8160, longitude: 107.6180 },
   { id: 'z3', farm_id: 'f1', name: 'Zona 3 - Ladang Selatan', area_ha: 3.2, crop_type: 'Cabai', status: 'delayed', latitude: -6.8180, longitude: 107.6160 },
   { id: 'z4', farm_id: 'f1', name: 'Zona 4 - Persemaian', area_ha: 0.8, crop_type: 'Tomat', status: 'error', latitude: -6.8170, longitude: 107.6140 },
-  { id: 'z5', farm_id: 'f1', name: 'Zona 5 - Kebun Barat', area_ha: 2.0, crop_type: 'Mentimun', status: 'irrigating', latitude: -6.8155, longitude: 107.6130 },
+  { id: 'z5', farm_id: 'f1', name: 'Zona 5 - Kebun Barat', area_ha: 2.0, crop_type: 'Mentimun', status: 'fertigating', latitude: -6.8155, longitude: 107.6130 },
 ];
 
 // ─── Current Sensor Readings ─────────
@@ -105,15 +105,15 @@ export const mockNotifications: Notification[] = [
 
 // ─── Override Logs ───────────────────
 export const mockOverrideLogs: OverrideLog[] = [
-  { id: 'ol1', zone_id: 'z1', zone_name: 'Zona 1', user_name: 'Mas Eko', duration_minutes: 15, reason: 'Tanah terlalu kering', started_at: '2026-04-18T09:30:00Z', ended_at: '2026-04-18T09:45:00Z', status: 'completed' },
-  { id: 'ol2', zone_id: 'z3', zone_name: 'Zona 3', user_name: 'Mas Eko', duration_minutes: 30, reason: 'Cabai butuh air tambahan', started_at: '2026-04-18T08:15:00Z', ended_at: '2026-04-18T08:45:00Z', status: 'completed' },
-  { id: 'ol3', zone_id: 'z2', zone_name: 'Zona 2', user_name: 'Pak Budi', duration_minutes: 10, reason: '', started_at: '2026-04-18T07:00:00Z', ended_at: '2026-04-18T07:10:00Z', status: 'completed' },
+  { id: 'ol1', zone_id: 'z1', zone_name: 'Zona 1', user_name: 'Mas Eko', mode: 'water', duration_minutes: 15, reason: 'Tanah terlalu kering', started_at: '2026-04-18T09:30:00Z', ended_at: '2026-04-18T09:45:00Z', status: 'completed' },
+  { id: 'ol2', zone_id: 'z3', zone_name: 'Zona 3', user_name: 'Mas Eko', mode: 'fertigation', duration_minutes: 30, reason: 'Cabai butuh air tambahan', started_at: '2026-04-18T08:15:00Z', ended_at: '2026-04-18T08:45:00Z', status: 'completed' },
+  { id: 'ol3', zone_id: 'z2', zone_name: 'Zona 2', user_name: 'Pak Budi', mode: 'water', duration_minutes: 10, reason: '', started_at: '2026-04-18T07:00:00Z', ended_at: '2026-04-18T07:10:00Z', status: 'completed' },
 ];
 
 // ─── Irrigation Logs ─────────────────
 export const mockIrrigationLogs: IrrigationLog[] = [
-  { id: 'il1', zone_id: 'z1', zone_name: 'Zona 1', source: 'auto', duration_minutes: 15, water_volume_liters: 450, started_at: '2026-04-18T08:30:00Z', ended_at: '2026-04-18T08:45:00Z', status: 'completed' },
-  { id: 'il2', zone_id: 'z5', zone_name: 'Zona 5', source: 'schedule', duration_minutes: 20, water_volume_liters: 600, started_at: '2026-04-18T05:40:00Z', ended_at: '2026-04-18T06:00:00Z', status: 'completed' },
-  { id: 'il3', zone_id: 'z2', zone_name: 'Zona 2', source: 'manual_override', duration_minutes: 10, water_volume_liters: 300, started_at: '2026-04-18T07:00:00Z', ended_at: '2026-04-18T07:10:00Z', status: 'completed' },
-  { id: 'il4', zone_id: 'z1', zone_name: 'Zona 1', source: 'auto', duration_minutes: 25, water_volume_liters: 750, started_at: '2026-04-18T09:25:00Z', status: 'running' },
+  { id: 'il1', zone_id: 'z1', zone_name: 'Zona 1', source: 'auto', mode: 'water', duration_minutes: 15, water_volume_liters: 450, started_at: '2026-04-18T08:30:00Z', ended_at: '2026-04-18T08:45:00Z', status: 'completed' },
+  { id: 'il2', zone_id: 'z5', zone_name: 'Zona 5', source: 'schedule', mode: 'fertigation', duration_minutes: 20, water_volume_liters: 600, started_at: '2026-04-18T05:40:00Z', ended_at: '2026-04-18T06:00:00Z', status: 'completed' },
+  { id: 'il3', zone_id: 'z2', zone_name: 'Zona 2', source: 'manual_override', mode: 'water', duration_minutes: 10, water_volume_liters: 300, started_at: '2026-04-18T07:00:00Z', ended_at: '2026-04-18T07:10:00Z', status: 'completed' },
+  { id: 'il4', zone_id: 'z1', zone_name: 'Zona 1', source: 'auto', mode: 'water', duration_minutes: 25, water_volume_liters: 750, started_at: '2026-04-18T09:25:00Z', status: 'running' },
 ];

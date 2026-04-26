@@ -10,12 +10,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import { mockSensorHistory, mockEcoSavings, mockWeather } from '@/shared/lib/mockData';
+import { mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
 import { formatNumber, formatCurrency, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
-import type { Zone, SensorData, IrrigationLog } from '@/shared/types/global.types';
+import type { Zone, SensorData, IrrigationLog, WeatherData } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
 import { irrigationService } from '@/shared/services/irrigationService';
+import { fetchWeather } from '@/shared/services/weatherService';
 
 // ─── Animated Count-Up ───
 function useCountUp(target: number, duration = 1500) {
@@ -101,19 +102,28 @@ export default function OverviewPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
   const [irrigationLogs, setIrrigationLogs] = useState<IrrigationLog[]>([]);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const fetchedZones = await sensorService.getZones();
-        const fetchedSensors = await sensorService.getAllSensorData();
-        const fetchedLogs = await irrigationService.getActiveIrrigations();
+        const [fetchedZones, fetchedSensors, fetchedLogs, weatherData] = await Promise.all([
+          sensorService.getZones(),
+          sensorService.getAllSensorData(),
+          irrigationService.getActiveIrrigations(),
+          fetchWeather(
+            Number(process.env.NEXT_PUBLIC_FARM_LAT) || undefined,
+            Number(process.env.NEXT_PUBLIC_FARM_LON) || undefined,
+          ),
+        ]);
+
         const logsToDisplay = fetchedLogs.length > 0 ? fetchedLogs : await irrigationService.getIrrigationHistory();
 
         setZones(fetchedZones);
         setSensorDataMap(fetchedSensors);
         setIrrigationLogs(logsToDisplay);
+        setWeather(weatherData);
       } catch (error) {
         console.error("Error fetching overview data:", error);
       } finally {
@@ -222,49 +232,49 @@ export default function OverviewPage() {
           
           {/* Current Weather */}
           <div className="text-center py-4">
-            <span className="text-5xl">{mockWeather.icon}</span>
-            <p className="text-3xl font-bold mt-2" style={{ color: 'var(--surface-text)' }}>{mockWeather.temperature}°C</p>
-            <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>{mockWeather.description}</p>
+            <span className="text-5xl">{weather?.icon ?? '🌡️'}</span>
+            <p className="text-3xl font-bold mt-2" style={{ color: 'var(--surface-text)' }}>{weather?.temperature ?? '—'}°C</p>
+            <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>{weather?.description ?? 'Memuat...'}</p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 my-4">
             <div className="text-center glass-sm p-2">
               <Droplets className="w-4 h-4 mx-auto text-secondary-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{mockWeather.humidity}%</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.humidity ?? '—'}%</p>
               <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Kelembaban</p>
             </div>
             <div className="text-center glass-sm p-2">
               <CloudRain className="w-4 h-4 mx-auto text-accent-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{mockWeather.pop}%</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.pop ?? '—'}%</p>
               <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Prob. Hujan</p>
             </div>
             <div className="text-center glass-sm p-2">
               <Wind className="w-4 h-4 mx-auto text-primary-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{mockWeather.wind_speed}</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.wind_speed ?? '—'}</p>
               <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>km/h</p>
             </div>
           </div>
 
-          {/* Smart Delay Status */}
+          {/* Smart Delay Status — driven by real weather pop */}
           <div className={cn(
             'rounded-xl p-3 border',
-            mockWeather.pop > 70
+            (weather?.pop ?? 0) > 70
               ? 'bg-accent-200/20 border-accent-400/30'
               : 'bg-primary-100/30 border-primary-300/30'
           )}>
             <div className="flex items-center gap-2">
-              {mockWeather.pop > 70 ? (
+              {(weather?.pop ?? 0) > 70 ? (
                 <AlertCircle className="w-4 h-4 text-accent-600" />
               ) : (
                 <Play className="w-4 h-4 text-primary-600" />
               )}
               <span className="text-xs font-semibold" style={{ color: 'var(--surface-text)' }}>
-                {mockWeather.pop > 70 ? '⏸️ Smart Delay AKTIF' : '✅ Status: NORMAL'}
+                {(weather?.pop ?? 0) > 70 ? '⏸️ Smart Delay AKTIF' : '✅ Status: NORMAL'}
               </span>
             </div>
             <p className="text-[11px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-              {mockWeather.pop > 70
-                ? 'Penyiraman ditunda — hujan diprediksi dalam 3 jam'
+              {(weather?.pop ?? 0) > 70
+                ? `Penyiraman ditunda — hujan ${weather?.pop}% dalam 3 jam ke depan`
                 : 'Tidak ada penundaan — sistem beroperasi normal'}
             </p>
           </div>
@@ -399,9 +409,15 @@ export default function OverviewPage() {
                     </td>
                     <td className="py-2.5 px-3 font-mono text-xs" style={{ color: 'var(--surface-text)' }}>{log.duration_minutes}m</td>
                     <td className="py-2.5 px-3 font-mono text-xs" style={{ color: 'var(--surface-text)' }}>{formatNumber(log.water_volume_liters)}L</td>
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-3 flex items-center gap-1.5 flex-wrap">
                       <span className={cn(
-                        'text-xs px-2 py-0.5 rounded-full font-medium',
+                        'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
+                        log.mode === 'fertigation' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
+                      )}>
+                        {log.mode === 'fertigation' ? '🧪 Nutrisi' : '💧 Air Saja'}
+                      </span>
+                      <span className={cn(
+                        'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
                         log.status === 'running' && 'bg-primary-100 text-primary-700 animate-pulse',
                         log.status === 'completed' && 'bg-gray-100 text-gray-600',
                       )}>

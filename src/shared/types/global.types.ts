@@ -17,7 +17,7 @@ export interface UserProfile {
   email: string;
   full_name: string;       // Normalized from DB column 'nama' or 'full_name'
   role: AppRole;           // Resolved from roles.name via FK join
-  role_id?: number | null; // FK to public.roles
+  role_id?: string | null; // FK to public.roles (UUID)
   is_active?: boolean;
   avatar_url?: string | null; // Google profile picture URL
   farm_id: string | null;
@@ -26,7 +26,7 @@ export interface UserProfile {
 }
 
 // ─── Domain ───────────────────────────────────────────────────
-export type ZoneStatus = 'idle' | 'irrigating' | 'delayed' | 'error';
+export type ZoneStatus = 'idle' | 'irrigating' | 'fertigating' | 'delayed' | 'error';
 
 export interface Zone {
   id: string;
@@ -127,6 +127,7 @@ export interface OverrideLog {
   zone_id: string;
   zone_name: string;
   user_name: string;
+  mode: 'water' | 'fertigation';
   duration_minutes: number;
   reason?: string;
   started_at: string;
@@ -138,6 +139,7 @@ export interface IrrigationLog {
   id: string;
   zone_id: string;
   zone_name: string;
+  mode: 'water' | 'fertigation';
   source: 'auto' | 'manual_override' | 'schedule';
   duration_minutes: number;
   water_volume_liters: number;
