@@ -553,9 +553,75 @@ export default function UserManagementPage() {
               </button>
             </div>
           </div>
+      {/* Assign Zones Modal */}
+      {assignZonesModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setAssignZonesModal(null)} />
+          <div className="relative glass-heavy p-6 max-w-sm w-full space-y-4 animate-scale-in">
+            <button onClick={() => setAssignZonesModal(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-white/20" style={{ color: 'var(--surface-text-muted)' }}>
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full bg-primary-100 border-4 border-primary-300/40 flex items-center justify-center">
+                <Sprout className="w-7 h-7 text-primary-600" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>
+                Tugas Zona
+              </h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
+                Pilih zona mana saja yang bisa diakses oleh <strong>{assignZonesModal.userName}</strong>.
+              </p>
+            </div>
+            
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+              {[1, 2, 3, 4, 5].map(num => {
+                const z = `zone_${num}`;
+                const isSelected = assignZonesModal.selectedZones.includes(z);
+                return (
+                  <label key={z} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/30 cursor-pointer border border-transparent transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAssignZonesModal(prev => {
+                          if (!prev) return prev;
+                          const newZones = checked 
+                            ? [...prev.selectedZones, z]
+                            : prev.selectedZones.filter(id => id !== z);
+                          return { ...prev, selectedZones: newZones };
+                        });
+                      }}
+                      className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300"
+                    />
+                    <span className="text-sm font-medium flex-1" style={{ color: 'var(--surface-text)' }}>
+                      Zona {num}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={() => setAssignZonesModal(null)}
+                className="py-2.5 rounded-xl text-sm font-bold bg-gray-100 hover:bg-gray-200 transition-colors"
+                style={{ color: 'var(--surface-text)' }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleAssignZones}
+                className="py-2.5 rounded-xl text-sm font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-lg glow-sm transition-colors"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
 
     </div>
   );
