@@ -41,6 +41,7 @@ interface UserRow {
   role_id: number;
   is_active: boolean;
   created_at: string;
+  assigned_zones?: string[] | null;
   roles: RoleRow | null;
 }
 
@@ -72,6 +73,9 @@ export default function UserManagementPage() {
   } | null>(null);
   const [kickConfirm, setKickConfirm] = useState<{
     userId: string; userName: string;
+  } | null>(null);
+  const [assignZonesModal, setAssignZonesModal] = useState<{
+    userId: string; userName: string; selectedZones: string[];
   } | null>(null);
 
   // ─── Fetch users ─────────────────────────────────────────
@@ -142,6 +146,27 @@ export default function UserManagementPage() {
     } finally {
       setUpdatingId(null);
       setConfirm(null);
+    }
+  };
+
+  // ─── Update assigned zones ─────────────────────────────────
+  const handleAssignZones = async () => {
+    if (!assignZonesModal) return;
+    setUpdatingId(assignZonesModal.userId);
+    try {
+      const { error: updateErr } = await supabase
+        .from('user_profiles')
+        .update({ assigned_zones: assignZonesModal.selectedZones })
+        .eq('id', assignZonesModal.userId);
+
+      if (updateErr) throw updateErr;
+
+      await fetchUsers();
+      setAssignZonesModal(null);
+    } catch (err: any) {
+      alert('Gagal mengupdate zona:\n\n' + (err.message ?? 'Unknown error'));
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -418,6 +443,22 @@ export default function UserManagementPage() {
                         ))}
                       </select>
 
+                      {/* Assign Zones button (only for pemilik_kebun) */}
+                      {user.roles?.name === 'pemilik_kebun' && (
+                        <button
+                          onClick={() => setAssignZonesModal({
+                            userId: user.id,
+                            userName: displayName,
+                            selectedZones: user.assigned_zones ?? []
+                          })}
+                          disabled={isUpdating}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-primary-50 text-primary-600"
+                          title="Tugaskan Zona"
+                        >
+                          {isUpdating && updatingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sprout className="w-4 h-4" />}
+                        </button>
+                      )}
+
                       {/* Kick (delete) button */}
                       <button
                         onClick={() => setKickConfirm({ userId: user.id, userName: displayName })}
@@ -425,8 +466,7 @@ export default function UserManagementPage() {
                         className="p-1.5 rounded-lg transition-colors hover:bg-danger-50 text-danger-500"
                         title="Hapus User"
                       >
-                        {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                          <Trash2 className="w-4 h-4" />}
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </>
                   )}
@@ -477,7 +517,7 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* Kick Confirmation Modal */}
+      {/* Kick Modal */}
       {kickConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setKickConfirm(null)} />
@@ -491,10 +531,9 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="text-center">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>Hapus Pengguna?</h3>
+              <h3 className="text-base font-bold text-danger-600">Hapus Pengguna?</h3>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
-                Data profil <strong>{kickConfirm.userName}</strong> akan dihapus dari sistem.
-                Jika mereka login kembali, mereka harus menunggu persetujuan Super Admin lagi.
+                Data profil <strong>{kickConfirm.userName}</strong> akan dihapus dari sistem secara permanen.
               </p>
             </div>
             <div className="flex gap-3 pt-2">
