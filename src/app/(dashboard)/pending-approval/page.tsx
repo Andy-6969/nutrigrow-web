@@ -83,7 +83,7 @@ export default function PendingApprovalPage() {
               <div>
                 <p className="text-xs font-semibold" style={{ color: 'var(--surface-text)' }}>Status Akun</p>
                 <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                  🔒 Guest (Menunggu Aktivasi) akses ditangguhkan
+                  🔒 Guest (Menunggu Aktivasi)
                 </p>
               </div>
             </div>
@@ -130,7 +130,9 @@ export default function PendingApprovalPage() {
               </li>
               <li className="flex items-start gap-1.5">
                 <span className="text-primary-500 shrink-0 mt-0.5">3.</span>
-                Admin akan mengubah role Anda menjadi <strong>Pemilik Kebun</strong> di panel manajemen.
+                <span>
+                  Admin akan mengubah role Anda menjadi <strong>Pemilik Kebun</strong> di panel manajemen.
+                </span>
               </li>
             </ul>
           </div>
