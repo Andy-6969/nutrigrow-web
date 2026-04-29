@@ -3,439 +3,318 @@
 import { useState, useEffect } from 'react';
 import {
   Droplets, Leaf, DollarSign, Zap, CloudRain,
-  Wind, Thermometer, ArrowUpRight, ArrowDownRight,
-  Timer, Play, AlertCircle
+  Wind, Thermometer, AlertTriangle, Power,
+  ChevronRight, Activity
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar
+  AreaChart, Area, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid
 } from 'recharts';
+import Lottie from 'lottie-react';
 import { mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
-import { formatNumber, formatCurrency, cn } from '@/shared/lib/utils';
-import { ZONE_STATUS } from '@/shared/lib/constants';
-import type { Zone, SensorData, IrrigationLog, WeatherData } from '@/shared/types/global.types';
+import { formatNumber, cn } from '@/shared/lib/utils';
+import type { WeatherData, SensorData } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
-import { irrigationService } from '@/shared/services/irrigationService';
 import { fetchWeather } from '@/shared/services/weatherService';
 
-// ─── Animated Count-Up ───
-function useCountUp(target: number, duration = 1500) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const increment = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [target, duration]);
-  return count;
-}
-
-// ─── KPI Card ───
-function KPICard({ icon: Icon, label, value, unit, trend, color, delay }: {
-  icon: React.ElementType; label: string; value: number; unit: string;
-  trend: number; color: string; delay: number;
-}) {
-  const animatedValue = useCountUp(value);
-  const isPositive = trend >= 0;
-
-  return (
-    <div
-      className="glass p-5 flex flex-col gap-3 opacity-0 animate-fade-in-up group cursor-default"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
-    >
-      <div className="flex items-center justify-between">
-        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-white', color)}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className={cn(
-          'flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full',
-          isPositive ? 'bg-success-50 text-primary-700' : 'bg-danger-50 text-danger-600'
-        )}>
-          {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {Math.abs(trend)}%
-        </div>
-      </div>
-      <div>
-        <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--surface-text)' }}>
-          {unit === 'Rp' ? formatCurrency(animatedValue) : formatNumber(animatedValue)}
-          {unit !== 'Rp' && <span className="text-sm font-normal ml-1" style={{ color: 'var(--surface-text-muted)' }}>{unit}</span>}
-        </p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>{label}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Zone Card (Mini Agri-Twin) ───
-function ZoneCard({ zone, sensor }: { zone: Zone; sensor?: SensorData }) {
-  const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS] || ZONE_STATUS.idle;
-  return (
-    <div className={cn(
-      'glass-sm p-3 flex items-center gap-3 cursor-pointer transition-all duration-200',
-      'hover:scale-[1.02] hover:shadow-lg',
-      zone.status === 'irrigating' && 'animate-pulse-glow'
-    )}>
-      <div className="text-2xl">{status.icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--surface-text)' }}>{zone.name}</p>
-        <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>{status.label} • {zone.crop_type}</p>
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-mono font-bold" style={{ color: status.color }}>{sensor?.soil_moisture ?? 0}%</p>
-        <p className="text-[10px]" style={{ color: 'var(--surface-text-subtle)' }}>💧 Tanah</p>
-      </div>
-    </div>
-  );
-}
+// TODO: Frontend Team - Unduh file Lottie JSON dari LottieFiles 
+// (Keyword: Isometric Farm / Smart City Isometric / Greenhouse) dengan background transparan.
+// Simpan di `src/assets/lottie/farm.json` lalu uncomment baris di bawah ini:
+// import farmAnimation from '@/assets/lottie/farm.json';
 
 export default function OverviewPage() {
-  const [chartType, setChartType] = useState<'soil_moisture' | 'temperature' | 'humidity' | 'ph'>('soil_moisture');
-
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
-  const [irrigationLogs, setIrrigationLogs] = useState<IrrigationLog[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [liveSensor, setLiveSensor] = useState<SensorData | null>(null);
+  const [isOverriding, setIsOverriding] = useState(false);
+  const [isHoveringOverride, setIsHoveringOverride] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [fetchedZones, fetchedSensors, fetchedLogs, weatherData] = await Promise.all([
-          sensorService.getZones(),
-          sensorService.getAllSensorData(),
-          irrigationService.getActiveIrrigations(),
-          fetchWeather(
-            Number(process.env.NEXT_PUBLIC_FARM_LAT) || undefined,
-            Number(process.env.NEXT_PUBLIC_FARM_LON) || undefined,
-          ),
-        ]);
+    const loadData = async () => {
+      // Load initial data
+      const weatherData = await fetchWeather(
+        Number(process.env.NEXT_PUBLIC_FARM_LAT) || undefined,
+        Number(process.env.NEXT_PUBLIC_FARM_LON) || undefined,
+      );
+      setWeather(weatherData);
 
-        const logsToDisplay = fetchedLogs.length > 0 ? fetchedLogs : await irrigationService.getIrrigationHistory();
-
-        setZones(fetchedZones);
-        setSensorDataMap(fetchedSensors);
-        setIrrigationLogs(logsToDisplay);
-        setWeather(weatherData);
-      } catch (error) {
-        console.error("Error fetching overview data:", error);
-      } finally {
-        setIsLoading(false);
+      // Get initial sensor data for the single node (Zone 1)
+      const allSensors = await sensorService.getAllSensorData();
+      if (Object.values(allSensors).length > 0) {
+        setLiveSensor(Object.values(allSensors)[0]);
       }
     };
 
-    fetchData();
+    loadData();
 
     sensorService.subscribeToSensorUpdates((payload) => {
       const newData = payload.new as SensorData;
-      if (newData.zone_id) {
-        setSensorDataMap(prev => ({
-          ...prev,
-          [newData.zone_id as string]: newData
-        }));
-      }
-    });
-
-    sensorService.subscribeToZoneUpdates((payload) => {
-      const updatedZone = payload.new as Zone;
-      setZones(prev => prev.map(z => z.id === updatedZone.id ? updatedZone : z));
-    });
-
-    irrigationService.subscribeToIrrigationUpdates(async () => {
-      const fetchedLogs = await irrigationService.getActiveIrrigations();
-      const logsToDisplay = fetchedLogs.length > 0 ? fetchedLogs : await irrigationService.getIrrigationHistory();
-      setIrrigationLogs(logsToDisplay);
+      setLiveSensor(newData);
     });
 
     return () => {
       sensorService.unsubscribeFromSensorUpdates();
-      sensorService.unsubscribeFromZoneUpdates();
-      irrigationService.unsubscribeFromIrrigationUpdates();
     };
   }, []);
 
-  const chartColors: Record<string, string> = {
-    soil_moisture: '#10B981',
-    temperature: '#EF4444',
-    humidity: '#3B82F6',
-    ph: '#F59E0B',
-  };
-
-  const chartLabels: Record<string, string> = {
-    soil_moisture: 'Kelembaban Tanah (%)',
-    temperature: 'Suhu Udara (°C)',
-    humidity: 'Kelembaban Udara (%)',
-    ph: 'pH Tanah',
+  const handleManualOverride = async () => {
+    setIsOverriding(true);
+    // Simulasi delay panggil API
+    await new Promise(res => setTimeout(res, 2000));
+    alert("Manual Override diaktifkan! Sistem sedang menyiram.");
+    setIsOverriding(false);
   };
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard icon={Droplets}    label="Air Dihemat"    value={mockEcoSavings.water_saved_liters}    unit="L"  trend={mockEcoSavings.water_trend}       color="bg-gradient-to-br from-secondary-400 to-secondary-600" delay={0} />
-        <KPICard icon={Leaf}        label="Pupuk Dihemat"  value={mockEcoSavings.fertilizer_saved_kg}   unit="kg" trend={mockEcoSavings.fertilizer_trend}   color="bg-gradient-to-br from-primary-400 to-primary-600" delay={100} />
-        <KPICard icon={DollarSign}  label="Biaya Dihemat"  value={mockEcoSavings.cost_saved_rupiah}     unit="Rp" trend={mockEcoSavings.cost_trend}         color="bg-gradient-to-br from-accent-400 to-accent-600" delay={200} />
-        <KPICard icon={Zap}         label="Energi Dihemat" value={mockEcoSavings.energy_saved_kwh}      unit="kWh" trend={mockEcoSavings.energy_trend}      color="bg-gradient-to-br from-purple-400 to-purple-600" delay={300} />
-      </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 relative overflow-hidden p-6 -m-4 lg:-m-6">
+      {/* Cinematic Radial Glow Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Middle Row: Agri-Twin Mini + Weather */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Agri-Twin Mini Map */}
-        <div className="lg:col-span-2 glass p-5 opacity-0 animate-fade-in-up flex flex-col" style={{ animationDelay: '400ms', animationFillMode: 'forwards' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-              🗺️ Agri-Twin — Ringkasan Lahan
+      {/* Main Layout Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative z-10 max-w-[1800px] mx-auto">
+        
+        {/* ======================================= */}
+        {/* LEFT COLUMN: Context (Weather & Charts) */}
+        {/* ======================================= */}
+        <div className="xl:col-span-3 space-y-6 flex flex-col">
+          {/* Weather Widget */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl">
+            <h3 className="text-sm font-semibold text-slate-400 mb-4 tracking-wider flex items-center gap-2">
+              <CloudRain className="w-4 h-4 text-cyan-400" />
+              KONDISI LINGKUNGAN
             </h3>
-            <span className="text-xs px-2 py-1 rounded-full bg-primary-100 text-primary-700 font-medium">
-              Live • {zones.length} Zona
-            </span>
+            <div className="flex items-center gap-4 mb-6">
+              <span className="text-6xl drop-shadow-lg">{weather?.icon ?? '🌤️'}</span>
+              <div>
+                <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
+                  {weather?.temperature ?? '--'}°C
+                </p>
+                <p className="text-sm text-slate-400 capitalize">{weather?.description ?? 'Memuat...'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-black/20 rounded-2xl p-3 border border-white/5">
+                <Wind className="w-4 h-4 text-emerald-400 mb-1" />
+                <p className="text-xs text-slate-500">Angin</p>
+                <p className="font-mono text-sm">{weather?.wind_speed ?? '--'} km/h</p>
+              </div>
+              <div className="bg-black/20 rounded-2xl p-3 border border-white/5">
+                <Droplets className="w-4 h-4 text-blue-400 mb-1" />
+                <p className="text-xs text-slate-500">Kelembaban</p>
+                <p className="font-mono text-sm">{weather?.humidity ?? '--'}%</p>
+              </div>
+            </div>
           </div>
+
+          {/* 24h Trend Chart */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl flex-1 min-h-[300px] flex flex-col">
+            <h3 className="text-sm font-semibold text-slate-400 mb-4 tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              TREN 24 JAM
+            </h3>
+            <div className="flex-1 -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={mockSensorHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis 
+                    dataKey="time" 
+                    tick={{ fill: '#64748b', fontSize: 10 }} 
+                    axisLine={false} 
+                    tickLine={false}
+                    interval={6}
+                  />
+                  <YAxis 
+                    tick={{ fill: '#64748b', fontSize: 10 }} 
+                    axisLine={false} 
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(0,0,0,0.8)', 
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      borderRadius: '12px'
+                    }} 
+                    itemStyle={{ color: '#10B981' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="soil_moisture" 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    fill="url(#colorSoil)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================= */}
+        {/* CENTER COLUMN: The Star (Agri-Twin HUD) */}
+        {/* ======================================= */}
+        <div className="xl:col-span-6 flex flex-col items-center justify-center relative min-h-[500px]">
+          {/* HUD Header */}
+          <div className="absolute top-0 text-center w-full z-20">
+            <h2 className="text-3xl font-extrabold tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 uppercase">
+              Main Greenhouse
+            </h2>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-mono text-emerald-400 tracking-widest">SYSTEM ONLINE // NODE 01</span>
+            </div>
+          </div>
+
+          {/* Lottie Container */}
+          <div className="relative w-full max-w-[600px] aspect-square flex items-center justify-center">
+            {/* Lottie component */}
+            <div className="w-[80%] h-[80%] relative z-10 flex items-center justify-center">
+              {/* NOTE: Gunakan variabel `farmAnimation` setelah di-import */}
+              <Lottie 
+                animationData={undefined /* farmAnimation */} 
+                loop={true}
+                className="w-full h-full opacity-90 drop-shadow-2xl"
+              />
+              {/* Dummy Placeholder if no animationData */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center border border-dashed border-slate-700/50 rounded-full animate-pulse-slow">
+                <p className="text-xs text-slate-500 font-mono">[ LOTTIE ANIMATION HERE ]</p>
+                <p className="text-[10px] text-slate-600 font-mono mt-1">Insert JSON from LottieFiles</p>
+              </div>
+            </div>
+
+            {/* HUD Floating Badges */}
+            <div className="absolute top-[15%] left-[5%] bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 shadow-xl animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <Droplets className="w-4 h-4 text-blue-400" />
+              <span className="font-mono text-sm font-semibold">{liveSensor?.soil_moisture ?? '--'}%</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider ml-1">Soil</span>
+            </div>
+
+            <div className="absolute top-[25%] right-[0%] bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 shadow-xl animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <Thermometer className="w-4 h-4 text-orange-400" />
+              <span className="font-mono text-sm font-semibold">{liveSensor?.temperature ?? '--'}°C</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider ml-1">Temp</span>
+            </div>
+
+            <div className="absolute bottom-[20%] left-[0%] bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 shadow-xl animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <div className="w-4 h-4 flex items-center justify-center text-purple-400 font-bold text-xs">pH</div>
+              <span className="font-mono text-sm font-semibold">{liveSensor?.ph ?? '--'}</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider ml-1">Acid</span>
+            </div>
+
+            <div className="absolute bottom-[10%] right-[5%] bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 shadow-xl animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+              <Wind className="w-4 h-4 text-cyan-400" />
+              <span className="font-mono text-sm font-semibold">{liveSensor?.humidity ?? '--'}%</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider ml-1">Humid</span>
+            </div>
+
+            {/* Decorative HUD Rings */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] border border-white/5 rounded-full pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[130%] border border-dashed border-white/5 rounded-full pointer-events-none animate-spin-slow" style={{ animationDuration: '60s' }} />
+          </div>
+        </div>
+
+        {/* ======================================= */}
+        {/* RIGHT COLUMN: Command & Vitals */}
+        {/* ======================================= */}
+        <div className="xl:col-span-3 space-y-6 flex flex-col">
           
-          <div className="flex-1">
-            {isLoading ? (
-              <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--surface-text-muted)' }}>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
-                  Memuat data zona...
+          {/* Giant OVERRIDE Button */}
+          <button
+            onClick={handleManualOverride}
+            disabled={isOverriding}
+            onMouseEnter={() => setIsHoveringOverride(true)}
+            onMouseLeave={() => setIsHoveringOverride(false)}
+            className={cn(
+              "relative w-full aspect-video rounded-3xl p-1 overflow-hidden transition-all duration-300 group",
+              isOverriding ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+            )}
+          >
+            {/* Button animated border glow */}
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 opacity-20 group-hover:opacity-100 transition-opacity duration-500",
+              isHoveringOverride && "animate-gradient-x"
+            )} />
+            
+            {/* Inner Button Content */}
+            <div className="absolute inset-[2px] bg-slate-950 rounded-[22px] flex flex-col items-center justify-center gap-3 transition-colors duration-300 z-10">
+              <div className={cn(
+                "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl",
+                isOverriding 
+                  ? "bg-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)]" 
+                  : "bg-slate-800 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 group-hover:shadow-[0_0_50px_rgba(16,185,129,0.5)]"
+              )}>
+                <Power className={cn("w-8 h-8", isOverriding && "animate-pulse")} />
+              </div>
+              <div className="text-center">
+                <p className="font-mono font-bold tracking-widest text-lg text-white">
+                  {isOverriding ? 'MENYIRAM...' : 'MANUAL OVERRIDE'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest">
+                  {isOverriding ? 'Proses Berjalan' : 'Siram Sekarang'}
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Eco-Savings Summary Stack */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 shadow-2xl flex-1 flex flex-col justify-between">
+            <h3 className="text-sm font-semibold text-slate-400 mb-6 tracking-wider flex items-center gap-2">
+              <Leaf className="w-4 h-4 text-emerald-400" />
+              ECO-SAVINGS IMPACT
+            </h3>
+            
+            <div className="space-y-6">
+              {/* Water Saved */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                  <Droplets className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-400 mb-1">Air Dihemat</p>
+                  <p className="font-mono text-xl font-bold">{formatNumber(mockEcoSavings.water_saved_liters)}<span className="text-sm text-slate-500 ml-1">L</span></p>
                 </div>
               </div>
-            ) : zones.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {zones.map(zone => (
-                  <ZoneCard 
-                    key={zone.id} 
-                    zone={zone} 
-                    sensor={sensorDataMap[zone.id]} 
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--surface-text-muted)' }}>
-                Belum ada data zona yang tersedia.
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Weather + Smart Delay */}
-        <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '500ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-            🌤️ Cuaca & Smart Delay
-          </h3>
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+              {/* Fertilizer Saved */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <Leaf className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-400 mb-1">Pupuk Dihemat</p>
+                  <p className="font-mono text-xl font-bold">{formatNumber(mockEcoSavings.fertilizer_saved_kg)}<span className="text-sm text-slate-500 ml-1">kg</span></p>
+                </div>
+              </div>
+
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+              {/* Energy Saved */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-400 mb-1">Energi Dihemat</p>
+                  <p className="font-mono text-xl font-bold">{formatNumber(mockEcoSavings.energy_saved_kwh)}<span className="text-sm text-slate-500 ml-1">kWh</span></p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-500">
+              <span>Total Estimasi Biaya</span>
+              <span className="font-mono text-emerald-400">Rp {formatNumber(mockEcoSavings.cost_saved_rupiah)}</span>
+            </div>
+          </div>
           
-          {/* Current Weather */}
-          <div className="text-center py-4">
-            <span className="text-5xl">{weather?.icon ?? '🌡️'}</span>
-            <p className="text-3xl font-bold mt-2" style={{ color: 'var(--surface-text)' }}>{weather?.temperature ?? '—'}°C</p>
-            <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>{weather?.description ?? 'Memuat...'}</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 my-4">
-            <div className="text-center glass-sm p-2">
-              <Droplets className="w-4 h-4 mx-auto text-secondary-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.humidity ?? '—'}%</p>
-              <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Kelembaban</p>
-            </div>
-            <div className="text-center glass-sm p-2">
-              <CloudRain className="w-4 h-4 mx-auto text-accent-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.pop ?? '—'}%</p>
-              <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Prob. Hujan</p>
-            </div>
-            <div className="text-center glass-sm p-2">
-              <Wind className="w-4 h-4 mx-auto text-primary-500 mb-1" />
-              <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{weather?.wind_speed ?? '—'}</p>
-              <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>km/h</p>
-            </div>
-          </div>
-
-          {/* Smart Delay Status — driven by real weather pop */}
-          <div className={cn(
-            'rounded-xl p-3 border',
-            (weather?.pop ?? 0) > 70
-              ? 'bg-accent-200/20 border-accent-400/30'
-              : 'bg-primary-100/30 border-primary-300/30'
-          )}>
-            <div className="flex items-center gap-2">
-              {(weather?.pop ?? 0) > 70 ? (
-                <AlertCircle className="w-4 h-4 text-accent-600" />
-              ) : (
-                <Play className="w-4 h-4 text-primary-600" />
-              )}
-              <span className="text-xs font-semibold" style={{ color: 'var(--surface-text)' }}>
-                {(weather?.pop ?? 0) > 70 ? '⏸️ Smart Delay AKTIF' : '✅ Status: NORMAL'}
-              </span>
-            </div>
-            <p className="text-[11px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-              {(weather?.pop ?? 0) > 70
-                ? `Penyiraman ditunda — hujan ${weather?.pop}% dalam 3 jam ke depan`
-                : 'Tidak ada penundaan — sistem beroperasi normal'}
-            </p>
-          </div>
-
-          {/* Next Schedule */}
-          <div className="mt-4 glass-sm p-3">
-            <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4 text-primary-500" />
-              <span className="text-xs font-medium" style={{ color: 'var(--surface-text)' }}>Jadwal Berikutnya</span>
-            </div>
-            <p className="text-sm font-semibold mt-1" style={{ color: 'var(--surface-text)' }}>14:30 — Zona 2 (Kebun Timur)</p>
-            <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>Durasi: 20 menit • Termasuk fertigasi</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Sensor Chart */}
-      <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-          <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-            📈 Pembacaan Sensor — 24 Jam Terakhir
-          </h3>
-          <div className="flex gap-1 bg-white/50 rounded-lg p-1" style={{ border: '1px solid var(--surface-border)' }}>
-            {Object.entries(chartLabels).map(([key, label]) => {
-              const shortLabels: Record<string, string> = {
-                soil_moisture: 'K. Tanah',
-                temperature: 'Suhu',
-                humidity: 'K. Udara',
-                ph: 'pH',
-              };
-              return (
-              <button
-                key={key}
-                onClick={() => setChartType(key as typeof chartType)}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
-                  chartType === key
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'hover:bg-white/60'
-                )}
-                style={chartType !== key ? { color: 'var(--surface-text-muted)' } : undefined}
-              >
-                {shortLabels[key] || label.split(' ')[0]}
-              </button>
-              );
-            })}
-          </div>
         </div>
 
-        <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={mockSensorHistory} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorSensor" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartColors[chartType]} stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={chartColors[chartType]} stopOpacity={0.02}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-              <XAxis
-                dataKey="time"
-                tick={{ fill: 'var(--surface-text-muted)', fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                interval={5}
-              />
-              <YAxis
-                tick={{ fill: 'var(--surface-text-muted)', fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: 'var(--glass-bg)',
-                  backdropFilter: 'blur(12px)',
-                  border: 'var(--glass-border)',
-                  borderRadius: '12px',
-                  boxShadow: 'var(--glass-shadow)',
-                }}
-                labelStyle={{ color: 'var(--surface-text)', fontWeight: 600 }}
-              />
-              <Area
-                type="monotone"
-                dataKey={chartType}
-                stroke={chartColors[chartType]}
-                strokeWidth={2}
-                fill="url(#colorSensor)"
-                dot={false}
-                animationDuration={1000}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '700ms', animationFillMode: 'forwards' }}>
-        <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-          🕒 Aktivitas Penyiraman Terkini
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--surface-border)' }}>
-                <th className="text-left py-2 px-3 font-medium text-xs" style={{ color: 'var(--surface-text-muted)' }}>Zona</th>
-                <th className="text-left py-2 px-3 font-medium text-xs" style={{ color: 'var(--surface-text-muted)' }}>Sumber</th>
-                <th className="text-left py-2 px-3 font-medium text-xs" style={{ color: 'var(--surface-text-muted)' }}>Durasi</th>
-                <th className="text-left py-2 px-3 font-medium text-xs" style={{ color: 'var(--surface-text-muted)' }}>Volume</th>
-                <th className="text-left py-2 px-3 font-medium text-xs" style={{ color: 'var(--surface-text-muted)' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-6 text-center text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                    Memuat aktivitas...
-                  </td>
-                </tr>
-              ) : irrigationLogs.length > 0 ? (
-                irrigationLogs.map(log => (
-                  <tr key={log.id} className="border-b hover:bg-white/30 transition-colors" style={{ borderColor: 'var(--surface-border)' }}>
-                    <td className="py-2.5 px-3 font-medium" style={{ color: 'var(--surface-text)' }}>{log.zone_name}</td>
-                    <td className="py-2.5 px-3">
-                      <span className={cn(
-                        'text-xs px-2 py-0.5 rounded-full font-medium',
-                        log.source === 'auto' && 'bg-primary-100 text-primary-700',
-                        log.source === 'schedule' && 'bg-secondary-100 text-secondary-700',
-                        log.source === 'manual_override' && 'bg-accent-200 text-accent-600',
-                      )}>
-                        {log.source === 'auto' ? '🤖 Otomatis' : log.source === 'schedule' ? '📅 Jadwal' : '🔧 Override'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-xs" style={{ color: 'var(--surface-text)' }}>{log.duration_minutes}m</td>
-                    <td className="py-2.5 px-3 font-mono text-xs" style={{ color: 'var(--surface-text)' }}>{formatNumber(log.water_volume_liters)}L</td>
-                    <td className="py-2.5 px-3 flex items-center gap-1.5 flex-wrap">
-                      <span className={cn(
-                        'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
-                        log.mode === 'fertigation' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
-                      )}>
-                        {log.mode === 'fertigation' ? '🧪 Nutrisi' : '💧 Air Saja'}
-                      </span>
-                      <span className={cn(
-                        'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
-                        log.status === 'running' && 'bg-primary-100 text-primary-700 animate-pulse',
-                        log.status === 'completed' && 'bg-gray-100 text-gray-600',
-                      )}>
-                        {log.status === 'running' ? '▶️ Berjalan' : '✅ Selesai'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="py-6 text-center text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                    Belum ada riwayat aktivitas penyiraman.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

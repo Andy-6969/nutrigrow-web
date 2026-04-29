@@ -21,7 +21,6 @@ const navItems = [
   { id: 'monitoring',    label: 'Monitoring',      icon: Activity,        href: '/monitoring' },
   { id: 'eco-savings',   label: 'Eco-Savings',     icon: Leaf,            href: '/eco-savings' },
   { id: 'schedules',     label: 'Jadwal',          icon: Calendar,        href: '/schedules' },
-  { id: 'override',      label: 'Manual Override', icon: Wrench,          href: '/override' },
   { id: 'devices',       label: 'Perangkat',       icon: Cpu,             href: '/devices' },
   { id: 'notifications',    label: 'Notifikasi',      icon: Bell,            href: '/notifications' },
   { id: 'user_management',  label: 'Kelola User',     icon: Users,           href: '/user-management' },
