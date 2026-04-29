@@ -170,8 +170,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
         <header
-          className="h-16 shrink-0 border-b border-emerald-900/40 flex items-center justify-between px-4 lg:px-6"
-          style={{ background: 'rgba(6,15,12,0.85)', backdropFilter: 'blur(16px)' }}
+          className="h-16 shrink-0 flex items-center justify-between px-4 lg:px-6"
+          style={{
+            background: 'var(--topbar-bg)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: '1px solid var(--topbar-border)',
+          }}
         >
           {/* Left: mobile menu + breadcrumb */}
           <div className="flex items-center gap-3">
@@ -182,10 +186,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div>
-              <h2 className="text-lg font-semibold text-emerald-50">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--topbar-text)' }}>
                 {navItems.find(n => n.href === pathname)?.label || 'Dashboard'}
               </h2>
-              <p className="text-xs hidden sm:block text-emerald-600">
+              <p className="text-xs hidden sm:block" style={{ color: 'var(--topbar-text-muted)' }}>
                 Bitanic Pro V4 — Smart Fertigation Monitoring
               </p>
             </div>
@@ -196,14 +200,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg transition-colors hover:bg-emerald-900/40 text-emerald-600 hover:text-emerald-300"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: 'var(--topbar-text-muted)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               title="Toggle tema"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
             {/* Notification bell */}
-            <Link href="/notifications" className="p-2 rounded-lg transition-colors hover:bg-emerald-900/40 text-emerald-600 hover:text-emerald-300 relative">
+            <Link
+              href="/notifications"
+              className="p-2 rounded-lg transition-colors relative"
+              style={{ color: 'var(--topbar-text-muted)' }}
+            >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -213,7 +224,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
 
             {/* User + Logout */}
-            <div className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l border-emerald-900/60">
+            <div
+              className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l"
+              style={{ borderColor: 'var(--topbar-border)' }}
+            >
               {profile?.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -227,8 +241,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               )}
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-emerald-50">{profile?.full_name || 'Pengguna'}</p>
-                <p className="text-[11px] text-emerald-600">
+                <p className="text-sm font-medium" style={{ color: 'var(--topbar-text)' }}>{profile?.full_name || 'Pengguna'}</p>
+                <p className="text-[11px]" style={{ color: 'var(--topbar-text-muted)' }}>
                   {role === 'super_admin' ? '⭐ Super Admin' : role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : 'Tamu'}
                 </p>
               </div>

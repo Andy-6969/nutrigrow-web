@@ -89,6 +89,12 @@
   --glass-border: 1px solid rgba(16, 185, 129, 0.15);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 
+  /* Topbar */
+  --topbar-bg:          rgba(6, 15, 12, 0.85);
+  --topbar-border:      rgba(6, 78, 59, 0.4);
+  --topbar-text:        #ECFDF5;
+  --topbar-text-muted:  #6EE7B7;
+
   /* Layout */
   --sidebar-width:     260px;
   --sidebar-collapsed: 72px;
@@ -106,20 +112,33 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark-mode toggle (optional — kept for future use if light mode is needed) */
+/* ============================================
+   Light Mode — White & Emerald Green
+   ============================================ */
 [data-theme="light"] {
+  /* Backgrounds */
   --surface-bg:         #F0FDF4;
   --surface-bg-alt:     #ECFDF5;
-  --surface-card:       rgba(255, 255, 255, 0.72);
-  --surface-card-hover: rgba(255, 255, 255, 0.88);
-  --surface-border:     rgba(16, 185, 129, 0.15);
+  --surface-card:       rgba(255, 255, 255, 0.80);
+  --surface-card-hover: rgba(255, 255, 255, 0.95);
+  --surface-border:     rgba(16, 185, 129, 0.18);
+
+  /* Text */
   --surface-text:        #1F2937;
-  --surface-text-muted:  #6B7280;
-  --surface-text-subtle: #9CA3AF;
-  --glass-bg:     rgba(255, 255, 255, 0.72);
+  --surface-text-muted:  #059669;
+  --surface-text-subtle: #10B981;
+
+  /* Glassmorphism — light white */
+  --glass-bg:     rgba(255, 255, 255, 0.75);
   --glass-blur:   12px;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.35);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-border: 1px solid rgba(16, 185, 129, 0.15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+
+  /* Topbar — light frosted white */
+  --topbar-bg:         rgba(240, 253, 244, 0.92);
+  --topbar-border:     rgba(16, 185, 129, 0.2);
+  --topbar-text:       #1F2937;
+  --topbar-text-muted: #059669;
 }
 
 /* ============================================
