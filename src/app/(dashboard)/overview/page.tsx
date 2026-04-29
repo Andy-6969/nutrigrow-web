@@ -2,25 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Droplets, Leaf, DollarSign, Zap, CloudRain,
-  Wind, Thermometer, AlertTriangle, Power,
-  ChevronRight, Activity
+  Droplets, Leaf, Zap, CloudRain,
+  Wind, Thermometer, Power, Activity
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid
 } from 'recharts';
-import Lottie from 'lottie-react';
 import { mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import type { WeatherData, SensorData } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
+import GreenhouseAnimation from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
-
-// TODO: Frontend Team - Unduh file Lottie JSON dari LottieFiles 
-// (Keyword: Isometric Farm / Smart City Isometric / Greenhouse) dengan background transparan.
-// Simpan di `src/assets/lottie/farm.json` lalu uncomment baris di bawah ini:
-// import farmAnimation from '@/assets/lottie/farm.json';
 
 export default function OverviewPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -172,19 +166,9 @@ export default function OverviewPage() {
 
           {/* Lottie Container */}
           <div className="relative w-full max-w-[600px] aspect-square flex items-center justify-center">
-            {/* Lottie component */}
-            <div className="w-[80%] h-[80%] relative z-10 flex items-center justify-center">
-              {/* NOTE: Gunakan variabel `farmAnimation` setelah di-import */}
-              <Lottie 
-                animationData={undefined /* farmAnimation */} 
-                loop={true}
-                className="w-full h-full opacity-90 drop-shadow-2xl"
-              />
-              {/* Dummy Placeholder if no animationData */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center border border-dashed border-slate-700/50 rounded-full animate-pulse-slow">
-                <p className="text-xs text-slate-500 font-mono">[ LOTTIE ANIMATION HERE ]</p>
-                <p className="text-[10px] text-slate-600 font-mono mt-1">Insert JSON from LottieFiles</p>
-              </div>
+            {/* 3D Greenhouse Animation */}
+            <div className="w-[90%] h-[90%] relative z-10">
+              <GreenhouseAnimation />
             </div>
 
             {/* HUD Floating Badges */}
