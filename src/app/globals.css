@@ -68,51 +68,58 @@
 }
 
 /* ============================================
-   CSS Custom Properties (non-Tailwind tokens)
+   CSS Custom Properties — Dark Forest Theme (Default)
    ============================================ */
 :root {
-  --surface-bg: #F0FDF4;
-  --surface-bg-alt: #ECFDF5;
-  --surface-card: rgba(255, 255, 255, 0.72);
-  --surface-card-hover: rgba(255, 255, 255, 0.88);
-  --surface-border: rgba(16, 185, 129, 0.15);
-  --surface-text: #1F2937;
-  --surface-text-muted: #6B7280;
-  --surface-text-subtle: #9CA3AF;
+  /* Backgrounds */
+  --surface-bg:         #060F0C;
+  --surface-bg-alt:     #0D1F1A;
+  --surface-card:       rgba(16, 185, 129, 0.06);
+  --surface-card-hover: rgba(16, 185, 129, 0.11);
+  --surface-border:     rgba(16, 185, 129, 0.18);
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-blur: 12px;
-  --glass-border: 1px solid rgba(255, 255, 255, 0.35);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  /* Text */
+  --surface-text:        #ECFDF5;
+  --surface-text-muted:  #6EE7B7;
+  --surface-text-subtle: #34D399;
 
-  --sidebar-width: 260px;
+  /* Glassmorphism — dark tinted */
+  --glass-bg:     rgba(13, 31, 26, 0.65);
+  --glass-blur:   16px;
+  --glass-border: 1px solid rgba(16, 185, 129, 0.15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+  /* Layout */
+  --sidebar-width:     260px;
   --sidebar-collapsed: 72px;
-  --topbar-height: 64px;
+  --topbar-height:     64px;
 
+  /* Radii */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
 
+  /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- Dark Mode --- */
-[data-theme="dark"] {
-  --surface-bg: #0A0F1C;
-  --surface-bg-alt: #0D1321;
-  --surface-card: rgba(255, 255, 255, 0.05);
-  --surface-card-hover: rgba(255, 255, 255, 0.09);
-  --surface-border: rgba(255, 255, 255, 0.08);
-  --surface-text: #F9FAFB;
-  --surface-text-muted: #9CA3AF;
-  --surface-text-subtle: #6B7280;
-
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+/* Dark-mode toggle (optional — kept for future use if light mode is needed) */
+[data-theme="light"] {
+  --surface-bg:         #F0FDF4;
+  --surface-bg-alt:     #ECFDF5;
+  --surface-card:       rgba(255, 255, 255, 0.72);
+  --surface-card-hover: rgba(255, 255, 255, 0.88);
+  --surface-border:     rgba(16, 185, 129, 0.15);
+  --surface-text:        #1F2937;
+  --surface-text-muted:  #6B7280;
+  --surface-text-subtle: #9CA3AF;
+  --glass-bg:     rgba(255, 255, 255, 0.72);
+  --glass-blur:   12px;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 /* ============================================
@@ -230,17 +237,14 @@ body {
   border-radius: var(--radius-md);
 }
 
+/* Dark Forest — glass always dark tinted */
 .glass-heavy {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(13, 31, 26, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: var(--glass-border);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   border-radius: var(--radius-xl);
-}
-
-[data-theme="dark"] .glass-heavy {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================
@@ -260,16 +264,9 @@ body {
 
 .gradient-mesh {
   background:
-    radial-gradient(at 20% 20%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-    radial-gradient(at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
-}
-
-[data-theme="dark"] .gradient-mesh {
-  background:
-    radial-gradient(at 20% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-    radial-gradient(at 80% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.03) 0%, transparent 50%);
+    radial-gradient(at 15% 20%, rgba(16, 185, 129, 0.10) 0%, transparent 55%),
+    radial-gradient(at 85% 80%, rgba(6, 182, 212, 0.07) 0%, transparent 55%),
+    radial-gradient(at 50% 50%, rgba(4, 120, 87, 0.05) 0%, transparent 60%);
 }
 
 /* ============================================
