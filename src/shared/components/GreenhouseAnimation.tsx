@@ -2,37 +2,115 @@
 
 import { useEffect, useRef } from 'react';
 
-export default function GreenhouseAnimation() {
+export type GreenhouseCondition = 'idle' | 'irrigating' | 'fertigating' | 'error' | 'offline' | 'delayed';
+
+interface Props {
+  condition?: GreenhouseCondition;
+}
+
+// ─── Theme per condition ─────────────────────────────────────────────
+const THEMES: Record<GreenhouseCondition, {
+  plantColor: string;
+  leafTop: string;
+  stemColor: string;
+  soilColor: string;
+  glassStroke: string;
+  glassOpacity: number;
+  groundColor: string;
+  ambientGlow: string;
+  showWater: boolean;
+  waterColor: string;
+  sensorColor: string;
+  sensorPulse: string;
+  filterGlow: string;
+  wilted: boolean;
+  flickerSensor: boolean;
+  label: string;
+  labelColor: string;
+}> = {
+  idle: {
+    plantColor: '#10b981', leafTop: '#6ee7b7', stemColor: '#059669',
+    soilColor: '#78350f', glassStroke: '#34d399', glassOpacity: 0.18,
+    groundColor: '#064e3b', ambientGlow: '#10b981',
+    showWater: true, waterColor: '#67e8f9',
+    sensorColor: '#10b981', sensorPulse: '#10b981',
+    filterGlow: '0 0 12px #10b98166', wilted: false, flickerSensor: false,
+    label: 'NORMAL', labelColor: '#10b981',
+  },
+  irrigating: {
+    plantColor: '#10b981', leafTop: '#6ee7b7', stemColor: '#059669',
+    soilColor: '#451a03', glassStroke: '#38bdf8', glassOpacity: 0.22,
+    groundColor: '#064e3b', ambientGlow: '#38bdf8',
+    showWater: true, waterColor: '#38bdf8',
+    sensorColor: '#38bdf8', sensorPulse: '#38bdf8',
+    filterGlow: '0 0 18px #38bdf888', wilted: false, flickerSensor: false,
+    label: 'IRRIGATING', labelColor: '#38bdf8',
+  },
+  fertigating: {
+    plantColor: '#10b981', leafTop: '#a7f3d0', stemColor: '#059669',
+    soilColor: '#451a03', glassStroke: '#a78bfa', glassOpacity: 0.22,
+    groundColor: '#064e3b', ambientGlow: '#a78bfa',
+    showWater: true, waterColor: '#c4b5fd',
+    sensorColor: '#a78bfa', sensorPulse: '#a78bfa',
+    filterGlow: '0 0 18px #a78bfa88', wilted: false, flickerSensor: false,
+    label: 'FERTIGATING', labelColor: '#a78bfa',
+  },
+  error: {
+    plantColor: '#78350f', leafTop: '#92400e', stemColor: '#451a03',
+    soilColor: '#292524', glassStroke: '#f59e0b', glassOpacity: 0.12,
+    groundColor: '#1c1917', ambientGlow: '#f59e0b',
+    showWater: false, waterColor: '#fbbf24',
+    sensorColor: '#ef4444', sensorPulse: '#ef4444',
+    filterGlow: '0 0 12px #f59e0b44', wilted: true, flickerSensor: true,
+    label: 'DRY / ERROR', labelColor: '#f59e0b',
+  },
+  offline: {
+    plantColor: '#525252', leafTop: '#737373', stemColor: '#404040',
+    soilColor: '#292524', glassStroke: '#6b7280', glassOpacity: 0.08,
+    groundColor: '#1c1917', ambientGlow: '#6b7280',
+    showWater: false, waterColor: '#9ca3af',
+    sensorColor: '#ef4444', sensorPulse: '#ef4444',
+    filterGlow: '0 0 6px #6b728044', wilted: true, flickerSensor: true,
+    label: 'OFFLINE', labelColor: '#9ca3af',
+  },
+  delayed: {
+    plantColor: '#10b981', leafTop: '#6ee7b7', stemColor: '#059669',
+    soilColor: '#78350f', glassStroke: '#7dd3fc', glassOpacity: 0.14,
+    groundColor: '#064e3b', ambientGlow: '#7dd3fc',
+    showWater: false, waterColor: '#7dd3fc',
+    sensorColor: '#7dd3fc', sensorPulse: '#7dd3fc',
+    filterGlow: '0 0 10px #7dd3fc44', wilted: false, flickerSensor: false,
+    label: 'SMART DELAY', labelColor: '#7dd3fc',
+  },
+};
+
+export default function GreenhouseAnimation({ condition = 'idle' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const t = THEMES[condition];
 
   useEffect(() => {
-    // Particle effect: floating water droplets
+    if (!t.showWater) return;
     const container = containerRef.current;
     if (!container) return;
-
-    const createParticle = () => {
-      const particle = document.createElement('div');
-      const size = Math.random() * 4 + 2;
-      particle.style.cssText = `
-        position: absolute;
-        width: ${size}px;
-        height: ${size}px;
-        background: radial-gradient(circle, #67e8f9, #06b6d4);
-        border-radius: 50%;
-        left: ${20 + Math.random() * 60}%;
-        bottom: 20%;
-        opacity: 0;
-        pointer-events: none;
-        animation: floatUp ${2 + Math.random() * 2}s ease-out forwards;
-        z-index: 20;
+    const createDrop = () => {
+      const drop = document.createElement('div');
+      const size = Math.random() * 3 + 2;
+      const x = 18 + Math.random() * 64;
+      drop.style.cssText = `
+        position:absolute; width:${size}px; height:${size}px;
+        background:${t.waterColor}; border-radius:50%;
+        left:${x}%; bottom:22%; opacity:0; pointer-events:none;
+        animation: dropFall ${1.4 + Math.random() * 1}s ease-out forwards;
       `;
-      container.appendChild(particle);
-      setTimeout(() => particle.remove(), 4000);
+      container.appendChild(drop);
+      setTimeout(() => drop.remove(), 2500);
     };
+    const id = setInterval(createDrop, condition === 'irrigating' ? 250 : 500);
+    return () => clearInterval(id);
+  }, [condition, t.showWater, t.waterColor]);
 
-    const interval = setInterval(createParticle, 400);
-    return () => clearInterval(interval);
-  }, []);
+  // Plant y positions — wilt offset for dry/offline
+  const wilt = t.wilted;
 
   return (
     <div
@@ -41,342 +119,231 @@ export default function GreenhouseAnimation() {
       style={{ perspective: '900px' }}
     >
       <style>{`
-        @keyframes floatUp {
-          0%   { opacity: 0; transform: translateY(0) scale(1); }
-          20%  { opacity: 0.8; }
-          100% { opacity: 0; transform: translateY(-120px) scale(0.3) translateX(${Math.random() > 0.5 ? '' : '-'}${Math.floor(Math.random() * 30)}px); }
+        @keyframes dropFall {
+          0%   { opacity:0; transform:translateY(0) scale(1); }
+          15%  { opacity:.75; }
+          100% { opacity:0; transform:translateY(-90px) scale(.4); }
         }
-
-        @keyframes plantSway {
-          0%, 100% { transform: rotate(-2deg) scaleY(1); }
-          50%       { transform: rotate(2deg) scaleY(1.02); }
+        @keyframes sway {
+          0%,100% { transform:rotate(-2deg) scaleY(1); }
+          50%      { transform:rotate(2deg) scaleY(1.02); }
         }
-
+        @keyframes wiltSway {
+          0%,100% { transform:rotate(-4deg) scaleY(.95); }
+          50%      { transform:rotate(-1deg) scaleY(.93); }
+        }
         @keyframes leafPulse {
-          0%, 100% { transform: scale(1) rotate(0deg); }
-          50%       { transform: scale(1.08) rotate(3deg); }
+          0%,100% { transform:scale(1); }
+          50%      { transform:scale(1.06); }
         }
-
-        @keyframes scanLine {
-          0%   { transform: translateY(-100%); opacity: 0; }
-          10%  { opacity: 0.6; }
-          90%  { opacity: 0.6; }
-          100% { transform: translateY(220px); opacity: 0; }
+        @keyframes sceneRock {
+          0%,100% { transform:rotateX(12deg) rotateY(-6deg); }
+          50%      { transform:rotateX(12deg) rotateY(6deg); }
         }
-
-        @keyframes glow-pulse {
-          0%, 100% { filter: drop-shadow(0 0 6px #10b981) drop-shadow(0 0 12px #10b98166); }
-          50%       { filter: drop-shadow(0 0 14px #10b981) drop-shadow(0 0 28px #10b98188); }
+        @keyframes sensorBlink {
+          0%,49%,51%,100% { opacity:1; }
+          50%              { opacity:.1; }
         }
-
-        @keyframes orbitDot {
-          from { transform: rotate(0deg) translateX(110px) rotate(0deg); }
-          to   { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
+        @keyframes ambientPulse {
+          0%,100% { opacity:.12; }
+          50%      { opacity:.22; }
         }
-
-        @keyframes orbitDot2 {
-          from { transform: rotate(120deg) translateX(100px) rotate(-120deg); }
-          to   { transform: rotate(480deg) translateX(100px) rotate(-480deg); }
-        }
-
-        @keyframes orbitDot3 {
-          from { transform: rotate(240deg) translateX(90px) rotate(-240deg); }
-          to   { transform: rotate(600deg) translateX(90px) rotate(-600deg); }
-        }
-
-        @keyframes rotateScene {
-          0%, 100% { transform: rotateX(12deg) rotateY(-8deg); }
-          50%       { transform: rotateX(12deg) rotateY(8deg); }
-        }
-
-        @keyframes drip {
-          0%   { transform: translateY(0) scaleY(1); opacity: 1; }
-          60%  { transform: translateY(30px) scaleY(1.8); opacity: 0.8; }
-          100% { transform: translateY(60px) scaleY(0.2); opacity: 0; }
-        }
-
         @keyframes pipePulse {
-          0%, 100% { stroke: #06b6d4; }
-          50%       { stroke: #67e8f9; }
+          0%,100% { stroke-width:2; }
+          50%      { stroke-width:3; }
         }
-
-        @keyframes dataFlicker {
-          0%, 95%, 100% { opacity: 1; }
-          96%, 99% { opacity: 0.4; }
-        }
-
-        .scene-rotate { animation: rotateScene 8s ease-in-out infinite; }
-        .plant-sway   { animation: plantSway 3s ease-in-out infinite; transform-origin: bottom center; }
-        .leaf-pulse   { animation: leafPulse 2.5s ease-in-out infinite; }
-        .glow-effect  { animation: glow-pulse 2s ease-in-out infinite; }
-        .data-flicker { animation: dataFlicker 5s ease-in-out infinite; }
+        .scene-rock { animation: sceneRock 9s ease-in-out infinite; }
+        .plant-sway { animation: sway 3.5s ease-in-out infinite; transform-origin: bottom center; }
+        .plant-wilt { animation: wiltSway 4s ease-in-out infinite; transform-origin: bottom center; }
+        .leaf-pulse { animation: leafPulse 2.8s ease-in-out infinite; }
+        .sensor-blink { animation: sensorBlink 1.2s step-end infinite; }
+        .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
       `}</style>
 
-      {/* ─── Orbit Data Dots ─────────────────────────────── */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-        <div style={{ position: 'relative', width: 0, height: 0 }}>
-          {/* dot 1 */}
-          <div style={{ position: 'absolute', animation: 'orbitDot 9s linear infinite' }}>
-            <div className="bg-emerald-400/90 rounded-full shadow-[0_0_8px_#10b981] data-flicker"
-              style={{ width: 8, height: 8, marginLeft: -4, marginTop: -4 }} />
-          </div>
-          {/* dot 2 */}
-          <div style={{ position: 'absolute', animation: 'orbitDot2 12s linear infinite' }}>
-            <div className="bg-cyan-400/90 rounded-full shadow-[0_0_8px_#22d3ee]"
-              style={{ width: 6, height: 6, marginLeft: -3, marginTop: -3 }} />
-          </div>
-          {/* dot 3 */}
-          <div style={{ position: 'absolute', animation: 'orbitDot3 15s linear infinite' }}>
-            <div className="bg-teal-300/80 rounded-full shadow-[0_0_8px_#5eead4]"
-              style={{ width: 5, height: 5, marginLeft: -2.5, marginTop: -2.5 }} />
-          </div>
-        </div>
+      {/* ─── Status Label ─────────────────────────── */}
+      <div
+        className="absolute top-2 left-1/2 -translate-x-1/2 z-30 px-3 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-widest border"
+        style={{
+          color: t.labelColor,
+          borderColor: `${t.labelColor}44`,
+          background: `${t.labelColor}10`,
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        {t.label}
       </div>
 
-      {/* ─── Scan Line ─────────────────────────────────────── */}
-      <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-2xl">
-        <div
-          style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            height: '3px',
-            background: 'linear-gradient(90deg, transparent 0%, #10b98144 30%, #10b981 50%, #10b98144 70%, transparent 100%)',
-            animation: 'scanLine 4s linear infinite',
-          }}
-        />
-      </div>
-
-      {/* ─── 3D Greenhouse Scene ───────────────────────────── */}
-      <div className="scene-rotate" style={{ transformStyle: 'preserve-3d', width: 340, height: 320 }}>
-        <svg
-          viewBox="0 0 340 320"
-          width="340"
-          height="320"
-          xmlns="http://www.w3.org/2000/svg"
-          className="glow-effect"
-          style={{ overflow: 'visible' }}
-        >
+      {/* ─── 3D Scene ─────────────────────────────── */}
+      <div className="scene-rock" style={{ transformStyle: 'preserve-3d', width: 320, height: 310 }}>
+        <svg viewBox="0 0 320 310" width="320" height="310" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible', filter: `drop-shadow(${t.filterGlow})` }}>
           <defs>
-            {/* Floor gradient */}
-            <linearGradient id="floorGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#064e3b" />
-              <stop offset="100%" stopColor="#022c22" />
+            <linearGradient id="floorG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={t.groundColor} />
+              <stop offset="100%" stopColor="#020a06" />
             </linearGradient>
-
-            {/* Glass panel gradient */}
-            <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.06" />
+            <linearGradient id="soilG" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={t.soilColor} />
+              <stop offset="100%" stopColor="#1c0a00" />
             </linearGradient>
-
-            {/* Glass panel darker */}
-            <linearGradient id="glassGrad2" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="#0e7490" stopOpacity="0.04" />
+            <linearGradient id="stemG" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor={t.stemColor} />
+              <stop offset="100%" stopColor={t.plantColor} />
             </linearGradient>
-
-            {/* Roof gradient */}
-            <linearGradient id="roofGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a7f3d0" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#34d399" stopOpacity="0.08" />
-            </linearGradient>
-
-            {/* Plant gradient */}
-            <linearGradient id="plantGrad" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="#064e3b" />
-              <stop offset="100%" stopColor="#10b981" />
-            </linearGradient>
-
-            {/* Leaf gradient */}
-            <radialGradient id="leafGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#6ee7b7" />
-              <stop offset="100%" stopColor="#059669" />
+            <radialGradient id="leafG" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={t.leafTop} />
+              <stop offset="100%" stopColor={t.plantColor} />
             </radialGradient>
-
-            {/* Water gradient */}
-            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#0891b2" stopOpacity="0.6" />
+            <linearGradient id="waterG" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={t.waterColor} stopOpacity=".9" />
+              <stop offset="100%" stopColor={t.waterColor} stopOpacity=".3" />
             </linearGradient>
-
-            {/* Ground soil */}
-            <linearGradient id="soilGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#78350f" />
-              <stop offset="100%" stopColor="#451a03" />
-            </linearGradient>
-
-            {/* Glow filter */}
             <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-
-            <filter id="softGlow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           </defs>
 
-          {/* ── GROUND PLATFORM (Isometric base) ────────────── */}
-          <polygon points="170,270 300,210 300,225 170,285 40,225 40,210" fill="#021a12" opacity="0.9" />
-          <polygon points="170,270 300,210 170,150 40,210" fill="url(#floorGrad)" stroke="#10b98133" strokeWidth="1" />
+          {/* ── Ground Platform ───────────────── */}
+          <polygon points="160,262 286,204 286,218 160,276 34,218 34,204" fill="#020a06" opacity=".9" />
+          <polygon points="160,262 286,204 160,146 34,204" fill="url(#floorG)" stroke={`${t.glassStroke}22`} strokeWidth="1" />
 
-          {/* Grid lines on floor */}
-          {[0.25, 0.5, 0.75].map((t, i) => (
-            <g key={i} opacity="0.2">
-              <line x1={40 + (300 - 40) * t} y1={210 - 60 * t} x2={170} y2={270 - 120 * t} stroke="#10b981" strokeWidth="0.8" />
-              <line x1={170} y1={150 + 120 * t} x2={300 - (300 - 40) * t} y2={210 - 60 * t} stroke="#10b981" strokeWidth="0.8" />
+          {/* Floor grid */}
+          {[0.33, 0.66].map((k,i) => (
+            <g key={i} opacity="0.12">
+              <line x1={34+(252*k)} y1={204-(58*k)} x2={160} y2={262-(116*k)} stroke={t.glassStroke} strokeWidth=".8"/>
+              <line x1={160} y1={146+(116*k)} x2={286-(252*k)} y2={204-(58*k)} stroke={t.glassStroke} strokeWidth=".8"/>
             </g>
           ))}
 
-          {/* ── SOIL BEDS ────────────────────────────────────── */}
-          {/* Left bed */}
-          <ellipse cx="120" cy="228" rx="38" ry="14" fill="url(#soilGrad)" stroke="#92400e33" strokeWidth="1" />
-          {/* Right bed */}
-          <ellipse cx="228" cy="215" rx="38" ry="14" fill="url(#soilGrad)" stroke="#92400e33" strokeWidth="1" />
+          {/* Soil Beds */}
+          <ellipse cx="112" cy="222" rx="34" ry="12" fill="url(#soilG)" />
+          <ellipse cx="215" cy="210" rx="34" ry="12" fill="url(#soilG)" />
 
-          {/* ── GREENHOUSE STRUCTURE ─────────────────────────── */}
-          {/* Back wall */}
-          <polygon points="170,80 260,130 260,210 170,160" fill="url(#glassGrad)" stroke="#67e8f966" strokeWidth="1.2" />
-          {/* Left wall */}
-          <polygon points="170,80 80,130 80,210 170,160" fill="url(#glassGrad2)" stroke="#67e8f955" strokeWidth="1.2" />
+          {/* Dry crack lines (error/offline only) */}
+          {wilt && <>
+            <line x1="100" y1="218" x2="115" y2="228" stroke="#78350f" strokeWidth=".8" opacity=".6"/>
+            <line x1="118" y1="215" x2="108" y2="226" stroke="#78350f" strokeWidth=".8" opacity=".6"/>
+            <line x1="203" y1="205" x2="218" y2="215" stroke="#78350f" strokeWidth=".8" opacity=".6"/>
+          </>}
 
-          {/* Glass panels - back wall (grid lines) */}
-          {[1, 2].map(i => (
-            <line key={i}
-              x1={170 + (260 - 170) * (i / 3)} y1={80 + (130 - 80) * (i / 3)}
-              x2={170 + (260 - 170) * (i / 3)} y2={160 + (210 - 160) * (i / 3)}
-              stroke="#a5f3fc44" strokeWidth="0.8"
-            />
+          {/* ── Greenhouse Structure ───────────── */}
+          <polygon points="160,76 244,124 244,204 160,156" fill={t.glassStroke} fillOpacity={t.glassOpacity} stroke={`${t.glassStroke}88`} strokeWidth="1.2" />
+          <polygon points="160,76 76,124 76,204 160,156" fill={t.glassStroke} fillOpacity={t.glassOpacity * 0.7} stroke={`${t.glassStroke}66`} strokeWidth="1.2" />
+
+          {/* Glass panels grid */}
+          {[1,2].map(i=>(
+            <line key={i} x1={160+(84*(i/3))} y1={76+(48*(i/3))} x2={160+(84*(i/3))} y2={156+(48*(i/3))} stroke={`${t.glassStroke}33`} strokeWidth=".8"/>
           ))}
-          {[1, 2].map(i => (
-            <line key={i}
-              x1={170} y1={80 + (130 - 80) * (i / 3) + (160 - 80) * (i / 3) / 3}
-              x2={260} y2={130 + (210 - 130) * (i / 3)}
-              stroke="#a5f3fc33" strokeWidth="0.8"
-            />
-          ))}
+          <line x1="160" y1="116" x2="244" y2="164" stroke={`${t.glassStroke}22`} strokeWidth=".8"/>
 
-          {/* Roof - left panel */}
-          <polygon points="170,50 80,110 80,130 170,80" fill="url(#roofGrad)" stroke="#6ee7b788" strokeWidth="1.5" />
-          {/* Roof - right panel */}
-          <polygon points="170,50 260,110 260,130 170,80" fill="url(#roofGrad)" stroke="#6ee7b7aa" strokeWidth="1.5" />
+          {/* Roof */}
+          <polygon points="160,48 76,108 76,124 160,76" fill={t.glassStroke} fillOpacity={t.glassOpacity * 1.2} stroke={`${t.glassStroke}99`} strokeWidth="1.5"/>
+          <polygon points="160,48 244,108 244,124 160,76" fill={t.glassStroke} fillOpacity={t.glassOpacity * 1.5} stroke={`${t.glassStroke}bb`} strokeWidth="1.5"/>
+          <line x1="160" y1="48" x2="160" y2="76" stroke={t.leafTop} strokeWidth="2" filter="url(#glow)" opacity=".8"/>
 
-          {/* Roof ridge line */}
-          <line x1="170" y1="50" x2="170" y2="80" stroke="#a7f3d0" strokeWidth="2" filter="url(#glow)" />
+          {/* Frame */}
+          <line x1="76" y1="108" x2="76" y2="204" stroke={`${t.glassStroke}55`} strokeWidth="1.5"/>
+          <line x1="244" y1="108" x2="244" y2="204" stroke={`${t.glassStroke}77`} strokeWidth="1.5"/>
 
-          {/* Structure frame lines */}
-          <line x1="80" y1="110" x2="80" y2="210" stroke="#34d39966" strokeWidth="1.5" />
-          <line x1="260" y1="110" x2="260" y2="210" stroke="#34d39988" strokeWidth="1.5" />
-          <line x1="80" y1="210" x2="170" y2="160" stroke="#34d39944" strokeWidth="1" />
-          <line x1="260" y1="210" x2="170" y2="160" stroke="#34d39944" strokeWidth="1" />
+          {/* ── Irrigation Pipe ───────────────── */}
+          <line x1="96" y1="130" x2="224" y2="130" stroke="#0e7490" strokeWidth="4" strokeLinecap="round" opacity={t.showWater ? 1 : 0.3}/>
+          {t.showWater && (
+            <line x1="96" y1="130" x2="224" y2="130" stroke={t.waterColor} strokeWidth="1.5" strokeLinecap="round"
+              style={{ animation: 'pipePulse 1.8s ease-in-out infinite' }}/>
+          )}
 
-          {/* ── IRRIGATION PIPES ─────────────────────────────── */}
-          {/* Main horizontal pipe */}
-          <line x1="100" y1="135" x2="240" y2="135" stroke="#0e7490" strokeWidth="5" strokeLinecap="round" />
-          <line x1="100" y1="135" x2="240" y2="135" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round"
-            style={{ animation: 'pipePulse 2s ease-in-out infinite' }} />
-
-          {/* Drip nozzles */}
-          {[120, 170, 220].map((x, i) => (
+          {/* Nozzles */}
+          {[116, 160, 204].map((x, i) => (
             <g key={i}>
-              <circle cx={x} cy="135" r="4" fill="#0e7490" stroke="#22d3ee" strokeWidth="1.5" />
-              {/* Drip drops */}
-              <ellipse cx={x} cy={145 + i * 2} rx="2" ry="3" fill="url(#waterGrad)"
-                style={{ animation: `drip ${1.5 + i * 0.4}s ease-in ${i * 0.3}s infinite` }}
-                filter="url(#softGlow)"
-              />
+              <circle cx={x} cy="130" r="3.5" fill="#0e7490" stroke={t.showWater ? t.waterColor : '#374151'} strokeWidth="1.2"/>
+              {t.showWater && (
+                <ellipse cx={x} cy={140} rx="1.5" ry="2.5" fill="url(#waterG)"
+                  style={{ animation: `dropFall ${1.2+i*0.3}s ease-in ${i*0.25}s infinite` }}
+                  filter="url(#glow)"
+                />
+              )}
             </g>
           ))}
 
-          {/* ── PLANTS ────────────────────────────────────────── */}
-          {/* Left bed plants */}
-          {[100, 118, 136].map((x, i) => {
-            const yBase = 228 - i * 3;
-            const height = 40 + i * 8;
+          {/* ── Plants (Left Bed) ─────────────── */}
+          {[96, 112, 128].map((x, i) => {
+            const yBase = 222 - i * 3;
+            const h = wilt ? 22 + i*5 : 34 + i*7;
+            const cls = wilt ? 'plant-wilt' : 'plant-sway';
             return (
-              <g key={i} className="plant-sway" style={{ animationDelay: `${i * 0.5}s`, transformOrigin: `${x}px ${yBase}px` }}>
-                {/* Stem */}
-                <line x1={x} y1={yBase} x2={x} y2={yBase - height} stroke="url(#plantGrad)" strokeWidth="2.5" strokeLinecap="round" />
+              <g key={i} className={cls} style={{ animationDelay: `${i*0.5}s`, transformOrigin: `${x}px ${yBase}px` }}>
+                <line x1={x} y1={yBase} x2={x} y2={yBase-h} stroke="url(#stemG)" strokeWidth={wilt ? '1.5' : '2.2'} strokeLinecap="round"/>
                 {/* Left leaf */}
-                <ellipse cx={x - 10} cy={yBase - height * 0.6} rx="12" ry="6" fill="url(#leafGrad)"
-                  className="leaf-pulse"
-                  style={{ animationDelay: `${i * 0.3}s`, transform: 'rotate(-25deg)', transformOrigin: `${x}px ${yBase - height * 0.6}px` }}
+                <ellipse cx={x-8} cy={yBase-h*0.58} rx={wilt ? 7 : 10} ry={wilt ? 3.5 : 5}
+                  fill="url(#leafG)" className="leaf-pulse"
+                  style={{ animationDelay:`${i*0.3}s`, transform:`rotate(${wilt?'-35deg':'-25deg'})`, transformOrigin:`${x}px ${yBase-h*0.58}px` }}
                 />
                 {/* Right leaf */}
-                <ellipse cx={x + 10} cy={yBase - height * 0.75} rx="12" ry="6" fill="url(#leafGrad)"
-                  className="leaf-pulse"
-                  style={{ animationDelay: `${i * 0.3 + 0.5}s`, transform: 'rotate(25deg)', transformOrigin: `${x}px ${yBase - height * 0.75}px` }}
+                <ellipse cx={x+8} cy={yBase-h*0.76} rx={wilt ? 7 : 10} ry={wilt ? 3.5 : 5}
+                  fill="url(#leafG)" className="leaf-pulse"
+                  style={{ animationDelay:`${i*0.3+0.4}s`, transform:`rotate(${wilt?'35deg':'25deg'})`, transformOrigin:`${x}px ${yBase-h*0.76}px` }}
                 />
-                {/* Top bud */}
-                <circle cx={x} cy={yBase - height} r="5" fill="#6ee7b7" filter="url(#softGlow)" />
+                <circle cx={x} cy={yBase-h} r={wilt ? 3 : 4.5} fill={t.plantColor} filter="url(#glow)" opacity={wilt ? 0.5 : 1}/>
               </g>
             );
           })}
 
-          {/* Right bed plants */}
-          {[208, 226, 244].map((x, i) => {
-            const yBase = 215 - i * 3;
-            const height = 36 + i * 10;
+          {/* ── Plants (Right Bed) ────────────── */}
+          {[200, 215, 230].map((x, i) => {
+            const yBase = 210 - i * 3;
+            const h = wilt ? 20 + i*5 : 30 + i*8;
+            const cls = wilt ? 'plant-wilt' : 'plant-sway';
             return (
-              <g key={i} className="plant-sway" style={{ animationDelay: `${i * 0.7 + 0.3}s`, transformOrigin: `${x}px ${yBase}px` }}>
-                <line x1={x} y1={yBase} x2={x} y2={yBase - height} stroke="url(#plantGrad)" strokeWidth="2.5" strokeLinecap="round" />
-                <ellipse cx={x - 10} cy={yBase - height * 0.6} rx="11" ry="5.5" fill="url(#leafGrad)"
-                  className="leaf-pulse"
-                  style={{ animationDelay: `${i * 0.4}s`, transform: 'rotate(-20deg)', transformOrigin: `${x}px ${yBase - height * 0.6}px` }}
+              <g key={i} className={cls} style={{ animationDelay:`${i*0.6+0.3}s`, transformOrigin:`${x}px ${yBase}px` }}>
+                <line x1={x} y1={yBase} x2={x} y2={yBase-h} stroke="url(#stemG)" strokeWidth={wilt ? '1.5' : '2.2'} strokeLinecap="round"/>
+                <ellipse cx={x-8} cy={yBase-h*0.6} rx={wilt ? 6 : 9} ry={wilt ? 3 : 4.5}
+                  fill="url(#leafG)" className="leaf-pulse"
+                  style={{ animationDelay:`${i*0.4}s`, transform:`rotate(${wilt?'-35deg':'-20deg'})`, transformOrigin:`${x}px ${yBase-h*0.6}px` }}
                 />
-                <ellipse cx={x + 11} cy={yBase - height * 0.78} rx="11" ry="5.5" fill="url(#leafGrad)"
-                  className="leaf-pulse"
-                  style={{ animationDelay: `${i * 0.4 + 0.6}s`, transform: 'rotate(20deg)', transformOrigin: `${x}px ${yBase - height * 0.78}px` }}
+                <ellipse cx={x+8} cy={yBase-h*0.78} rx={wilt ? 6 : 9} ry={wilt ? 3 : 4.5}
+                  fill="url(#leafG)" className="leaf-pulse"
+                  style={{ animationDelay:`${i*0.4+0.5}s`, transform:`rotate(${wilt?'35deg':'20deg'})`, transformOrigin:`${x}px ${yBase-h*0.78}px` }}
                 />
-                <circle cx={x} cy={yBase - height} r="4.5" fill="#34d399" filter="url(#softGlow)" />
+                <circle cx={x} cy={yBase-h} r={wilt ? 2.5 : 4} fill={t.plantColor} filter="url(#glow)" opacity={wilt ? 0.5 : 1}/>
               </g>
             );
           })}
 
-          {/* ── SENSOR NODE (IoT device) ───────────────────────── */}
+          {/* ── IoT Sensor Node ───────────────── */}
           <g filter="url(#glow)">
-            <rect x="155" y="215" width="30" height="20" rx="4" fill="#0f172a" stroke="#10b981" strokeWidth="1.5" />
-            <rect x="155" y="215" width="30" height="20" rx="4" fill="#10b98122" />
-            {/* LED dots */}
-            <circle cx="163" cy="225" r="2.5" fill="#10b981">
-              <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+            <rect x="147" y="210" width="26" height="18" rx="4" fill="#0f172a" stroke={t.sensorColor} strokeWidth="1.5"/>
+            <rect x="147" y="210" width="26" height="18" rx="4" fill={t.sensorColor} fillOpacity=".1"/>
+
+            {/* LED 1 */}
+            <circle cx="156" cy="219" r="2.2" fill={t.sensorColor}>
+              {t.flickerSensor
+                ? <animate attributeName="opacity" values="1;0;1;0;1" dur="1.5s" repeatCount="indefinite"/>
+                : <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/>
+              }
             </circle>
-            <circle cx="172" cy="225" r="2.5" fill="#22d3ee">
-              <animate attributeName="opacity" values="0.3;1;0.3" dur="1.8s" repeatCount="indefinite" />
+            {/* LED 2 */}
+            <circle cx="163" cy="219" r="2.2" fill={condition === 'fertigating' ? '#a78bfa' : condition === 'irrigating' ? '#38bdf8' : t.sensorColor}>
+              <animate attributeName="opacity" values="0.3;1;0.3" dur="2.1s" repeatCount="indefinite"/>
             </circle>
-            <circle cx="181" cy="225" r="2.5" fill="#a78bfa">
-              <animate attributeName="opacity" values="1;0.3;1" dur="2.2s" repeatCount="indefinite" />
+            {/* LED 3 */}
+            <circle cx="170" cy="219" r="2.2" fill={t.flickerSensor ? '#ef4444' : t.sensorColor}>
+              {t.flickerSensor
+                ? <animate attributeName="opacity" values="0;1;0;1" dur="0.8s" repeatCount="indefinite"/>
+                : <animate attributeName="opacity" values="1;0.3;1" dur="2.4s" repeatCount="indefinite"/>
+              }
             </circle>
+
             {/* Antenna */}
-            <line x1="170" y1="215" x2="170" y2="204" stroke="#10b981" strokeWidth="1.5" />
-            <circle cx="170" cy="202" r="2.5" fill="#10b981">
-              <animate attributeName="r" values="2.5;4;2.5" dur="2s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+            <line x1="160" y1="210" x2="160" y2="200" stroke={t.sensorColor} strokeWidth="1.2"/>
+            <circle cx="160" cy="198" r="2" fill={t.sensorColor}>
+              {!t.flickerSensor && <animate attributeName="r" values="2;3.5;2" dur="2.5s" repeatCount="indefinite"/>}
+              {!t.flickerSensor && <animate attributeName="opacity" values="1;0.3;1" dur="2.5s" repeatCount="indefinite"/>}
             </circle>
           </g>
 
-          {/* ── AMBIENT GLOW at bottom ─────────────────────────── */}
-          <ellipse cx="170" cy="275" rx="90" ry="12" fill="#10b981" opacity="0.12" />
+          {/* ── Ambient Floor Glow ────────────── */}
+          <ellipse cx="160" cy="268" rx="85" ry="10" fill={t.ambientGlow} className="ambient-pulse"/>
         </svg>
-      </div>
-
-      {/* ─── Corner Data Readouts ─────────────────────────── */}
-      <div className="absolute top-4 left-4 z-30 font-mono text-[9px] text-emerald-400/50 data-flicker leading-relaxed pointer-events-none">
-        <p>SYS:ONLINE</p>
-        <p>NODE:01/01</p>
-        <p>TEMP:OK</p>
-      </div>
-      <div className="absolute top-4 right-4 z-30 font-mono text-[9px] text-cyan-400/50 data-flicker leading-relaxed text-right pointer-events-none"
-        style={{ animationDelay: '0.5s' }}>
-        <p>IRRIG:ACTIVE</p>
-        <p>PUMP:ON</p>
-        <p>AI:MONITORING</p>
       </div>
     </div>
   );
