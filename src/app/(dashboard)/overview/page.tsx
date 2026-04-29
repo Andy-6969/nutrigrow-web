@@ -27,6 +27,42 @@ export default function OverviewPage() {
   const [animKey, setAnimKey] = useState(0);
   const [isOverriding, setIsOverriding] = useState(false);
   const [isHoveringOverride, setIsHoveringOverride] = useState(false);
+  const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'fertigation'>('water');
+
+  const IRRIGATION_MODES = [
+    {
+      id: 'water' as const,
+      label: 'Air Biasa',
+      emoji: '💧',
+      desc: 'Hanya air bersih',
+      color: '#38bdf8',
+      glow: 'shadow-[0_0_20px_rgba(56,189,248,0.4)]',
+      border: 'border-sky-400/60',
+      bg: 'bg-sky-400/10',
+    },
+    {
+      id: 'fertilizer' as const,
+      label: 'Pupuk Cair',
+      emoji: '🧪',
+      desc: 'Hanya larutan pupuk',
+      color: '#a78bfa',
+      glow: 'shadow-[0_0_20px_rgba(167,139,250,0.4)]',
+      border: 'border-violet-400/60',
+      bg: 'bg-violet-400/10',
+    },
+    {
+      id: 'fertigation' as const,
+      label: 'Air + Pupuk',
+      emoji: '⚗️',
+      desc: 'Campuran seimbang',
+      color: '#34d399',
+      glow: 'shadow-[0_0_20px_rgba(52,211,153,0.4)]',
+      border: 'border-emerald-400/60',
+      bg: 'bg-emerald-400/10',
+    },
+  ];
+
+  const selectedMode = IRRIGATION_MODES.find(m => m.id === irrigationMode)!;
 
   useEffect(() => {
     const loadData = async () => {
@@ -80,8 +116,9 @@ export default function OverviewPage() {
 
   const handleManualOverride = async () => {
     setIsOverriding(true);
+    const modeLabel = IRRIGATION_MODES.find(m => m.id === irrigationMode)?.label ?? irrigationMode;
     await new Promise(res => setTimeout(res, 2000));
-    alert(`Manual Override diaktifkan untuk ${selectedZone?.name ?? 'zona'}!`);
+    alert(`Manual Override diaktifkan!\nZona: ${selectedZone?.name ?? '-'}\nMode: ${modeLabel}`);
     setIsOverriding(false);
   };
 
@@ -287,6 +324,39 @@ export default function OverviewPage() {
         {/* ── RIGHT COLUMN ── */}
         <div className="xl:col-span-3 space-y-6 flex flex-col">
 
+          {/* ── IRRIGATION MODE SELECTOR ── */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-4 shadow-2xl">
+            <p className="text-[10px] font-mono text-slate-500 tracking-widest mb-3 uppercase">Mode Penyiraman</p>
+            <div className="grid grid-cols-3 gap-2">
+              {IRRIGATION_MODES.map(mode => {
+                const isActive = irrigationMode === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setIrrigationMode(mode.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 p-3 rounded-2xl border transition-all duration-200',
+                      isActive
+                        ? `${mode.bg} ${mode.border} ${mode.glow} scale-[1.03]`
+                        : 'bg-black/20 border-white/5 hover:bg-white/5 hover:border-white/10'
+                    )}
+                  >
+                    <span className="text-xl">{mode.emoji}</span>
+                    <span
+                      className="text-[10px] font-bold leading-tight text-center"
+                      style={{ color: isActive ? mode.color : '#64748b' }}
+                    >
+                      {mode.label}
+                    </span>
+                    <span className="text-[9px] text-slate-600 text-center leading-tight hidden sm:block">
+                      {mode.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* OVERRIDE Button */}
           <button
             onClick={handleManualOverride}
@@ -298,15 +368,25 @@ export default function OverviewPage() {
               isOverriding ? "cursor-not-allowed opacity-80" : "cursor-pointer"
             )}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 opacity-20 group-hover:opacity-100 transition-opacity duration-500" />
+            {/* Border glow — color follows selected mode */}
+            <div
+              className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: `linear-gradient(135deg, ${selectedMode.color}, ${selectedMode.color}88, ${selectedMode.color})`,
+              }}
+            />
             <div className="absolute inset-[2px] bg-slate-950 rounded-[22px] flex flex-col items-center justify-center gap-3 z-10">
-              <div className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl",
-                isOverriding
-                  ? "bg-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)]"
-                  : "bg-slate-800 text-slate-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 group-hover:shadow-[0_0_50px_rgba(16,185,129,0.5)]"
-              )}>
-                <Power className={cn("w-8 h-8", isOverriding && "animate-pulse")} />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl text-3xl"
+                style={isOverriding ? {
+                  backgroundColor: `${selectedMode.color}20`,
+                  boxShadow: `0 0 30px ${selectedMode.color}88`,
+                } : undefined}
+              >
+                {isOverriding
+                  ? <Power className="w-8 h-8 animate-pulse" style={{ color: selectedMode.color }} />
+                  : <span className="group-hover:scale-110 transition-transform duration-200">{selectedMode.emoji}</span>
+                }
               </div>
               <div className="text-center">
                 <p className="font-mono font-bold tracking-widest text-lg text-white">
