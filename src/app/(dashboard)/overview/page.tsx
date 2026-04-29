@@ -15,8 +15,19 @@ import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import type { WeatherData, SensorData, Zone } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
-import GreenhouseAnimation from '@/shared/components/GreenhouseAnimation';
+import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
+
+// Map zone status → animation condition
+function toCondition(status?: string): GreenhouseCondition {
+  if (!status) return 'idle';
+  if (status === 'irrigating')  return 'irrigating';
+  if (status === 'fertigating') return 'fertigating';
+  if (status === 'delayed')     return 'delayed';
+  if (status === 'error')       return 'error';
+  if (status === 'offline')     return 'offline';
+  return 'idle';
+}
 
 export default function OverviewPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -112,6 +123,7 @@ export default function OverviewPage() {
   const zoneStatus = selectedZone
     ? (ZONE_STATUS[selectedZone.status as keyof typeof ZONE_STATUS] ?? ZONE_STATUS.idle)
     : null;
+  const animCondition = toCondition(selectedZone?.status);
   const multiZone = zones.length > 1;
 
   const handleManualOverride = async () => {
@@ -254,7 +266,7 @@ export default function OverviewPage() {
           >
             {/* 3D Greenhouse */}
             <div className="w-[90%] h-[90%] relative z-10">
-              <GreenhouseAnimation />
+              <GreenhouseAnimation condition={animCondition} />
             </div>
 
             {/* HUD Badges — well spaced to avoid arrow overlap */}
