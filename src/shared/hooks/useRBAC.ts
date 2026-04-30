@@ -52,10 +52,13 @@ export function useRBAC() {
         return hasRole('super_admin', 'pemilik_kebun');
 
       // Admin-only features
-      case 'devices':
       case 'user_management':
       case 'settings':
         return hasRole('super_admin');
+
+      // Devices — super_admin full manage, pemilik_kebun read-only / export
+      case 'devices':
+        return hasRole('super_admin', 'pemilik_kebun');
 
       default:
         return false;

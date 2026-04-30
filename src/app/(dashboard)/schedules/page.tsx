@@ -107,21 +107,24 @@ export default function SchedulesPage() {
         <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--surface-text)' }}>📅 Kalender Mingguan</h3>
         <div className="grid gap-px rounded-xl overflow-hidden min-w-[700px]" style={{ gridTemplateColumns: '60px repeat(7, 1fr)', background: 'var(--surface-border)' }}>
           {/* Header */}
-          <div className="bg-primary-50 p-2 text-[10px] font-semibold text-center text-primary-700">Waktu</div>
+          <div className="p-2 text-[10px] font-bold text-center" style={{ background: 'rgba(16,185,129,0.25)', color: 'var(--surface-text)' }}>Waktu</div>
           {DAYS.map(d => (
-            <div key={d} className="bg-primary-50 p-2 text-[10px] font-semibold text-center text-primary-700">{d}</div>
+            <div key={d} className="p-2 text-[10px] font-bold text-center" style={{ background: 'rgba(16,185,129,0.25)', color: 'var(--surface-text)' }}>{d}</div>
           ))}
 
           {/* Time slots */}
           {HOURS.map(hour => (
             <>
-              <div key={`t-${hour}`} className="bg-white/50 p-1.5 text-[10px] text-center font-mono border-t" style={{ color: 'var(--surface-text-muted)', borderColor: 'var(--surface-border)' }}>
+              <div key={`t-${hour}`} className="p-1.5 text-[10px] text-center font-mono border-t" style={{ background: 'rgba(16,185,129,0.08)', color: 'var(--surface-text-muted)', borderColor: 'var(--surface-border)' }}>
                 {String(hour).padStart(2, '0')}:00
               </div>
               {DAYS.map((_, dayIdx) => {
                 const slots = calendarSlots.filter(s => s.hour === hour && s.days.includes(dayIdx));
                 return (
-                  <div key={`c-${hour}-${dayIdx}`} className="bg-white/30 p-0.5 min-h-[36px] border-t hover:bg-primary-50/30 transition-colors" style={{ borderColor: 'var(--surface-border)' }}>
+                  <div key={`c-${hour}-${dayIdx}`} className="p-0.5 min-h-[36px] border-t transition-colors" style={{ background: 'var(--surface-card)', borderColor: 'var(--surface-border)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-card-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}
+                  >
                     {slots.map(slot => (
                       <button
                         key={slot.id}
