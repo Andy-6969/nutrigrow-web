@@ -67,9 +67,13 @@ export interface Device {
 export interface Farm {
   id: string;
   name: string;
-  location_lat: number;
-  location_lng: number;
+  description?: string;
+  location_address?: string;
+  location_lat?: number;
+  location_lng?: number;
   total_area_ha: number;
+  owner_name?: string;
+  created_at?: string;
 }
 
 /** @deprecated Use UserProfile from AuthContext instead */
