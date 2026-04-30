@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Cpu, Wifi, WifiOff, Battery, Signal, Clock, Search, Download, FileSpreadsheet, CheckCircle } from 'lucide-react';
 import { mockDevices, mockSensorData, mockSensorHistory, mockIrrigationLogs, mockOverrideLogs, mockZones } from '@/shared/lib/mockData';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
+import { DeviceCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
 
 function getBatteryColor(level: number) {
   if (level > 60) return 'text-primary-500';
@@ -189,7 +190,14 @@ export default function DevicesPage() {
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const { hasRole } = useRBAC();
+
+  // Simulate initial load (ganti dengan fetch real dari Supabase nanti)
+  useEffect(() => {
+    const t = setTimeout(() => setPageLoading(false), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   const filtered = mockDevices.filter(d => {
     if (filter !== 'all' && d.device_type !== filter) return false;
@@ -217,6 +225,9 @@ export default function DevicesPage() {
     <div className="space-y-6 max-w-[1600px] mx-auto">
 
       {/* ── Header ── */}
+      {pageLoading ? (
+        <PageHeaderSkeleton />
+      ) : (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
           <Cpu className="w-5 h-5 text-primary-500" />
@@ -268,6 +279,7 @@ export default function DevicesPage() {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Export Info Banner ── */}
       {canExport && (
@@ -314,13 +326,19 @@ export default function DevicesPage() {
       </div>
 
       {/* ── Device Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((device, i) => (
-          <div key={device.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}>
-            <DeviceCard device={device} />
-          </div>
-        ))}
-      </div>
+      {pageLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[1,2,3,4,5,6,7,8].map(i => <DeviceCardSkeleton key={i} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((device, i) => (
+            <div key={device.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}>
+              <DeviceCard device={device} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="glass p-12 text-center">

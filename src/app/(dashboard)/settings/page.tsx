@@ -72,10 +72,12 @@ export default function SettingsPage() {
 
   const { profile } = useAuth();
 
-  // Sync dark mode from DOM
+  // Sync dark mode dari localStorage saat mount
   useEffect(() => {
-    const theme = document.documentElement.getAttribute('data-theme');
-    setDarkMode(theme === 'dark');
+    const saved = localStorage.getItem('nutrigrow-theme');
+    const isDark = saved === 'dark';
+    setDarkMode(isDark);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
 
   const handleSaveProfile = async () => {
@@ -231,7 +233,9 @@ export default function SettingsPage() {
                     onClick={() => {
                       const next = !darkMode;
                       setDarkMode(next);
-                      document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+                      const theme = next ? 'dark' : 'light';
+                      document.documentElement.setAttribute('data-theme', theme);
+                      localStorage.setItem('nutrigrow-theme', theme);
                     }}
                     className={cn('w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5', darkMode ? 'bg-primary-500' : 'bg-gray-300')}
                   >

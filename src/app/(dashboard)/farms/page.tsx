@@ -6,6 +6,8 @@ import { cn } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { farmService } from '@/shared/services/farmService';
 import type { Farm, Zone } from '@/shared/types/global.types';
+import { FarmCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
+import { useToast } from '@/shared/context/ToastContext';
 
 /* ─── Form default ───────────────────────────────────────────── */
 const EMPTY: Omit<Farm, 'id' | 'created_at'> = {
@@ -329,6 +331,7 @@ function FarmCard({
 export default function FarmsPage() {
   const { canAccess } = useRBAC();
   const canManage = canAccess('farm_management');
+  const { success, error: toastError } = useToast();
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -352,23 +355,27 @@ export default function FarmsPage() {
     <div className="space-y-6 max-w-[1400px] mx-auto">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-            <MapPin className="w-5 h-5 text-primary-500" />
-            Manajemen Lahan
-          </h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>
-            {farms.length} lahan terdaftar {!canManage && '· hanya bisa dilihat'}
-          </p>
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
+              <MapPin className="w-5 h-5 text-primary-500" />
+              Manajemen Lahan
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>
+              {farms.length} lahan terdaftar {!canManage && '· hanya bisa dilihat'}
+            </p>
+          </div>
+          {canManage && (
+            <button onClick={openCreate}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all shadow-lg glow-sm hover:glow-md active:scale-[0.98]">
+              <Plus className="w-4 h-4" /> Tambah Lahan
+            </button>
+          )}
         </div>
-        {canManage && (
-          <button onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all shadow-lg glow-sm hover:glow-md active:scale-[0.98]">
-            <Plus className="w-4 h-4" /> Tambah Lahan
-          </button>
-        )}
-      </div>
+      )}
 
       {/* RBAC info banner untuk pemilik_kebun */}
       {!canManage && canAccess('farms') && (
@@ -384,9 +391,7 @@ export default function FarmsPage() {
       {/* Loading */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="glass p-5 h-48 animate-pulse rounded-2xl" style={{ opacity: 0.5 }} />
-          ))}
+          {[1, 2, 3].map(i => <FarmCardSkeleton key={i} />)}
         </div>
       )}
 
@@ -436,14 +441,22 @@ export default function FarmsPage() {
         <FarmModal
           initial={editTarget}
           onClose={() => setShowForm(false)}
-          onSaved={() => { setShowForm(false); load(); }}
+          onSaved={() => {
+            setShowForm(false);
+            load();
+            success(editTarget ? 'Lahan diperbarui!' : 'Lahan baru ditambahkan!', editTarget ? 'Perubahan berhasil disimpan.' : 'Lahan berhasil dibuat.');
+          }}
         />
       )}
       {deleteTarget && (
         <DeleteModal
           farm={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onDeleted={() => { setDeleteTarget(null); load(); }}
+          onDeleted={() => {
+            setDeleteTarget(null);
+            load();
+            success('Lahan dihapus', `${deleteTarget.name} telah dihapus dari sistem.`);
+          }}
         />
       )}
     </div>
