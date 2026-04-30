@@ -5,9 +5,104 @@ import { MapPin, Plus, Edit, Trash2, X, Save, Loader2, ChevronDown, ChevronUp, A
 import { cn } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { farmService } from '@/shared/services/farmService';
-import type { Farm, Zone } from '@/shared/types/global.types';
+import { zoneService } from '@/shared/services/zoneService';
+import type { Farm, Zone, ZoneStatus } from '@/shared/types/global.types';
 import { FarmCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
 import { useToast } from '@/shared/context/ToastContext';
+
+const ZONE_STATUSES: ZoneStatus[] = ['idle','irrigating','fertigating','delayed','error'];
+const EMPTY_ZONE = { name:'', area_ha: 0, crop_type:'', status:'idle' as ZoneStatus, latitude: undefined as number|undefined, longitude: undefined as number|undefined };
+
+/* ─ Zone Modal ────────────────────────────────────────────────────── */
+function ZoneModal({ farmId, initial, onClose, onSaved }: {
+  farmId: string; initial: Zone | null;
+  onClose: ()=>void; onSaved: ()=>void;
+}) {
+  const isEdit = !!initial;
+  const [form, setForm] = useState(initial ? {
+    name: initial.name, area_ha: initial.area_ha, crop_type: initial.crop_type,
+    status: initial.status as ZoneStatus,
+    latitude: initial.latitude, longitude: initial.longitude,
+  } : { ...EMPTY_ZONE });
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const set = (k: string, v: string|number|undefined) => setForm((p:typeof form) => ({...p,[k]:v}));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) { setErr('Nama zona wajib diisi.'); return; }
+    if (form.area_ha <= 0)  { setErr('Luas harus lebih dari 0.'); return; }
+    setLoading(true); setErr('');
+    const result = isEdit
+      ? await zoneService.updateZone(initial!.id, form)
+      : await zoneService.createZone({ farm_id: farmId, ...form });
+    setLoading(false);
+    if (result.error) { setErr(result.error); return; }
+    onSaved();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="glass-heavy w-full max-w-md rounded-2xl p-6 space-y-4" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-sm flex items-center gap-2" style={{color:'var(--surface-text)'}}>
+            <Layers className="w-4 h-4 text-emerald-500"/>
+            {isEdit ? '✏️ Edit Zona' : '➕ Tambah Zona'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10">
+            <X className="w-4 h-4" style={{color:'var(--surface-text-muted)'}}/>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Nama Zona *</label>
+              <input value={form.name} onChange={e=>set('name',e.target.value)} placeholder="Zona 1 - Sawah Utara"
+                className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Luas (ha) *</label>
+              <input type="number" min={0.1} step={0.1} value={form.area_ha||''} onChange={e=>set('area_ha',parseFloat(e.target.value)||0)}
+                placeholder="0.0" className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Jenis Tanaman</label>
+              <input value={form.crop_type} onChange={e=>set('crop_type',e.target.value)} placeholder="Padi, Jagung..."
+                className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Latitude</label>
+              <input type="number" step="any" value={form.latitude??''} onChange={e=>set('latitude',parseFloat(e.target.value)||undefined)}
+                placeholder="-6.815" className="w-full px-3 py-2 rounded-xl glass-sm text-sm font-mono outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Longitude</label>
+              <input type="number" step="any" value={form.longitude??''} onChange={e=>set('longitude',parseFloat(e.target.value)||undefined)}
+                placeholder="107.615" className="w-full px-3 py-2 rounded-xl glass-sm text-sm font-mono outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Status Awal</label>
+              <select value={form.status} onChange={e=>set('status',e.target.value as ZoneStatus)}
+                className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}>
+                {ZONE_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          {err && <p className="text-xs text-danger-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/>{err}</p>}
+          <div className="flex gap-3 pt-1">
+            <button type="submit" disabled={loading}
+              className="flex-1 py-2.5 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 flex items-center justify-center gap-2 disabled:opacity-60">
+              {loading?<Loader2 className="w-4 h-4 animate-spin"/>:<Save className="w-4 h-4"/>}
+              {isEdit?'Simpan':'Tambah Zona'}
+            </button>
+            <button type="button" onClick={onClose}
+              className="px-4 py-2.5 rounded-xl glass-sm text-sm" style={{color:'var(--surface-text-muted)'}}>Batal</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Form default ───────────────────────────────────────────── */
 const EMPTY: Omit<Farm, 'id' | 'created_at'> = {
@@ -223,6 +318,15 @@ function FarmCard({
   const [zones, setZones] = useState<Zone[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [loadingZones, setLoadingZones] = useState(false);
+  const [zoneModal, setZoneModal] = useState<{open:boolean; zone:Zone|null}>({open:false,zone:null});
+  const [deleteZone, setDeleteZone] = useState<Zone|null>(null);
+  const [deletingZone, setDeletingZone] = useState(false);
+  const { success } = useToast();
+
+  const reloadZones = useCallback(async () => {
+    const z = await farmService.getZonesByFarm(farm.id);
+    setZones(z);
+  }, [farm.id]);
 
   const loadZones = useCallback(async () => {
     if (zones.length > 0) { setExpanded(e => !e); return; }
@@ -232,6 +336,17 @@ function FarmCard({
     setLoadingZones(false);
     setExpanded(true);
   }, [farm.id, zones.length]);
+
+  const handleDeleteZone = async () => {
+    if (!deleteZone) return;
+    setDeletingZone(true);
+    await zoneService.deleteZone(deleteZone.id);
+    setDeletingZone(false);
+    setDeleteZone(null);
+    success('Zona dihapus', `${deleteZone.name} berhasil dihapus.`);
+    reloadZones();
+  };
+
 
   const STATUS_COLOR: Record<string, string> = {
     irrigating: '#3B82F6', fertigating: '#8B5CF6',
@@ -309,19 +424,86 @@ function FarmCard({
       {expanded && zones.length > 0 && (
         <div className="space-y-1.5">
           {zones.map(z => (
-            <div key={z.id} className="flex items-center justify-between px-3 py-2 rounded-xl glass-sm text-xs">
+            <div key={z.id} className="flex items-center justify-between px-3 py-2 rounded-xl glass-sm text-xs group">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full" style={{ background: STATUS_COLOR[z.status] ?? '#9CA3AF' }} />
                 <span style={{ color: 'var(--surface-text)' }}>{z.name.split(' - ')[1] || z.name}</span>
                 <span className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>{z.crop_type}</span>
               </div>
-              <span className="font-mono" style={{ color: 'var(--surface-text-muted)' }}>{z.area_ha} ha</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono" style={{ color: 'var(--surface-text-muted)' }}>{z.area_ha} ha</span>
+                {canManage && (
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={()=>setZoneModal({open:true,zone:z})}
+                      className="p-1 rounded hover:bg-primary-500/20" title="Edit zona">
+                      <Edit className="w-3 h-3 text-primary-500"/>
+                    </button>
+                    <button onClick={()=>setDeleteZone(z)}
+                      className="p-1 rounded hover:bg-danger-500/20" title="Hapus zona">
+                      <Trash2 className="w-3 h-3 text-danger-500"/>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
       {expanded && zones.length === 0 && !loadingZones && (
         <p className="text-xs text-center py-2" style={{ color: 'var(--surface-text-muted)' }}>Belum ada zona di lahan ini.</p>
+      )}
+
+      {/* Tambah Zona button */}
+      {expanded && canManage && (
+        <button onClick={()=>setZoneModal({open:true,zone:null})}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium border-dashed border-2 hover:border-emerald-500 hover:text-emerald-600 transition-all"
+          style={{borderColor:'var(--surface-border)',color:'var(--surface-text-muted)'}}>
+          <Plus className="w-3.5 h-3.5"/> Tambah Zona
+        </button>
+      )}
+
+      {/* Zone Modal */}
+      {zoneModal.open && (
+        <ZoneModal
+          farmId={farm.id}
+          initial={zoneModal.zone}
+          onClose={()=>setZoneModal({open:false,zone:null})}
+          onSaved={()=>{
+            setZoneModal({open:false,zone:null});
+            reloadZones();
+            success(zoneModal.zone ? 'Zona diperbarui!' : 'Zona ditambahkan!', zoneModal.zone ? undefined : `Zona baru berhasil ditambahkan ke ${farm.name}.`);
+          }}
+        />
+      )}
+
+      {/* Delete Zone Confirm */}
+      {deleteZone && (
+        <div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4" onClick={()=>setDeleteZone(null)}>
+          <div className="glass-heavy w-full max-w-xs rounded-2xl p-5 space-y-4" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-danger-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-danger-500"/>
+              </div>
+              <div>
+                <p className="font-bold text-sm" style={{color:'var(--surface-text)'}}>Hapus Zona</p>
+                <p className="text-xs" style={{color:'var(--surface-text-muted)'}}>Tidak bisa dibatalkan</p>
+              </div>
+            </div>
+            <p className="text-sm" style={{color:'var(--surface-text-muted)'}}>
+              Hapus zona <strong style={{color:'var(--surface-text)'}}>{deleteZone.name}</strong>?
+              Semua data sensor dan perangkat di zona ini juga akan terhapus.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={handleDeleteZone} disabled={deletingZone}
+                className="flex-1 py-2.5 rounded-xl bg-danger-500 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-danger-600 disabled:opacity-50">
+                {deletingZone?<Loader2 className="w-4 h-4 animate-spin"/>:<Trash2 className="w-4 h-4"/>}
+                Hapus
+              </button>
+              <button onClick={()=>setDeleteZone(null)}
+                className="px-4 py-2.5 rounded-xl glass-sm text-sm" style={{color:'var(--surface-text-muted)'}}>Batal</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
