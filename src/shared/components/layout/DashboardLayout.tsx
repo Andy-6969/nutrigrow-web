@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Map, Activity, Leaf, Calendar, Wrench, Cpu,
   Bell, Settings, ChevronLeft, ChevronRight, Menu, X,
-  Sun, Moon, LogOut, Loader2, Users
+  Sun, Moon, LogOut, Loader2, Users, MapPin
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { APP_NAME } from '@/shared/lib/constants';
@@ -16,15 +16,16 @@ import { useRBAC } from '@/shared/hooks/useRBAC';
 import PendingApprovalPage from '@/app/(dashboard)/pending-approval/page';
 
 const navItems = [
-  { id: 'overview',      label: 'Dashboard',      icon: LayoutDashboard, href: '/overview' },
-  { id: 'agri-twin',     label: 'Agri-Twin',      icon: Map,             href: '/agri-twin' },
-  { id: 'monitoring',    label: 'Monitoring',      icon: Activity,        href: '/monitoring' },
-  { id: 'eco-savings',   label: 'Eco-Savings',     icon: Leaf,            href: '/eco-savings' },
-  { id: 'schedules',     label: 'Jadwal',          icon: Calendar,        href: '/schedules' },
-  { id: 'devices',       label: 'Perangkat',       icon: Cpu,             href: '/devices' },
-  { id: 'notifications',    label: 'Notifikasi',      icon: Bell,            href: '/notifications' },
-  { id: 'user_management',  label: 'Kelola User',     icon: Users,           href: '/user-management' },
-  { id: 'settings',         label: 'Pengaturan',      icon: Settings,        href: '/settings' },
+  { id: 'overview',        label: 'Dashboard',      icon: LayoutDashboard, href: '/overview' },
+  { id: 'agri-twin',       label: 'Agri-Twin',      icon: Map,             href: '/agri-twin' },
+  { id: 'monitoring',      label: 'Monitoring',      icon: Activity,        href: '/monitoring' },
+  { id: 'eco-savings',     label: 'Eco-Savings',     icon: Leaf,            href: '/eco-savings' },
+  { id: 'schedules',       label: 'Jadwal',          icon: Calendar,        href: '/schedules' },
+  { id: 'devices',         label: 'Perangkat',       icon: Cpu,             href: '/devices' },
+  { id: 'farms',           label: 'Lahan',           icon: MapPin,          href: '/farms' },
+  { id: 'notifications',   label: 'Notifikasi',      icon: Bell,            href: '/notifications' },
+  { id: 'user_management', label: 'Kelola User',     icon: Users,           href: '/user-management' },
+  { id: 'settings',        label: 'Pengaturan',      icon: Settings,        href: '/settings' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -76,6 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (item.id === 'settings')        return canAccess('settings');
     if (item.id === 'devices')         return canAccess('devices');
     if (item.id === 'user_management') return canAccess('user_management');
+    if (item.id === 'farms')           return canAccess('farms');
     return true;
   });
 

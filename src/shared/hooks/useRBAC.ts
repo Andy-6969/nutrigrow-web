@@ -39,6 +39,8 @@ export function useRBAC() {
       | 'user_management'
       | 'settings'
       | 'notifications'
+      | 'farms'
+      | 'farm_management'
   ): boolean => {
     if (!role || role === 'guest') return false;
 
@@ -60,6 +62,13 @@ export function useRBAC() {
       case 'devices':
         return hasRole('super_admin', 'pemilik_kebun');
 
+      // Farms — semua role aktif bisa lihat, hanya super_admin bisa manage
+      case 'farms':
+        return hasRole('super_admin', 'pemilik_kebun');
+
+      // Farm management (CRUD) — super_admin only
+      case 'farm_management':
+        return hasRole('super_admin');
       default:
         return false;
     }
