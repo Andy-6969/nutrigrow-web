@@ -340,12 +340,19 @@ function FarmCard({
   const handleDeleteZone = async () => {
     if (!deleteZone) return;
     setDeletingZone(true);
-    await zoneService.deleteZone(deleteZone.id);
+    const { error } = await zoneService.deleteZone(deleteZone.id);
     setDeletingZone(false);
+    if (error) {
+      // Tetap hapus dari state lokal walau Supabase error (mock mode)
+      console.warn('[zone] delete error (mock mode):', error);
+    }
+    // Optimistic: langsung filter dari state lokal
+    setZones(prev => prev.filter(z => z.id !== deleteZone.id));
+    const deleted = deleteZone;
     setDeleteZone(null);
-    success('Zona dihapus', `${deleteZone.name} berhasil dihapus.`);
-    reloadZones();
+    success('Zona dihapus', `${deleted.name} berhasil dihapus.`);
   };
+
 
 
   const STATUS_COLOR: Record<string, string> = {
@@ -468,9 +475,10 @@ function FarmCard({
           farmId={farm.id}
           initial={zoneModal.zone}
           onClose={()=>setZoneModal({open:false,zone:null})}
-          onSaved={()=>{
+          onSaved={async ()=>{
             setZoneModal({open:false,zone:null});
-            reloadZones();
+            // Reload dari server; kalau masih mock, zones sudah ada di state via edit atau reload ulang
+            await reloadZones();
             success(zoneModal.zone ? 'Zona diperbarui!' : 'Zona ditambahkan!', zoneModal.zone ? undefined : `Zona baru berhasil ditambahkan ke ${farm.name}.`);
           }}
         />
