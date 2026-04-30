@@ -95,6 +95,19 @@
   --topbar-text:        #ECFDF5;
   --topbar-text-muted:  #6EE7B7;
 
+  /* Sidebar — Dark Forest */
+  --sidebar-bg:         linear-gradient(180deg, #0A1F18 0%, #060F0C 60%, #040A08 100%);
+  --sidebar-border:     rgba(6, 78, 59, 0.4);
+  --sidebar-text:       #6EE7B7;
+  --sidebar-text-hover: #ECFDF5;
+  --sidebar-active-bg:  rgba(16, 185, 129, 0.15);
+  --sidebar-active-border: rgba(16, 185, 129, 0.25);
+  --sidebar-active-text: #6EE7B7;
+  --sidebar-hover-bg:   rgba(16, 185, 129, 0.08);
+  --sidebar-icon:       #34D399;
+  --sidebar-icon-hover: #A7F3D0;
+  --sidebar-collapse-hover: rgba(16, 185, 129, 0.08);
+
   /* Layout */
   --sidebar-width:     260px;
   --sidebar-collapsed: 72px;
@@ -113,32 +126,45 @@
 }
 
 /* ============================================
-   Light Mode — White & Emerald Green
+   Light Mode — Fresh Emerald & White
    ============================================ */
 [data-theme="light"] {
   /* Backgrounds */
   --surface-bg:         #F0FDF4;
-  --surface-bg-alt:     #ECFDF5;
-  --surface-card:       rgba(255, 255, 255, 0.80);
-  --surface-card-hover: rgba(255, 255, 255, 0.95);
-  --surface-border:     rgba(16, 185, 129, 0.18);
+  --surface-bg-alt:     #DCFCE7;
+  --surface-card:       rgba(255, 255, 255, 0.90);
+  --surface-card-hover: rgba(255, 255, 255, 1.0);
+  --surface-border:     rgba(16, 185, 129, 0.22);
 
   /* Text */
-  --surface-text:        #1F2937;
-  --surface-text-muted:  #059669;
-  --surface-text-subtle: #10B981;
+  --surface-text:        #0D2318;
+  --surface-text-muted:  #047A55;
+  --surface-text-subtle: #059669;
 
-  /* Glassmorphism — light white */
-  --glass-bg:     rgba(255, 255, 255, 0.75);
-  --glass-blur:   12px;
-  --glass-border: 1px solid rgba(16, 185, 129, 0.15);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+  /* Glassmorphism — light frosted */
+  --glass-bg:     rgba(255, 255, 255, 0.82);
+  --glass-blur:   14px;
+  --glass-border: 1px solid rgba(16, 185, 129, 0.20);
+  --glass-shadow: 0 4px 24px rgba(5, 150, 105, 0.10);
 
-  /* Topbar — light frosted white */
-  --topbar-bg:         rgba(240, 253, 244, 0.92);
-  --topbar-border:     rgba(16, 185, 129, 0.2);
-  --topbar-text:       #1F2937;
-  --topbar-text-muted: #059669;
+  /* Topbar — crisp white with green accent */
+  --topbar-bg:         rgba(255, 255, 255, 0.95);
+  --topbar-border:     rgba(16, 185, 129, 0.25);
+  --topbar-text:       #0D2318;
+  --topbar-text-muted: #047A55;
+
+  /* Sidebar — Deep Emerald Forest (stays dark) */
+  --sidebar-bg:         linear-gradient(180deg, #064E3B 0%, #065F46 40%, #047A55 100%);
+  --sidebar-border:     rgba(167, 243, 208, 0.15);
+  --sidebar-text:       rgba(167, 243, 208, 0.80);
+  --sidebar-text-hover: #ECFDF5;
+  --sidebar-active-bg:  rgba(255, 255, 255, 0.15);
+  --sidebar-active-border: rgba(255, 255, 255, 0.25);
+  --sidebar-active-text: #FFFFFF;
+  --sidebar-hover-bg:   rgba(255, 255, 255, 0.10);
+  --sidebar-icon:       #6EE7B7;
+  --sidebar-icon-hover: #ECFDF5;
+  --sidebar-collapse-hover: rgba(255, 255, 255, 0.10);
 }
 
 /* ============================================
@@ -244,7 +270,8 @@ body {
 
 .glass:hover {
   background: var(--surface-card-hover);
-  transition: background var(--transition-base);
+  box-shadow: var(--glass-shadow);
+  transition: background var(--transition-base), box-shadow var(--transition-base);
 }
 
 .glass-sm {

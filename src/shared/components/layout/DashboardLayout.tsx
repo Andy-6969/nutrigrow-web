@@ -98,21 +98,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside
         className={cn(
           'fixed lg:static z-50 h-full flex flex-col transition-all duration-300 ease-in-out',
-          'border-r border-emerald-900/40',
           collapsed ? 'w-[72px]' : 'w-[260px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
-        style={{ background: 'linear-gradient(180deg, #0A1F18 0%, #060F0C 60%, #040A08 100%)' }}
+        style={{
+          background: 'var(--sidebar-bg)',
+          borderRight: '1px solid var(--sidebar-border)',
+        }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-emerald-900/40 shrink-0">
+        <div className="flex items-center gap-3 px-4 h-16 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
           <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
             <img src="/logo-bitanic.jpg" alt="Bitanic" className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
-              <h1 className="font-bold text-base tracking-tight font-[var(--font-display)] text-emerald-50">{APP_NAME}</h1>
-              <p className="text-[10px] text-emerald-500 -mt-0.5">Smart Fertigation</p>
+              <h1 className="font-bold text-base tracking-tight font-[var(--font-display)]" style={{ color: 'var(--sidebar-text-hover)' }}>{APP_NAME}</h1>
+              <p className="text-[10px] -mt-0.5" style={{ color: 'var(--sidebar-icon)' }}>Smart Fertigation</p>
             </div>
           )}
         </div>
@@ -129,12 +131,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative',
-                  isActive
-                    ? 'bg-emerald-500/15 text-emerald-300 shadow-lg shadow-black/30 border border-emerald-500/20'
-                    : 'text-emerald-700 hover:bg-emerald-900/40 hover:text-emerald-200'
                 )}
+                style={isActive ? {
+                  background: 'var(--sidebar-active-bg)',
+                  color: 'var(--sidebar-active-text)',
+                  border: '1px solid var(--sidebar-active-border)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
+                } : {
+                  color: 'var(--sidebar-text)',
+                  border: '1px solid transparent',
+                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--sidebar-hover-bg)'; e.currentTarget.style.color = 'var(--sidebar-text-hover)'; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; } }}
               >
-                <Icon className={cn('w-5 h-5 shrink-0', isActive ? 'text-emerald-400' : 'text-emerald-700 group-hover:text-emerald-300')} />
+                <Icon
+                  className="w-5 h-5 shrink-0"
+                  style={{ color: isActive ? 'var(--sidebar-active-text)' : 'var(--sidebar-icon)' }}
+                />
                 {!collapsed && (
                   <span className="text-sm font-medium truncate">{item.label}</span>
                 )}
@@ -147,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </span>
                 )}
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-400 rounded-r-full shadow-[0_0_8px_#10b981]" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ background: 'var(--sidebar-active-text)', boxShadow: '0 0 8px var(--sidebar-icon)' }} />
                 )}
               </Link>
             );
@@ -155,10 +168,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Collapse button (desktop) */}
-        <div className="hidden lg:block border-t border-emerald-900/40 p-2">
+        <div className="hidden lg:block p-2" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-emerald-700 hover:bg-emerald-900/40 hover:text-emerald-200 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-colors"
+            style={{ color: 'var(--sidebar-text)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-collapse-hover)'; e.currentTarget.style.color = 'var(--sidebar-text-hover)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             {!collapsed && <span className="text-xs">Minimkan</span>}
@@ -249,7 +265,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="ml-1 p-2 rounded-lg transition-colors hover:bg-red-900/30 hover:text-red-400 text-emerald-700 disabled:opacity-50"
+                className="ml-1 p-2 rounded-lg transition-colors disabled:opacity-50"
+                style={{ color: 'var(--topbar-text-muted)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.color = '#F87171'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--topbar-text-muted)'; }}
                 title="Keluar"
               >
                 {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
