@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -34,6 +34,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // Sync theme dari localStorage saat mount
+  useEffect(() => {
+    const saved = localStorage.getItem('nutrigrow-theme');
+    const isDark = saved === 'dark';
+    setDarkMode(isDark);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, []);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { profile, role, isLoading, logout } = useAuth();
@@ -82,8 +90,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.setAttribute('data-theme', darkMode ? '' : 'light');
+    const next = !darkMode;
+    setDarkMode(next);
+    const theme = next ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('nutrigrow-theme', theme);
   };
 
   return (
