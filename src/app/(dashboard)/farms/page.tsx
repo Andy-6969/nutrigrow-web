@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { MapPin, Plus, Edit, Trash2, X, Save, Loader2, ChevronDown, ChevronUp, AlertTriangle, Sprout, Layers } from 'lucide-react';
-import { cn } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { farmService } from '@/shared/services/farmService';
 import { zoneService } from '@/shared/services/zoneService';
@@ -521,7 +520,7 @@ function FarmCard({
 export default function FarmsPage() {
   const { canAccess } = useRBAC();
   const canManage = canAccess('farm_management');
-  const { success, error: toastError } = useToast();
+  const { success } = useToast();
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -536,7 +535,10 @@ export default function FarmsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(); 
+  }, [load]);
 
   const openCreate = () => { setEditTarget(null); setShowForm(true); };
   const openEdit   = (f: Farm) => { setEditTarget(f); setShowForm(true); };
