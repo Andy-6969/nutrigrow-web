@@ -51,13 +51,16 @@ const waterFlowAnimation = {
   ],
 };
 
-// Zone positions on the virtual farm map (percentage-based layout)
-const zonePositions: Record<string, { x: number; y: number; w: number; h: number }> = {
-  z1: { x: 3,  y: 3,  w: 46, h: 40 },
-  z2: { x: 53, y: 3,  w: 44, h: 32 },
-  z3: { x: 3,  y: 48, w: 35, h: 48 },
-  z4: { x: 41, y: 48, w: 18, h: 22 },
-  z5: { x: 63, y: 40, w: 34, h: 56 },
+// Fallback grid for zones without layout_json or mapped positions
+const getFallbackPosition = (index: number) => {
+  const col = index % 2;
+  const row = Math.floor(index / 2);
+  return {
+    x: 3 + (col * 50),
+    y: 28 + (row * 36), // Start at y: 28% to clear the legend bar at top
+    w: 44,
+    h: 30
+  };
 };
 
 function ZoneBlock({ zone, sensor, position, isSelected, onClick }: {
@@ -236,16 +239,20 @@ export default function AgriTwinPage() {
                 </div>
 
                 {/* Schematic blocks */}
-                {zones.map(zone => (
-                  <ZoneBlock
-                    key={zone.id}
-                    zone={zone}
-                    sensor={sensorDataMap[zone.id] || mockSensorData[zone.id] || { soil_moisture: 0, temperature: 0, humidity: 0, ph: 0, recorded_at: '' }}
-                    position={zonePositions[zone.id] || { x: 0, y: 0, w: 10, h: 10 }}
-                    isSelected={selectedZone === zone.id}
-                    onClick={() => setSelectedZone(zone.id)}
-                  />
-                ))}
+                {zones.map((zone, index) => {
+                  // In the future, this can read from zone.layout_json
+                  const position = getFallbackPosition(index);
+                  return (
+                    <ZoneBlock
+                      key={zone.id}
+                      zone={zone}
+                      sensor={sensorDataMap[zone.id] || mockSensorData[zone.id] || { soil_moisture: 0, temperature: 0, humidity: 0, ph: 0, recorded_at: '' }}
+                      position={position}
+                      isSelected={selectedZone === zone.id}
+                      onClick={() => setSelectedZone(zone.id)}
+                    />
+                  );
+                })}
               </div>
             )}
 
