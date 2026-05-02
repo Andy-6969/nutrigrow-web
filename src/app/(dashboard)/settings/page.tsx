@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { useAuth } from '@/shared/context/AuthContext';
 import { saveExpoPushToken } from '@/shared/services/expoNotificationService';
 import { userService } from '@/shared/services/userService';
+import { useLanguage, useT } from '@/shared/context/LanguageContext';
 
 // ─── Expo token input helper ──────────────────────────────────
 function ExpoTokenSection({ userId }: { userId: string }) {
@@ -78,6 +79,8 @@ export default function SettingsPage() {
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
 
   const { profile, refreshProfile } = useAuth();
+  const { lang, setLang } = useLanguage();
+  const t = useT();
 
   useEffect(() => {
     if (profile) {
@@ -134,17 +137,17 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { id: 'profile', label: 'Profil', icon: User },
-    { id: 'notifications', label: 'Notifikasi', icon: Bell },
-    { id: 'appearance', label: 'Tampilan', icon: Monitor },
-    { id: 'security', label: 'Keamanan', icon: Shield },
+    { id: 'profile', label: t('settings_tab_profile'), icon: User },
+    { id: 'notifications', label: t('settings_tab_notifications'), icon: Bell },
+    { id: 'appearance', label: t('settings_tab_display'), icon: Monitor },
+    { id: 'security', label: t('settings_tab_security'), icon: Shield },
   ];
 
   return (
     <div className="space-y-6 max-w-[1000px] mx-auto">
       <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
         <Settings className="w-5 h-5 text-primary-500" />
-        Pengaturan
+        {t('settings_title')}
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -175,7 +178,7 @@ export default function SettingsPage() {
           {/* ── Profile Tab ── */}
           {activeTab === 'profile' && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>👤 Profil Pengguna</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>👤 {t('settings_tab_profile')}</h3>
               <div className="flex items-center gap-4">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt={profile.full_name} referrerPolicy="no-referrer"
@@ -194,26 +197,26 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Nama Lengkap</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_full_name')}</label>
                   <input value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Email</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_email')}</label>
                   <input defaultValue={profile?.email ?? ''} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Peran</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_role')}</label>
                   <input defaultValue={profile?.role ?? ''} disabled className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm opacity-60" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Lahan</label>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('common_farm')}</label>
                   <input defaultValue="Lahan Pertanian Bitanic" disabled className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm opacity-60" style={{ color: 'var(--surface-text)' }} />
                 </div>
               </div>
               <button onClick={handleSaveProfile} disabled={saveStatus === 'saving'}
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm disabled:opacity-70">
                 {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saveStatus === 'ok' ? '✅ Tersimpan!' : saveStatus === 'err' ? '❌ Gagal Menyimpan' : 'Simpan Perubahan'}
+                {saveStatus === 'ok' ? `✅ ${t('settings_save_ok')}` : saveStatus === 'err' ? `❌ ${t('settings_save_error')}` : t('settings_save_profile')}
               </button>
             </div>
           )}
@@ -221,8 +224,8 @@ export default function SettingsPage() {
           {/* ── Notifications Tab ── */}
           {activeTab === 'notifications' && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔔 Preferensi Notifikasi</h3>
-              <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>Kelola jenis notifikasi push yang dikirim ke perangkat mobile kamu.</p>
+              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔔 {t('settings_notif_section')}</h3>
+              <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_notif_hint')}</p>
 
               <div className="space-y-3">
                 {[
@@ -277,14 +280,14 @@ export default function SettingsPage() {
           {/* ── Appearance Tab ── */}
           {activeTab === 'appearance' && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🎨 Tampilan</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🎨 {t('settings_tab_display')}</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 glass-sm rounded-xl">
                   <div className="flex items-center gap-3">
                     {darkMode ? <Moon className="w-5 h-5 text-secondary-500" /> : <Sun className="w-5 h-5 text-accent-500" />}
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Mode Gelap</p>
-                      <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>Beralih antara tema terang dan gelap</p>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>{t('settings_dark_mode')}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_dark_hint')}</p>
                     </div>
                   </div>
                   <button
@@ -304,13 +307,18 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-primary-500" />
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Bahasa</p>
-                      <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>Pilih bahasa antarmuka</p>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>{t('settings_language')}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_language_hint')}</p>
                     </div>
                   </div>
-                  <select className="px-3 py-1.5 rounded-lg glass-sm text-sm outline-none" style={{ color: 'var(--surface-text)' }}>
-                    <option>🇮🇩 Indonesia</option>
-                    <option>🇬🇧 English</option>
+                  <select
+                    value={lang}
+                    onChange={e => setLang(e.target.value as 'id' | 'en')}
+                    className="px-3 py-1.5 rounded-lg glass-sm text-sm outline-none cursor-pointer"
+                    style={{ color: 'var(--surface-text)' }}
+                  >
+                    <option value="id">🇮🇩 Indonesia</option>
+                    <option value="en">🇬🇧 English</option>
                   </select>
                 </div>
               </div>
@@ -320,19 +328,19 @@ export default function SettingsPage() {
           {/* ── Security Tab ── */}
           {activeTab === 'security' && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔒 Keamanan</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>🔒 {t('settings_security')}</h3>
               <div className="space-y-4">
                 <div className="p-4 glass-sm rounded-xl">
                   <div className="flex items-center gap-2 mb-3">
                     <Lock className="w-4 h-4 text-primary-500" />
-                    <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Ubah Password</p>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>{t('settings_change_password')}</p>
                   </div>
                   <div className="space-y-3">
-                    <input type="password" value={passwordForm.current} onChange={e => setPasswordForm(p => ({...p, current: e.target.value}))} placeholder="Password saat ini" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
-                    <input type="password" value={passwordForm.new} onChange={e => setPasswordForm(p => ({...p, new: e.target.value}))} placeholder="Password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
-                    <input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm(p => ({...p, confirm: e.target.value}))} placeholder="Konfirmasi password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.current} onChange={e => setPasswordForm(p => ({...p, current: e.target.value}))} placeholder={t('settings_current_pass')} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.new} onChange={e => setPasswordForm(p => ({...p, new: e.target.value}))} placeholder={t('settings_new_pass')} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm(p => ({...p, confirm: e.target.value}))} placeholder={t('settings_confirm_pass')} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                     {passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm && (
-                      <p className="text-xs text-danger-500">Password tidak cocok</p>
+                      <p className="text-xs text-danger-500">{t('settings_pass_mismatch')}</p>
                     )}
                   </div>
                   <button 
@@ -340,13 +348,13 @@ export default function SettingsPage() {
                     disabled={passwordStatus === 'saving'}
                     className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm disabled:opacity-70">
                     {passwordStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
-                    {passwordStatus === 'ok' ? '✅ Update Berhasil!' : passwordStatus === 'err' ? '❌ Gagal Update' : 'Update Password'}
+                    {passwordStatus === 'ok' ? `✅ ${t('settings_pass_ok')}` : passwordStatus === 'err' ? `❌ ${t('settings_pass_error')}` : t('settings_update_password')}
                   </button>
                 </div>
                 <div className="p-4 glass-sm rounded-xl">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Sesi Aktif</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>Login via Supabase Auth • {profile?.email}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--surface-text-subtle)' }}>Sesi diperbarui otomatis setiap 7 hari</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>{t('settings_active_session')}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_session_info')} • {profile?.email}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--surface-text-subtle)' }}>{t('settings_session_expiry')}</p>
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { mockDevices, mockSensorData, mockSensorHistory, mockIrrigationLogs, moc
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { DeviceCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
+import { useT } from '@/shared/context/LanguageContext';
 
 function getBatteryColor(level: number) {
   if (level > 60) return 'text-primary-500';
@@ -21,9 +22,14 @@ function getSignalBars(rssi: number) {
   return 0;
 }
 
-function DeviceCard({ device }: { device: typeof mockDevices[0] }) {
+function DeviceCard({ device, t }: { device: typeof mockDevices[0]; t: (k: string) => string }) {
   const batteryColor = getBatteryColor(device.battery_level);
   const signalBars = getSignalBars(device.rssi);
+  const devLabel = device.device_type === 'sensor'
+    ? `📡 ${t('devices_sensor')}`
+    : device.device_type === 'actuator'
+    ? `⚙️ ${t('devices_actuator')}`
+    : `📻 ${t('devices_gateway')}`;
 
   return (
     <div className={cn(
@@ -42,7 +48,7 @@ function DeviceCard({ device }: { device: typeof mockDevices[0] }) {
           </div>
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>
-              {device.device_type === 'sensor' ? '📡 Sensor' : device.device_type === 'actuator' ? '⚙️ Aktuator' : '📻 Gateway'}
+              {devLabel}
             </p>
             <p className="text-[10px] font-mono" style={{ color: 'var(--surface-text-muted)' }}>
               ID: {device.id.toUpperCase()}
@@ -54,7 +60,7 @@ function DeviceCard({ device }: { device: typeof mockDevices[0] }) {
           device.is_online ? 'bg-primary-100 text-primary-700' : 'bg-danger-50 text-danger-600'
         )}>
           {device.is_online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-          {device.is_online ? 'Online' : 'Offline'}
+          {device.is_online ? t('common_online') : t('common_offline')}
         </div>
       </div>
 
@@ -62,20 +68,20 @@ function DeviceCard({ device }: { device: typeof mockDevices[0] }) {
         <div className="glass-sm p-2 text-center">
           <Battery className={cn('w-4 h-4 mx-auto mb-0.5', batteryColor)} />
           <p className={cn('text-sm font-bold', batteryColor)}>{device.battery_level}%</p>
-          <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>Baterai</p>
+          <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>{t('devices_battery')}</p>
         </div>
         <div className="glass-sm p-2 text-center">
           <Signal className="w-4 h-4 mx-auto mb-0.5 text-secondary-500" />
           <p className="text-sm font-bold text-secondary-500">{device.rssi} dBm</p>
           <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>
-            Sinyal {'█'.repeat(signalBars)}{'░'.repeat(4 - signalBars)}
+            {t('devices_signal')} {'█'.repeat(signalBars)}{'░'.repeat(4 - signalBars)}
           </p>
         </div>
       </div>
 
       <div className="space-y-1.5 text-xs" style={{ color: 'var(--surface-text-muted)' }}>
         <div className="flex justify-between">
-          <span>Zona</span>
+          <span>{t('devices_zone')}</span>
           <span className="font-medium" style={{ color: 'var(--surface-text)' }}>{device.zone_name || '—'}</span>
         </div>
         <div className="flex justify-between">
@@ -83,7 +89,7 @@ function DeviceCard({ device }: { device: typeof mockDevices[0] }) {
           <span className="font-mono" style={{ color: 'var(--surface-text)' }}>v{device.firmware_version}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Heartbeat</span>
+          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {t('devices_heartbeat')}</span>
           <span style={{ color: 'var(--surface-text)' }}>{formatRelativeTime(device.last_heartbeat)}</span>
         </div>
       </div>
@@ -192,6 +198,7 @@ export default function DevicesPage() {
   const [exported, setExported] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const { hasRole } = useRBAC();
+  const t = useT();
 
   // Simulate initial load (ganti dengan fetch real dari Supabase nanti)
   useEffect(() => {
@@ -259,21 +266,11 @@ export default function DevicesPage() {
               title="Export laporan kondisi sensor & perangkat ke Excel"
             >
               {exported ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Tersimpan!
-                </>
+                <><CheckCircle className="w-4 h-4" />{t('devices_exported')}</>
               ) : exporting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Mengekspor...
-                </>
+                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('devices_exporting')}</>
               ) : (
-                <>
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Export Excel
-                  <Download className="w-3.5 h-3.5 opacity-80" />
-                </>
+                <><FileSpreadsheet className="w-4 h-4" />{t('devices_export')}<Download className="w-3.5 h-3.5 opacity-80" /></>
               )}
             </button>
           )}
@@ -289,8 +286,7 @@ export default function DevicesPage() {
         >
           <FileSpreadsheet className="w-4 h-4 text-primary-500 shrink-0 mt-0.5" />
           <div style={{ color: 'var(--surface-text-muted)' }}>
-            <span className="font-semibold" style={{ color: 'var(--surface-text)' }}>Laporan Excel</span> berisi 5 sheet:{' '}
-            Ringkasan Perangkat, Data Sensor Terkini, Tren 24 Jam, Log Irigasi, dan Log Override.
+            <span className="font-semibold" style={{ color: 'var(--surface-text)' }}>{t('devices_report_info')}</span>{' '}{t('devices_report_desc')}
           </div>
         </div>
       )}
@@ -301,7 +297,7 @@ export default function DevicesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
           <input
             type="text"
-            placeholder="Cari perangkat..."
+            placeholder={t('devices_search')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
@@ -319,7 +315,7 @@ export default function DevicesPage() {
               )}
               style={filter !== f ? { color: 'var(--surface-text-muted)' } : undefined}
             >
-              {f === 'all' ? 'Semua' : f === 'sensor' ? '📡 Sensor' : f === 'actuator' ? '⚙️ Aktuator' : '📻 Gateway'}
+              {f === 'all' ? t('common_all') : f === 'sensor' ? `📡 ${t('devices_sensor')}` : f === 'actuator' ? `⚙️ ${t('devices_actuator')}` : `📻 ${t('devices_gateway')}`}
             </button>
           ))}
         </div>
@@ -334,7 +330,7 @@ export default function DevicesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((device, i) => (
             <div key={device.id} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}>
-              <DeviceCard device={device} />
+              <DeviceCard device={device} t={t} />
             </div>
           ))}
         </div>
@@ -344,7 +340,7 @@ export default function DevicesPage() {
         <div className="glass p-12 text-center">
           <Cpu className="w-12 h-12 mx-auto text-primary-200 mb-3" />
           <p className="text-sm font-medium" style={{ color: 'var(--surface-text-muted)' }}>
-            Tidak ada perangkat yang cocok dengan filter
+            {t('devices_no_match')}
           </p>
         </div>
       )}

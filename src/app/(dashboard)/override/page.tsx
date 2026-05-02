@@ -11,6 +11,7 @@ import type { Zone, SensorData, OverrideLog } from '@/shared/types/global.types'
 import { sensorService } from '@/shared/services/sensorService';
 import { overrideService } from '@/shared/services/overrideService';
 import { useRBAC } from '@/shared/hooks/useRBAC';
+import { useT } from '@/shared/context/LanguageContext';
 
 export default function OverridePage() {
   const [selectedZone, setSelectedZone] = useState('');
@@ -24,6 +25,7 @@ export default function OverridePage() {
   const [isActivating, setIsActivating] = useState(false);
   const [now, setNow] = useState(Date.now());
   const { canControlZone } = useRBAC();
+  const t = useT();
 
   // Global Timer Tick
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function OverridePage() {
     <div className="space-y-6 max-w-[1200px] mx-auto">
       <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
         <Wrench className="w-5 h-5 text-primary-500" />
-        Manual Override
+        {t('override_title')}
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -131,20 +133,20 @@ export default function OverridePage() {
           isOverrideActive && 'animate-pulse-glow'
         )} style={{ animationFillMode: 'forwards' }}>
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>🔧 Panel Kontrol Override</h3>
+            <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>🔧 {t('override_panel')}</h3>
             {isAnyOverrideActive && (
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger-500 text-white text-xs font-bold animate-pulse">
-                <Zap className="w-3 h-3" /> OVERRIDE AKTIF ({activeOverrides.length})
+                <Zap className="w-3 h-3" /> {t('override_active_badge')} ({activeOverrides.length})
               </span>
             )}
           </div>
 
           {/* Zone Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>Pilih Zona</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>{t('override_select_zone')}</label>
             <div className="grid grid-cols-1 gap-2">
               {isLoading ? (
-                <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>Memuat zona...</div>
+                <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_zones')}</div>
               ) : zones.map(zone => {
                 const status = ZONE_STATUS[zone.status];
                 const sensor = sensorDataMap[zone.id];
@@ -170,8 +172,8 @@ export default function OverridePage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium flex items-center" style={{ color: 'var(--surface-text)' }}>
                         {zone.name}
-                        {hasActiveOverride && <span className="ml-2 text-[10px] bg-danger-500 text-white px-1.5 py-0.5 rounded">AKTIF</span>}
-                        {!isAllowed && <span className="ml-2 text-[10px] bg-gray-500 text-white px-1.5 py-0.5 rounded">🔒 TERKUNCI</span>}
+                        {hasActiveOverride && <span className="ml-2 text-[10px] bg-danger-500 text-white px-1.5 py-0.5 rounded">{t('common_active').toUpperCase()}</span>}
+                        {!isAllowed && <span className="ml-2 text-[10px] bg-gray-500 text-white px-1.5 py-0.5 rounded">🔒 {t('override_locked')}</span>}
                       </p>
                       <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
                         {status.label} • 💧 {sensor?.soil_moisture ?? 0}%
@@ -185,7 +187,7 @@ export default function OverridePage() {
 
           {/* Mode Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>Mode Penyiraman</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>{t('override_mode_label')}</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setOverrideMode('water')}
@@ -197,7 +199,7 @@ export default function OverridePage() {
                 )}
               >
                 <span className="text-2xl">💧</span>
-                <span className="text-xs font-bold">Air Biasa</span>
+                <span className="text-xs font-bold">{t('override_mode_water')}</span>
               </button>
               <button
                 onClick={() => setOverrideMode('fertigation')}
@@ -209,7 +211,7 @@ export default function OverridePage() {
                 )}
               >
                 <span className="text-2xl">🧪</span>
-                <span className="text-xs font-bold">Air + Nutrisi</span>
+                <span className="text-xs font-bold">{t('override_mode_fertigation')}</span>
               </button>
             </div>
           </div>
@@ -217,7 +219,7 @@ export default function OverridePage() {
           {/* Duration Slider */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>
-              ⏱️ Durasi: <strong className="text-primary-600">{duration} menit</strong>
+              ⏱️ {t('override_duration')}: <strong className="text-primary-600">{duration} {t('override_minutes')}</strong>
             </label>
             <input
               type="range"
@@ -238,7 +240,7 @@ export default function OverridePage() {
           {/* Timer Display */}
           {isOverrideActive && (
             <div className="text-center py-4 glass-sm rounded-xl">
-              <p className="text-xs mb-1" style={{ color: 'var(--surface-text-muted)' }}>Sisa Waktu</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('override_remaining')}</p>
               <p className="text-4xl font-mono font-bold text-primary-500">{formatTimer(getRemainingTime())}</p>
               <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
                 {zones.find(z => z.id === selectedZone)?.name}
@@ -259,7 +261,7 @@ export default function OverridePage() {
               )}
             >
               <Play className="w-5 h-5 mr-2" />
-              {isActivating ? 'MEMPROSES...' : 'AKTIFKAN OVERRIDE'}
+              {isActivating ? t('override_processing') : t('override_activate')}
             </button>
           ) : (
             <button
@@ -271,7 +273,7 @@ export default function OverridePage() {
               )}
             >
               <Square className="w-5 h-5 mr-2" />
-              {isActivating ? 'MEMPROSES...' : 'HENTIKAN OVERRIDE'}
+              {isActivating ? t('override_processing') : t('override_deactivate')}
             </button>
           )}
 
@@ -279,8 +281,7 @@ export default function OverridePage() {
           <div className="flex items-start gap-2 p-3 rounded-xl bg-accent-200/20 border border-accent-400/30">
             <AlertTriangle className="w-4 h-4 text-accent-600 shrink-0 mt-0.5" />
             <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>
-              Override akan mem-bypass semua logika otomatis (Fuzzy Logic & Smart Delay). 
-              Aktuator akan langsung dieksekusi sesuai durasi yang ditentukan.
+              {t('override_warning')}
             </p>
           </div>
         </div>
@@ -288,7 +289,7 @@ export default function OverridePage() {
         {/* Override Log */}
         <div className="glass p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
           <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
-            📋 Riwayat Override
+            📋 {t('override_history')}
           </h3>
           <div className="space-y-3">
             {isLoading ? (
@@ -308,17 +309,17 @@ export default function OverridePage() {
                       'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
                       log.status === 'active' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
                     )}>
-                      {log.status === 'active' ? 'Aktif' : 'Selesai'}
+                      {log.status === 'active' ? t('common_active') : t('override_completed')}
                     </span>
                     <span className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
                       log.mode === 'fertigation' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
                     )}>
-                      {log.mode === 'fertigation' ? '🧪 Nutrisi' : '💧 Air Saja'}
+                      {log.mode === 'fertigation' ? `🧪 ${t('override_nutrition')}` : `💧 ${t('override_water_only')}`}
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>
-                    Oleh {log.user_name} • {log.duration_minutes} menit
+                    {t('override_by')} {log.user_name} • {log.duration_minutes} {t('override_minutes')}
                     {log.reason && ` • "${log.reason}"`}
                   </p>
                   <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: 'var(--surface-text-subtle)' }}>
@@ -328,7 +329,7 @@ export default function OverridePage() {
               </div>
             ))}
             {activeOverrides.length === 0 && overrideHistory.length === 0 && !isLoading && (
-              <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>Belum ada riwayat override.</div>
+              <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_no_history')}</div>
             )}
           </div>
         </div>

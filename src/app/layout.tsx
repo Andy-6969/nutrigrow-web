@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '@/shared/context/AuthContext';
 import { ToastProvider } from '@/shared/context/ToastContext';
+import { LanguageProvider } from '@/shared/context/LanguageContext';
 import PWAInit from '@/shared/components/PWAInit';
 
 const geistSans = Geist({
@@ -48,7 +49,9 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <ToastProvider>
-            {children}
+            <LanguageProvider>
+              {children}
+            </LanguageProvider>
           </ToastProvider>
         </AuthProvider>
         <PWAInit />

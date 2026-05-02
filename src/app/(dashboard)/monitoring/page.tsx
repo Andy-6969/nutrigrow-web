@@ -9,11 +9,13 @@ import {
 import { mockZones, mockSensorData, mockSensorHistory } from '@/shared/lib/mockData';
 import { cn, getThresholdColor, getSensorStatusColor } from '@/shared/lib/utils';
 import { SENSOR_THRESHOLDS, ZONE_STATUS } from '@/shared/lib/constants';
+import { useT } from '@/shared/context/LanguageContext';
 
 function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
   label: string; value: number; unit: string; icon: React.ElementType;
   threshold: { low: number; high: number }; iconColor: string;
 }) {
+  const t = useT();
   const status = getThresholdColor(value, threshold.low, threshold.high);
   const statusColor = getSensorStatusColor(status);
   const percentage = Math.min(100, Math.max(0, ((value - 0) / (threshold.high * 1.3)) * 100));
@@ -41,13 +43,14 @@ function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
       <p className="text-xs font-medium text-center" style={{ color: 'var(--surface-text-muted)' }}>{label}</p>
       <div className="flex items-center gap-1">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
-        <span className="text-[10px] capitalize" style={{ color: statusColor }}>{status === 'success' ? 'Normal' : status === 'warning' ? 'Perhatian' : 'Kritis'}</span>
+        <span className="text-[10px] capitalize" style={{ color: statusColor }}>{status === 'success' ? t('common_normal') : status === 'warning' ? t('common_warning') : t('common_critical')}</span>
       </div>
     </div>
   );
 }
 
 export default function MonitoringPage() {
+  const t = useT();
   const [selectedZone, setSelectedZone] = useState(mockZones[0].id);
   const [timeRange, setTimeRange] = useState('24h');
   const sensor = mockSensorData[selectedZone];
@@ -58,7 +61,7 @@ export default function MonitoringPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
           <Activity className="w-5 h-5 text-primary-500" />
-          Monitoring Sensor Real-Time
+          {t('monitoring_title')}
         </h2>
         <div className="flex gap-2 flex-wrap">
           {mockZones.map(zone => {
@@ -85,7 +88,7 @@ export default function MonitoringPage() {
       {/* Sensor Gauges */}
       <div className="glass p-5 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--surface-text-muted)' }}>
-          📡 Pembacaan Saat Ini — {mockZones.find(z => z.id === selectedZone)?.name}
+          📡 {t('monitoring_current')} — {mockZones.find(z => z.id === selectedZone)?.name}
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <GaugeCard
@@ -127,7 +130,7 @@ export default function MonitoringPage() {
       <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
           <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>
-            📊 Grafik Historis Sensor
+            📊 {t('monitoring_chart')}
           </h3>
           <div className="flex gap-1 bg-white/50 rounded-lg p-1" style={{ border: '1px solid var(--surface-border)' }}>
             {['24h', '7d', '30d'].map(range => (
@@ -158,9 +161,9 @@ export default function MonitoringPage() {
                   border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
                 }}
               />
-              <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name="Kelembaban Tanah (%)" />
-              <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name="Suhu (°C)" />
-              <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name="Kelembaban Udara (%)" />
+              <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t('monitoring_soil_moisture')} />
+              <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t('monitoring_temperature')} />
+              <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t('monitoring_humidity')} />
               <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name="pH" />
             </LineChart>
           </ResponsiveContainer>

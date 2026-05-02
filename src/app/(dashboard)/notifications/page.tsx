@@ -5,6 +5,7 @@ import { Bell, Check, CheckCheck, CloudRain, Wrench, AlertTriangle, Activity, Tr
 import { mockNotifications } from '@/shared/lib/mockData';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import type { Notification } from '@/shared/types/global.types';
+import { useT } from '@/shared/context/LanguageContext';
 
 const typeConfig: Record<Notification['type'], { icon: React.ElementType; color: string; bg: string }> = {
   smart_delay:    { icon: CloudRain,      color: 'text-accent-600',    bg: 'bg-accent-200/30' },
@@ -14,6 +15,7 @@ const typeConfig: Record<Notification['type'], { icon: React.ElementType; color:
 };
 
 export default function NotificationsPage() {
+  const t = useT();
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState<'all' | Notification['type']>('all');
 
@@ -37,7 +39,7 @@ export default function NotificationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
           <Bell className="w-5 h-5 text-primary-500" />
-          Notification Center
+        {t('notifications_title')}
           {unreadCount > 0 && (
             <span className="ml-1 px-2.5 py-0.5 bg-danger-500 text-white text-xs font-bold rounded-full">
               {unreadCount}
@@ -49,7 +51,7 @@ export default function NotificationsPage() {
             onClick={markAllRead}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium glass-sm hover:scale-105 transition-transform text-primary-600"
           >
-            <CheckCheck className="w-3.5 h-3.5" /> Tandai Semua Dibaca
+            <CheckCheck className="w-3.5 h-3.5" /> {t('notifications_mark_all')}
           </button>
         )}
       </div>
@@ -57,11 +59,11 @@ export default function NotificationsPage() {
       {/* Filter tabs */}
       <div className="flex gap-1 bg-white/50 rounded-xl p-1 overflow-x-auto" style={{ border: '1px solid var(--surface-border)' }}>
         {[
-          { key: 'all', label: 'Semua', count: notifications.length },
-          { key: 'smart_delay', label: '⏸️ Smart Delay' },
-          { key: 'cycle_complete', label: '✅ Siklus' },
-          { key: 'device_alert', label: '🔴 Alert' },
-          { key: 'override', label: '🔧 Override' },
+          { key: 'all',            label: `${t('notifications_all')} (${notifications.length})` },
+          { key: 'smart_delay',    label: `⏸️ ${t('notifications_smart_delay')}` },
+          { key: 'cycle_complete', label: `✅ ${t('notifications_cycle')}` },
+          { key: 'device_alert',   label: `🔴 ${t('notifications_alert')}` },
+          { key: 'override',       label: `🔧 ${t('notifications_override')}` },
         ].map(f => (
           <button
             key={f.key}
@@ -105,7 +107,7 @@ export default function NotificationsPage() {
                       <button
                         onClick={() => markAsRead(notification.id)}
                         className="p-1 rounded-md hover:bg-primary-50 transition-colors"
-                        title="Tandai dibaca"
+                        title={t('notifications_mark_read')}
                       >
                         <Check className="w-3.5 h-3.5 text-primary-500" />
                       </button>
@@ -113,7 +115,7 @@ export default function NotificationsPage() {
                     <button
                       onClick={() => deleteNotification(notification.id)}
                       className="p-1 rounded-md hover:bg-danger-50 transition-colors"
-                      title="Hapus"
+                      title={t('notifications_delete')}
                     >
                       <Trash2 className="w-3.5 h-3.5 text-danger-500" />
                     </button>
@@ -143,7 +145,7 @@ export default function NotificationsPage() {
         <div className="glass p-12 text-center">
           <Bell className="w-12 h-12 mx-auto text-primary-200 mb-3" />
           <p className="text-sm font-medium" style={{ color: 'var(--surface-text-muted)' }}>
-            Tidak ada notifikasi
+            {t('notifications_empty')}
           </p>
         </div>
       )}

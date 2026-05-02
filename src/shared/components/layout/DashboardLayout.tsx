@@ -13,22 +13,25 @@ import { APP_NAME } from '@/shared/lib/constants';
 import { mockNotifications } from '@/shared/lib/mockData';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
+import { useT } from '@/shared/context/LanguageContext';
 import PendingApprovalPage from '@/app/(dashboard)/pending-approval/page';
 
-const navItems = [
-  { id: 'overview',        label: 'Dashboard',      icon: LayoutDashboard, href: '/overview' },
-  { id: 'agri-twin',       label: 'Agri-Twin',      icon: Map,             href: '/agri-twin' },
-  { id: 'monitoring',      label: 'Monitoring',      icon: Activity,        href: '/monitoring' },
-  { id: 'eco-savings',     label: 'Eco-Savings',     icon: Leaf,            href: '/eco-savings' },
-  { id: 'schedules',       label: 'Jadwal',          icon: Calendar,        href: '/schedules' },
-  { id: 'devices',         label: 'Perangkat',       icon: Cpu,             href: '/devices' },
-  { id: 'farms',           label: 'Lahan',           icon: MapPin,          href: '/farms' },
-  { id: 'notifications',   label: 'Notifikasi',      icon: Bell,            href: '/notifications' },
-  { id: 'user_management', label: 'Kelola User',     icon: Users,           href: '/user-management' },
-  { id: 'settings',        label: 'Pengaturan',      icon: Settings,        href: '/settings' },
+const navItemDefs = [
+  { id: 'overview',        tKey: 'nav_dashboard',        icon: LayoutDashboard, href: '/overview' },
+  { id: 'agri-twin',       tKey: 'nav_agri_twin',        icon: Map,             href: '/agri-twin' },
+  { id: 'monitoring',      tKey: 'nav_monitoring',       icon: Activity,        href: '/monitoring' },
+  { id: 'eco-savings',     tKey: 'nav_eco_savings',      icon: Leaf,            href: '/eco-savings' },
+  { id: 'schedules',       tKey: 'nav_schedules',        icon: Calendar,        href: '/schedules' },
+  { id: 'devices',         tKey: 'nav_devices',          icon: Cpu,             href: '/devices' },
+  { id: 'farms',           tKey: 'nav_farms',            icon: MapPin,          href: '/farms' },
+  { id: 'notifications',   tKey: 'nav_notifications',    icon: Bell,            href: '/notifications' },
+  { id: 'user_management', tKey: 'nav_user_management',  icon: Users,           href: '/user-management' },
+  { id: 'settings',        tKey: 'nav_settings',         icon: Settings,        href: '/settings' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useT();
+  const navItems = navItemDefs.map(item => ({ ...item, label: t(item.tKey) }));
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -190,7 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-text)'; }}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            {!collapsed && <span className="text-xs">Minimkan</span>}
+            {!collapsed && <span className="text-xs">{t('common_close')}</span>}
           </button>
         </div>
       </aside>
@@ -216,7 +219,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <div>
               <h2 className="text-lg font-semibold" style={{ color: 'var(--topbar-text)' }}>
-                {navItems.find(n => n.href === pathname)?.label || 'Dashboard'}
+                {navItems.find(n => n.href === pathname)?.label || t('nav_dashboard')}
               </h2>
               <p className="text-xs hidden sm:block" style={{ color: 'var(--topbar-text-muted)' }}>
                 Bitanic Pro V4 — Smart Fertigation Monitoring
@@ -272,7 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="hidden md:block">
                 <p className="text-sm font-medium" style={{ color: 'var(--topbar-text)' }}>{profile?.full_name || 'Pengguna'}</p>
                 <p className="text-[11px]" style={{ color: 'var(--topbar-text-muted)' }}>
-                  {role === 'super_admin' ? '⭐ Super Admin' : role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : 'Tamu'}
+                  {role === 'super_admin' ? '⭐ Super Admin' : role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : t('nav_logout')}
                 </p>
               </div>
               <button
@@ -282,7 +285,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 style={{ color: 'var(--topbar-text-muted)' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.color = '#F87171'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--topbar-text-muted)'; }}
-                title="Keluar"
+                title={t('nav_logout')}
               >
                 {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
               </button>
