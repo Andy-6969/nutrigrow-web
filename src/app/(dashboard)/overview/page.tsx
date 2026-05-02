@@ -5,7 +5,7 @@ import {
   Droplets, Leaf, Zap, CloudRain,
   Wind, Thermometer, Power, Calendar,
   ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout,
-  Search, X, Loader2
+  Search, X, Loader2, Compass
 } from 'lucide-react';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
@@ -259,21 +259,18 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            {/* Metrics Grid: Kelembaban, Kecepatan Angin, Arah Angin */}
+            {/* Metrics Grid: icon-only */}
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div style={subCard} className="p-2.5">
-                <Droplets className="w-3.5 h-3.5 text-blue-400 mb-1" />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Kelembaban</p>
+              <div style={subCard} className="p-2.5 flex flex-col items-center text-center">
+                <Droplets className="w-4 h-4 text-blue-400 mb-1.5" />
                 <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.humidity ?? '--'}%</p>
               </div>
-              <div style={subCard} className="p-2.5">
-                <Wind className="w-3.5 h-3.5 text-cyan-400 mb-1" />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Kec. Angin</p>
+              <div style={subCard} className="p-2.5 flex flex-col items-center text-center">
+                <Wind className="w-4 h-4 text-cyan-400 mb-1.5" />
                 <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.wind_speed ?? '--'} <span className="text-[9px] font-normal" style={textSubtle}>km/j</span></p>
               </div>
-              <div style={subCard} className="p-2.5">
-                <Thermometer className="w-3.5 h-3.5 text-orange-400 mb-1" />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Arah Angin</p>
+              <div style={subCard} className="p-2.5 flex flex-col items-center text-center">
+                <Compass className="w-4 h-4 text-amber-400 mb-1.5" />
                 <p className="text-[11px] font-semibold leading-tight" style={textMain}>{weather?.wind_direction ?? '--'}</p>
               </div>
             </div>
