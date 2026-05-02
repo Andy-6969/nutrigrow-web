@@ -152,3 +152,18 @@ export interface IrrigationLog {
   ended_at?: string;
   status: 'running' | 'completed' | 'cancelled' | 'error';
 }
+
+export interface Schedule {
+  id: string;
+  zone_id: string;
+  name: string;
+  cron_expression: string;
+  duration_minutes: number;
+  is_active: boolean;
+  include_fertigation: boolean;
+  created_at?: string;
+  updated_at?: string;
+  
+  // Joined relation from public.zones
+  zone_name?: string; 
+}

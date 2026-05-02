@@ -1,28 +1,13 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useMemo } from 'react';
-import { Calendar, Plus, Clock, Droplets, Power, Trash2, Edit, X } from 'lucide-react';
-import { mockZones } from '@/shared/lib/mockData';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Calendar, Plus, Clock, Trash2, Edit, X, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-
-interface Schedule {
-  id: string;
-  name: string;
-  zone_id: string;
-  zone_name: string;
-  cron_expression: string;
-  duration_minutes: number;
-  is_active: boolean;
-  include_fertigation: boolean;
-}
-
-const mockSchedules: Schedule[] = [
-  { id: 's1', name: 'Penyiraman Pagi Z1', zone_id: 'z1', zone_name: 'Sawah Utara', cron_expression: '0 6 * * *', duration_minutes: 15, is_active: true, include_fertigation: true },
-  { id: 's2', name: 'Penyiraman Sore Z2', zone_id: 'z2', zone_name: 'Kebun Timur', cron_expression: '0 16 * * *', duration_minutes: 20, is_active: true, include_fertigation: false },
-  { id: 's3', name: 'Penyiraman Pagi Z3', zone_id: 'z3', zone_name: 'Ladang Selatan', cron_expression: '30 5 * * 1,3,5', duration_minutes: 25, is_active: true, include_fertigation: true },
-  { id: 's4', name: 'Penyiraman Z5', zone_id: 'z5', zone_name: 'Kebun Barat', cron_expression: '0 7 * * *', duration_minutes: 20, is_active: false, include_fertigation: false },
-  { id: 's5', name: 'Fertigasi Z1 Siang', zone_id: 'z1', zone_name: 'Sawah Utara', cron_expression: '0 11 * * 2,4,6', duration_minutes: 10, is_active: true, include_fertigation: true },
-];
+import type { Schedule, Zone } from '@/shared/types/global.types';
+import { scheduleService } from '@/shared/services/scheduleService';
+import { sensorService } from '@/shared/services/sensorService';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 
 const DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 5); // 05:00 - 20:00
@@ -38,7 +23,11 @@ function parseCron(cron: string) {
 }
 
 export default function SchedulesPage() {
-  const [schedules, setSchedules] = useState(mockSchedules);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
   const [showForm, setShowForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
@@ -46,16 +35,53 @@ export default function SchedulesPage() {
     duration_minutes: 15, include_fertigation: false,
   });
 
+  const { canControlZone } = useRBAC();
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [fetchedSchedules, fetchedZones] = await Promise.all([
+        scheduleService.getSchedules(),
+        sensorService.getZones()
+      ]);
+      setSchedules(fetchedSchedules);
+      setZones(fetchedZones);
+    } catch (e) {
+      console.error('Failed to load schedules/zones', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    scheduleService.subscribeToSchedules(() => fetchData());
+    return () => scheduleService.unsubscribeFromSchedules();
+  }, [fetchData]);
+
   const calendarSlots = useMemo(() => {
     return schedules.map(s => ({ ...s, ...parseCron(s.cron_expression) }));
   }, [schedules]);
 
-  const toggleActive = (id: string) => {
-    setSchedules(prev => prev.map(s => s.id === id ? { ...s, is_active: !s.is_active } : s));
+  const toggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      // Optimistic update
+      setSchedules(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
+      await scheduleService.toggleScheduleStatus(id, !currentStatus);
+    } catch (error) {
+      console.error(error);
+      fetchData(); // revert on failure
+    }
   };
 
-  const deleteSchedule = (id: string) => {
-    setSchedules(prev => prev.filter(s => s.id !== id));
+  const deleteSchedule = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
+    try {
+      setSchedules(prev => prev.filter(s => s.id !== id));
+      await scheduleService.deleteSchedule(id);
+    } catch (error) {
+      console.error(error);
+      fetchData(); // revert
+    }
   };
 
   const openCreate = () => {
@@ -70,21 +96,23 @@ export default function SchedulesPage() {
     setShowForm(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingSchedule) {
-      setSchedules(prev => prev.map(s => s.id === editingSchedule.id ? {
-        ...s, ...formData, zone_name: mockZones.find(z => z.id === formData.zone_id)?.name.split(' - ')[1] || ''
-      } : s));
-    } else {
-      const newSchedule: Schedule = {
-        id: `s${Date.now()}`, ...formData,
-        zone_name: mockZones.find(z => z.id === formData.zone_id)?.name.split(' - ')[1] || '',
-        is_active: true,
-      };
-      setSchedules(prev => [...prev, newSchedule]);
+    setIsSaving(true);
+    try {
+      if (editingSchedule) {
+        await scheduleService.updateSchedule(editingSchedule.id, formData);
+      } else {
+        await scheduleService.createSchedule(formData);
+      }
+      setShowForm(false);
+      fetchData();
+    } catch (error) {
+      console.error('Failed to save schedule', error);
+      alert('Gagal menyimpan jadwal. Silakan coba lagi.');
+    } finally {
+      setIsSaving(false);
     }
-    setShowForm(false);
   };
 
   return (
@@ -152,7 +180,11 @@ export default function SchedulesPage() {
       <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
         <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--surface-text)' }}>📋 Daftar Jadwal</h3>
         <div className="space-y-2">
-          {schedules.map((schedule, i) => {
+          {isLoading ? (
+             <div className="text-sm py-8 text-center flex justify-center items-center gap-2" style={{ color: 'var(--surface-text-muted)' }}>
+               <Loader2 className="w-5 h-5 animate-spin text-primary-500" /> Memuat jadwal...
+             </div>
+          ) : schedules.map((schedule, i) => {
             const cron = parseCron(schedule.cron_expression);
             return (
               <div key={schedule.id} className={cn(
@@ -161,10 +193,12 @@ export default function SchedulesPage() {
               )} style={{ animationDelay: `${(i + 3) * 80}ms`, animationFillMode: 'forwards' }}>
                 {/* Toggle */}
                 <button
-                  onClick={() => toggleActive(schedule.id)}
+                  onClick={() => toggleActive(schedule.id, schedule.is_active)}
+                  disabled={!canControlZone(schedule.zone_id)}
                   className={cn(
                     'w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5 shrink-0',
-                    schedule.is_active ? 'bg-primary-500' : 'bg-gray-300'
+                    schedule.is_active ? 'bg-primary-500' : 'bg-gray-300',
+                    !canControlZone(schedule.zone_id) && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   <div className={cn(
@@ -185,14 +219,16 @@ export default function SchedulesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(schedule)} className="p-1.5 rounded-lg hover:bg-primary-50 transition-colors">
-                    <Edit className="w-4 h-4 text-primary-500" />
-                  </button>
-                  <button onClick={() => deleteSchedule(schedule.id)} className="p-1.5 rounded-lg hover:bg-danger-50 transition-colors">
-                    <Trash2 className="w-4 h-4 text-danger-500" />
-                  </button>
-                </div>
+                {canControlZone(schedule.zone_id) && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(schedule)} className="p-1.5 rounded-lg hover:bg-primary-50 transition-colors">
+                      <Edit className="w-4 h-4 text-primary-500" />
+                    </button>
+                    <button onClick={() => deleteSchedule(schedule.id)} className="p-1.5 rounded-lg hover:bg-danger-50 transition-colors">
+                      <Trash2 className="w-4 h-4 text-danger-500" />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -231,7 +267,7 @@ export default function SchedulesPage() {
                   style={{ color: 'var(--surface-text)' }}
                 >
                   <option value="">-- Pilih Zona --</option>
-                  {mockZones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+                  {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
                 </select>
               </div>
 
@@ -272,10 +308,10 @@ export default function SchedulesPage() {
               </label>
 
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 py-3 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-all glow-sm hover:glow-md active:scale-[0.98]">
-                  {editingSchedule ? '💾 Simpan' : '➕ Buat Jadwal'}
+                <button type="submit" disabled={isSaving} className="flex-1 flex justify-center items-center py-3 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-all glow-sm hover:glow-md active:scale-[0.98] disabled:opacity-70">
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingSchedule ? '💾 Simpan' : '➕ Buat Jadwal')}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl glass-sm font-medium text-sm hover:scale-105 transition-transform" style={{ color: 'var(--surface-text-muted)' }}>
+                <button type="button" onClick={() => setShowForm(false)} disabled={isSaving} className="px-6 py-3 rounded-xl glass-sm font-medium text-sm hover:scale-105 transition-transform disabled:opacity-50" style={{ color: 'var(--surface-text-muted)' }}>
                   Batal
                 </button>
               </div>
