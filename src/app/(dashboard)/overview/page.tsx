@@ -248,6 +248,7 @@ export default function OverviewPage() {
             <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
               <CloudRain className="w-4 h-4 text-cyan-400" />
               WEATHER FORECAST
+              <span className="ml-auto text-[9px] font-mono" style={textSubtle}>BMKG</span>
             </h3>
             <div className="flex items-center gap-4 mb-5">
               <span className="text-5xl drop-shadow-lg">{weather?.icon ?? '🌤️'}</span>
