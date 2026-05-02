@@ -302,7 +302,7 @@ export default function OverviewPage() {
         <div className="xl:col-span-3 space-y-6 flex flex-col">
 
           {/* Weather Forecast Card */}
-          <div style={card} className="p-6">
+          <div style={card} className="p-6 animate-card-entrance animate-delay-1">
             <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
               <CloudRain className="w-4 h-4 text-cyan-400" />
               WEATHER FORECAST
@@ -375,7 +375,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Weekly Forecast */}
-          <div style={card} className="p-6 flex-1 min-h-[300px] flex flex-col">
+          <div style={card} className="p-6 flex-1 min-h-[300px] flex flex-col animate-card-entrance animate-delay-3">
             {/* Header */}
             <h3 className="text-sm font-semibold mb-3 tracking-wider flex items-center gap-2" style={textMuted}>
               <Calendar className="w-4 h-4 text-cyan-400" />
@@ -504,7 +504,7 @@ export default function OverviewPage() {
         </div>
 
         {/* ── CENTER COLUMN (HUD) ── */}
-        <div className="xl:col-span-6 flex flex-col items-center justify-center relative min-h-[500px]">
+        <div className="xl:col-span-6 flex flex-col items-center justify-center relative min-h-[500px] animate-card-entrance animate-delay-2">
 
           {/* HUD Header */}
           <div className="absolute top-0 text-center w-full z-20 px-12" style={slideInStyle} key={`header-${animKey}`}>
@@ -602,7 +602,7 @@ export default function OverviewPage() {
         <div className="xl:col-span-3 space-y-6 flex flex-col">
 
           {/* Irrigation Mode Selector */}
-          <div style={card} className="p-4">
+          <div style={card} className="p-4 animate-card-entrance animate-delay-3">
             <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>Mode Penyiraman</p>
             <div className="grid grid-cols-3 gap-2">
               {IRRIGATION_MODES.map(mode => {
@@ -636,7 +636,7 @@ export default function OverviewPage() {
 
           {/* Manual Override Button */}
           <button onClick={handleManualOverride} disabled={isOverriding}
-            className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group',
+            className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
               isOverriding ? 'cursor-not-allowed opacity-80' : 'cursor-pointer')}
           >
             <div className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
@@ -662,7 +662,7 @@ export default function OverviewPage() {
           </button>
 
           {/* Eco-Savings */}
-          <div style={card} className="p-6 flex-1 flex flex-col justify-between">
+          <div style={card} className="p-6 flex-1 flex flex-col justify-between animate-card-entrance animate-delay-6">
             <h3 className="text-sm font-semibold mb-6 tracking-wider flex items-center gap-2" style={textMuted}>
               <Leaf className="w-4 h-4 text-emerald-500" />
               ECO-SAVINGS IMPACT
