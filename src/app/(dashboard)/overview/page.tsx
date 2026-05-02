@@ -302,9 +302,9 @@ export default function OverviewPage() {
             </h3>
 
             {/* Search Box */}
-            <div ref={searchRef} className="relative mb-3">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+            <div ref={searchRef} className="relative mb-3 z-50">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors focus-within:border-cyan-500/50"
+                style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--surface-border)' }}>
                 {isSearching
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" style={{ color: '#06b6d4' }} />
                   : <Search className="w-3.5 h-3.5 shrink-0" style={{ color: '#06b6d4' }} />
@@ -315,7 +315,7 @@ export default function OverviewPage() {
                   onChange={e => handleSearchInput(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
                   placeholder="Cari lokasi lain..."
-                  className="flex-1 bg-transparent outline-none text-[11px] placeholder:opacity-40"
+                  className="flex-1 bg-transparent outline-none text-[11px] placeholder:opacity-50"
                   style={{ color: 'var(--surface-text)' }}
                 />
                 {searchQuery && (
@@ -327,17 +327,23 @@ export default function OverviewPage() {
 
               {/* Dropdown hasil pencarian */}
               {showDropdown && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
-                  style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+                <div className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)]"
+                  style={{ 
+                    background: 'rgba(15, 23, 42, 0.95)', // Warna solid gelap (slate-900)
+                    backdropFilter: 'blur(24px)',         // Efek blur sangat kuat
+                    WebkitBackdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(255,255,255,0.1)' 
+                  }}>
                   {searchResults.map(loc => (
                     <button key={loc.id}
                       onClick={() => selectLocation(loc)}
-                      className="w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-white/5 transition-colors duration-150"
+                      className="w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-white/10 transition-colors duration-150"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
                     >
-                      <MapPin className="w-3 h-3 shrink-0 text-purple-400" />
+                      <MapPin className="w-3 h-3 shrink-0 text-cyan-400" />
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--surface-text)' }}>{loc.name}</p>
-                        <p className="text-[9px] truncate" style={textSubtle}>{loc.admin1}, {loc.country}</p>
+                        <p className="text-[11px] font-semibold truncate" style={{ color: '#f8fafc' }}>{loc.name}</p>
+                        <p className="text-[9px] truncate" style={{ color: '#94a3b8' }}>{loc.admin1}, {loc.country}</p>
                       </div>
                     </button>
                   ))}
