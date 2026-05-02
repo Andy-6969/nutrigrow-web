@@ -198,31 +198,33 @@ export default function OverviewPage() {
               PRAKIRAAN 7 HARI
               <span className="ml-auto text-[9px] font-mono" style={textSubtle}>Open-Meteo</span>
             </h3>
-            <div className="flex-1 space-y-1.5 overflow-y-auto">
+            <div className="flex-1 space-y-2 overflow-y-auto mb-4 pr-1">
               {(weather?.weekly_forecast ?? []).length > 0 ? (
                 weather!.weekly_forecast.map((day, i) => {
                   const isToday = i === 0;
                   const rainHigh = day.precipitation_probability > 50;
                   return (
                     <div key={day.date}
-                      className="flex items-center gap-2 py-2 px-3 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                      className="flex items-center gap-3 py-2.5 px-3.5 rounded-xl transition-all duration-200 hover:scale-[1.02]"
                       style={{
                         background: isToday ? 'rgba(16,185,129,0.08)' : 'var(--surface-card)',
                         border: isToday ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--surface-border)',
                       }}
                     >
-                      <span className="text-[11px] font-bold w-7 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
+                      <span className="text-xs font-bold w-9 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
                         {isToday ? 'Hari' : day.day_name}
                       </span>
-                      <span className="text-lg w-7 text-center shrink-0">{day.icon}</span>
-                      <span className="text-[10px] flex-1 truncate" style={textSubtle}>{day.description}</span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-xs font-mono font-bold" style={textMain}>{day.temp_max}°</span>
-                        <span className="text-[10px] font-mono" style={textSubtle}>{day.temp_min}°</span>
+                      <span className="text-2xl w-8 text-center shrink-0 drop-shadow-md">{day.icon}</span>
+                      <span className="text-[11px] font-medium flex-1 leading-tight" style={textMain}>
+                        {day.description}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0 justify-end w-14">
+                        <span className="text-sm font-mono font-bold" style={textMain}>{Math.round(day.temp_max)}°</span>
+                        <span className="text-xs font-mono" style={textSubtle}>{Math.round(day.temp_min)}°</span>
                       </div>
-                      <div className="flex items-center gap-0.5 w-11 justify-end shrink-0">
-                        <Droplets className="w-3 h-3" style={{ color: rainHigh ? '#f59e0b' : '#3b82f6' }} />
-                        <span className="text-[10px] font-mono font-semibold" style={{ color: rainHigh ? '#f59e0b' : '#10b981' }}>
+                      <div className="flex items-center gap-1 w-12 justify-end shrink-0">
+                        <Droplets className="w-3.5 h-3.5" style={{ color: rainHigh ? '#f59e0b' : '#3b82f6' }} />
+                        <span className="text-xs font-mono font-semibold" style={{ color: rainHigh ? '#f59e0b' : '#10b981' }}>
                           {day.precipitation_probability}%
                         </span>
                       </div>
@@ -234,6 +236,20 @@ export default function OverviewPage() {
                   <p className="text-xs" style={textSubtle}>Data weekly belum tersedia</p>
                 </div>
               )}
+            </div>
+            
+            {/* Footer Lokasi & Update */}
+            <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--surface-border)' }}>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3 h-3 text-purple-400" />
+                <p className="text-[10px] font-semibold" style={textMuted}>{weather?.lokasi ?? '--'}</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3 h-3" style={textSubtle} />
+                <p className="text-[10px] font-mono" style={textSubtle}>
+                  {weather?.last_update ? new Date(weather.last_update).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
