@@ -3,17 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Droplets, Leaf, Zap, CloudRain,
-  Wind, Thermometer, Power, Activity,
+  Wind, Thermometer, Power, Calendar,
   ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout
 } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid
-} from 'recharts';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import type { WeatherData, SensorData, Zone, EcoSavingsData } from '@/shared/types/global.types';
-import { sensorService, type SensorHistoryPoint } from '@/shared/services/sensorService';
+import { sensorService } from '@/shared/services/sensorService';
 import { overrideService } from '@/shared/services/overrideService';
 import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
@@ -32,7 +28,7 @@ export default function OverviewPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
-  const [sensorHistory, setSensorHistory] = useState<SensorHistoryPoint[]>([]);
+
   const [ecoSavings, setEcoSavings] = useState<EcoSavingsData | null>(null);
   const [zoneIndex, setZoneIndex] = useState(0);
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
@@ -59,11 +55,6 @@ export default function OverviewPage() {
       setZones(fetchedZones);
       setSensorDataMap(allSensors);
       setEcoSavings(savings);
-      // Load sensor history untuk zona pertama
-      if (fetchedZones.length > 0) {
-        const hist = await sensorService.getSensorHistory(fetchedZones[0].id);
-        setSensorHistory(hist);
-      }
     };
     loadData();
     sensorService.subscribeToSensorUpdates((payload) => {
@@ -200,36 +191,49 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* 24h Chart */}
+          {/* Weekly Forecast */}
           <div style={card} className="p-6 flex-1 min-h-[300px] flex flex-col">
             <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
-              <Activity className="w-4 h-4 text-emerald-500" />
-              TREN 24 JAM
-              {selectedZone && (
-                <span className="ml-auto text-[10px] font-mono truncate max-w-[90px]" style={textSubtle}>
-                  {selectedZone.name.split(' - ')[1] || selectedZone.name}
-                </span>
-              )}
+              <Calendar className="w-4 h-4 text-cyan-400" />
+              PRAKIRAAN 7 HARI
+              <span className="ml-auto text-[9px] font-mono" style={textSubtle}>Open-Meteo</span>
             </h3>
-            <div className="flex-1 -ml-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={sensorHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#10B981" stopOpacity={0.35}/>
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" vertical={false} />
-                  <XAxis dataKey="time" tick={{ fill: 'var(--surface-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} interval={6} />
-                  <YAxis tick={{ fill: 'var(--surface-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--glass-bg)', borderColor: 'var(--surface-border)', borderRadius: '12px', color: 'var(--surface-text)' }}
-                    itemStyle={{ color: '#10B981' }}
-                  />
-                  <Area type="monotone" dataKey="soil_moisture" stroke="#10B981" strokeWidth={2} fill="url(#colorSoil)" />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="flex-1 space-y-1.5 overflow-y-auto">
+              {(weather?.weekly_forecast ?? []).length > 0 ? (
+                weather!.weekly_forecast.map((day, i) => {
+                  const isToday = i === 0;
+                  const rainHigh = day.precipitation_probability > 50;
+                  return (
+                    <div key={day.date}
+                      className="flex items-center gap-2 py-2 px-3 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                      style={{
+                        background: isToday ? 'rgba(16,185,129,0.08)' : 'var(--surface-card)',
+                        border: isToday ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--surface-border)',
+                      }}
+                    >
+                      <span className="text-[11px] font-bold w-7 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
+                        {isToday ? 'Hari' : day.day_name}
+                      </span>
+                      <span className="text-lg w-7 text-center shrink-0">{day.icon}</span>
+                      <span className="text-[10px] flex-1 truncate" style={textSubtle}>{day.description}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-xs font-mono font-bold" style={textMain}>{day.temp_max}°</span>
+                        <span className="text-[10px] font-mono" style={textSubtle}>{day.temp_min}°</span>
+                      </div>
+                      <div className="flex items-center gap-0.5 w-11 justify-end shrink-0">
+                        <Droplets className="w-3 h-3" style={{ color: rainHigh ? '#f59e0b' : '#3b82f6' }} />
+                        <span className="text-[10px] font-mono font-semibold" style={{ color: rainHigh ? '#f59e0b' : '#10b981' }}>
+                          {day.precipitation_probability}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs" style={textSubtle}>Data weekly belum tersedia</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

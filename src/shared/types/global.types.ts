@@ -121,6 +121,20 @@ export interface WeatherData {
   rekomendasi_siram: boolean;
   last_update: string;       // ISO timestamp from created_at
   lokasi: string;            // "Desa, Kecamatan"
+  // Open-Meteo 7-day forecast
+  weekly_forecast: WeeklyForecastDay[];
+}
+
+export interface WeeklyForecastDay {
+  date: string;                      // "2026-05-03"
+  day_name: string;                  // "Sab"
+  temp_max: number;
+  temp_min: number;
+  precipitation_probability: number; // 0-100
+  precipitation_sum: number;         // mm
+  weather_code: number;              // WMO code
+  icon: string;                      // emoji
+  description: string;               // "Hujan Ringan"
 }
 
 export interface WeatherForecast {

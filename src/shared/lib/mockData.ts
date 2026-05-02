@@ -95,6 +95,15 @@ export const mockWeather: WeatherData = {
     { dt: Date.now() + 3600000 * 12, temp: 27, humidity: 82, pop: 72, description: 'Hujan ringan', icon: '🌧️' },
     { dt: Date.now() + 3600000 * 15, temp: 25, humidity: 88, pop: 85, description: 'Hujan', icon: '🌧️' },
   ],
+  weekly_forecast: [
+    { date: '2026-05-02', day_name: 'Sab', temp_max: 30, temp_min: 23, precipitation_probability: 20, precipitation_sum: 0.5, weather_code: 2, icon: '⛅', description: 'Berawan Sebagian' },
+    { date: '2026-05-03', day_name: 'Min', temp_max: 29, temp_min: 22, precipitation_probability: 45, precipitation_sum: 2.1, weather_code: 3, icon: '☁️', description: 'Berawan' },
+    { date: '2026-05-04', day_name: 'Sen', temp_max: 27, temp_min: 21, precipitation_probability: 80, precipitation_sum: 8.5, weather_code: 63, icon: '🌧️', description: 'Hujan' },
+    { date: '2026-05-05', day_name: 'Sel', temp_max: 28, temp_min: 22, precipitation_probability: 55, precipitation_sum: 3.2, weather_code: 61, icon: '🌧️', description: 'Hujan' },
+    { date: '2026-05-06', day_name: 'Rab', temp_max: 31, temp_min: 23, precipitation_probability: 15, precipitation_sum: 0.0, weather_code: 1, icon: '⛅', description: 'Berawan Sebagian' },
+    { date: '2026-05-07', day_name: 'Kam', temp_max: 32, temp_min: 24, precipitation_probability: 10, precipitation_sum: 0.0, weather_code: 0, icon: '☀️', description: 'Cerah' },
+    { date: '2026-05-08', day_name: 'Jum', temp_max: 28, temp_min: 22, precipitation_probability: 70, precipitation_sum: 6.8, weather_code: 95, icon: '⛈️', description: 'Hujan Petir' },
+  ],
 };
 
 // ─── Notifications ───────────────────
