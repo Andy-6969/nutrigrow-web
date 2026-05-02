@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Map, Maximize2, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { mockSensorData } from '@/shared/lib/mockData';
@@ -47,7 +47,8 @@ function ZoneBlock({
   const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const resizeStart = useRef<{ mx: number; my: number; ox: number; oy: number; ow: number; oh: number; dir: string } | null>(null);
   const layoutRef = useRef(layout);
-  useEffect(() => { layoutRef.current = layout; }, [layout]);
+  // useLayoutEffect runs synchronously so layoutRef is always current when handlers fire
+  useLayoutEffect(() => { layoutRef.current = layout; });
 
   /* ── Drag handlers ── */
   const onDragDown = (e: React.PointerEvent) => {
@@ -87,26 +88,36 @@ function ZoneBlock({
 
   return (
     <div
-      className={cn('absolute rounded-2xl border-2 overflow-hidden group', isSelected && 'ring-2 ring-primary-400', isActive && 'animate-pulse-glow')}
-      style={{ left: layout.x, top: layout.y, width: layout.w, height: layout.h, borderColor: status.color, background: `linear-gradient(135deg, ${status.color}15, ${status.color}08)`, cursor: 'grab', userSelect: 'none', zIndex: isSelected ? 20 : 10 }}
+      className={cn('absolute rounded-2xl border-2 group', isSelected && 'ring-2 ring-primary-400 ring-offset-1', isActive && 'animate-pulse-glow')}
+      style={{
+        left: layout.x, top: layout.y, width: layout.w, height: layout.h,
+        borderColor: status.color,
+        background: `linear-gradient(135deg, ${status.color}15, ${status.color}08)`,
+        cursor: dragStart.current ? 'grabbing' : 'grab',
+        userSelect: 'none',
+        zIndex: isSelected ? 20 : 10,
+        // overflow must be visible so resize handles on corners aren't clipped
+        overflow: 'visible',
+      }}
       onPointerDown={onDragDown}
       onPointerMove={onDragMove}
       onPointerUp={onDragUp}
     >
-      {/* Lottie water overlay */}
-      {isActive && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30" style={isFertigating ? { filter: 'hue-rotate(240deg) saturate(1.5)' } : undefined}>
-          <Lottie animationData={waterFlowAnimation} loop autoplay style={{ width: '100%', height: '100%' }} rendererSettings={{ preserveAspectRatio: 'xMidYMid slice' }} />
-        </div>
-      )}
-      {isActive && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Inner clip — keeps Lottie + content inside card bounds while resize handles escape */}
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+        {/* Lottie water overlay */}
+        {isActive && (
+          <div className="absolute inset-0 opacity-30" style={isFertigating ? { filter: 'hue-rotate(240deg) saturate(1.5)' } : undefined}>
+            <Lottie animationData={waterFlowAnimation} loop autoplay style={{ width: '100%', height: '100%' }} rendererSettings={{ preserveAspectRatio: 'xMidYMid slice' }} />
+          </div>
+        )}
+        {isActive && (
           <div className="absolute inset-0 opacity-10" style={{ background: `repeating-linear-gradient(90deg, transparent, transparent 10px, ${status.color}40 10px, ${status.color}40 20px)`, animation: 'waterFlow 2s linear infinite' }} />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Content */}
-      <div className="relative z-10 p-3 h-full flex flex-col justify-between pointer-events-none">
+      <div className="absolute inset-0 z-10 p-3 flex flex-col justify-between pointer-events-none">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs font-bold text-left" style={{ color: 'var(--surface-text)' }}>{zone.name.split(' - ')[1] || zone.name}</p>
