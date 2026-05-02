@@ -218,7 +218,10 @@ export default function OverviewPage() {
                       <span className="text-[10px] font-medium flex-1 leading-[1.1] line-clamp-2" style={textMain}>
                         {day.description}
                       </span>
-                      <div className="flex items-center gap-1 shrink-0 justify-end w-12">
+                      <div 
+                        className="flex items-center gap-1 shrink-0 justify-end w-12 cursor-help"
+                        title={`Suhu Maks: ${Math.round(day.temp_max)}°C | Suhu Min: ${Math.round(day.temp_min)}°C`}
+                      >
                         <span className="text-xs font-mono font-bold" style={textMain}>{Math.round(day.temp_max)}°</span>
                         <span className="text-[10px] font-mono" style={textSubtle}>{Math.round(day.temp_min)}°</span>
                       </div>
