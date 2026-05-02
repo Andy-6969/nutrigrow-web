@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Map, Maximize2, Info } from 'lucide-react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { Map, Maximize2, Minimize2, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { mockSensorData } from '@/shared/lib/mockData';
 import { cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
@@ -156,11 +157,30 @@ function ZoneBlock({
 }
 
 export default function AgriTwinPage() {
+  const router = useRouter();
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [layouts, setLayouts] = useState<Record<string, ZoneLayout>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  const handleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      mapRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -215,15 +235,20 @@ export default function AgriTwinPage() {
               <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />{activeCount} zona aktif
             </span>
           )}
-          <button className="p-2 glass-sm rounded-lg hover:bg-white/60 transition-all border border-white/10">
-            <Maximize2 className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
+          <button
+            onClick={handleFullscreen}
+            title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+            className="p-2 glass-sm rounded-lg hover:bg-white/60 transition-all border border-white/10">
+            {isFullscreen
+              ? <Minimize2 className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
+              : <Maximize2 className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Map canvas */}
-        <div className="lg:col-span-3">
+        <div ref={mapRef} className="lg:col-span-3">
           <div className="glass p-4 relative" style={{ minHeight: 560 }}>
             {isLoading ? (
               <div className="flex items-center justify-center" style={{ minHeight: 500 }}>
@@ -313,7 +338,9 @@ export default function AgriTwinPage() {
                     </div>
                   </div>
                 </div>
-                <button className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all active:scale-95">
+                <button
+                  onClick={() => router.push('/monitoring')}
+                  className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all active:scale-95">
                   Buka Monitoring Detail
                 </button>
               </div>
