@@ -28,6 +28,8 @@ interface AuthContextValue {
   isAuthorized: boolean;
   /** Logout helper — clears session and cookie */
   logout: () => Promise<void>;
+  /** Refresh profile data from DB */
+  refreshProfile: () => Promise<void>;
 }
 
 // ─── Context ─────────────────────────────────────────────────
@@ -180,6 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // State update happens automatically via onAuthStateChange
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (session?.user?.id) {
+      const userProfile = await fetchUserProfile(session.user.id);
+      setProfile(userProfile);
+    }
+  }, [session]);
+
   const role = profile?.role ?? null;
   const isAuthorized = !!session && role !== null && role !== 'guest';
 
@@ -193,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isInitialized,
         isAuthorized,
         logout,
+        refreshProfile,
       }}
     >
       {children}

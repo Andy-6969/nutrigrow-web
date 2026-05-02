@@ -22,6 +22,7 @@ export interface UserProfile {
   avatar_url?: string | null; // Google profile picture URL
   farm_id: string | null;
   assigned_zones: string[]; // UUID[]
+  notification_preferences?: Record<string, boolean>; // JSONB
   created_at: string;
 }
 

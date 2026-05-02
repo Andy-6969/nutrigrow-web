@@ -1,10 +1,13 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect } from 'react';
 import { Settings, User, Bell, Shield, Monitor, Save, Moon, Sun, Globe, Lock, Smartphone, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useAuth } from '@/shared/context/AuthContext';
 import { saveExpoPushToken } from '@/shared/services/expoNotificationService';
+import { userService } from '@/shared/services/userService';
 
 // ─── Expo token input helper ──────────────────────────────────
 function ExpoTokenSection({ userId }: { userId: string }) {
@@ -68,9 +71,27 @@ export default function SettingsPage() {
     device_alert: true,
     override: false,
   });
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ok'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
+  const [fullName, setFullName] = useState('');
+  
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
 
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
+
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name);
+      if (profile.notification_preferences) {
+        setNotifications({
+          smart_delay: profile.notification_preferences.smart_delay ?? true,
+          cycle_complete: profile.notification_preferences.cycle_complete ?? true,
+          device_alert: profile.notification_preferences.device_alert ?? true,
+          override: profile.notification_preferences.override ?? false,
+        });
+      }
+    }
+  }, [profile]);
 
   // Sync dark mode dari localStorage saat mount
   useEffect(() => {
@@ -81,10 +102,35 @@ export default function SettingsPage() {
   }, []);
 
   const handleSaveProfile = async () => {
+    if (!profile) return;
     setSaveStatus('saving');
-    await new Promise(r => setTimeout(r, 800)); // Simulate API call
-    setSaveStatus('ok');
+    try {
+      await userService.updateProfile(profile.id, { full_name: fullName });
+      await refreshProfile();
+      setSaveStatus('ok');
+    } catch (error) {
+      console.error(error);
+      setSaveStatus('err');
+    }
     setTimeout(() => setSaveStatus('idle'), 2500);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!passwordForm.new || passwordForm.new !== passwordForm.confirm) {
+      setPasswordStatus('err');
+      setTimeout(() => setPasswordStatus('idle'), 2500);
+      return;
+    }
+    setPasswordStatus('saving');
+    try {
+      await userService.updatePassword(passwordForm.new);
+      setPasswordStatus('ok');
+      setPasswordForm({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      console.error(error);
+      setPasswordStatus('err');
+    }
+    setTimeout(() => setPasswordStatus('idle'), 2500);
   };
 
   const tabs = [
@@ -149,7 +195,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Nama Lengkap</label>
-                  <input defaultValue={profile?.full_name ?? ''} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                  <input value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--surface-text-muted)' }}>Email</label>
@@ -167,7 +213,7 @@ export default function SettingsPage() {
               <button onClick={handleSaveProfile} disabled={saveStatus === 'saving'}
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm disabled:opacity-70">
                 {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saveStatus === 'ok' ? '✅ Tersimpan!' : 'Simpan Perubahan'}
+                {saveStatus === 'ok' ? '✅ Tersimpan!' : saveStatus === 'err' ? '❌ Gagal Menyimpan' : 'Simpan Perubahan'}
               </button>
             </div>
           )}
@@ -191,7 +237,19 @@ export default function SettingsPage() {
                       <p className="text-[11px]" style={{ color: 'var(--surface-text-muted)' }}>{item.desc}</p>
                     </div>
                     <button
-                      onClick={() => setNotifications(p => ({ ...p, [item.key]: !p[item.key as keyof typeof p] }))}
+                      onClick={async () => {
+                        const nextValue = !notifications[item.key as keyof typeof notifications];
+                        const newPrefs = { ...notifications, [item.key]: nextValue };
+                        setNotifications(newPrefs);
+                        if (profile) {
+                          try {
+                            await userService.updateNotificationPreferences(profile.id, newPrefs);
+                          } catch (e) {
+                            console.error('Failed to save notification pref', e);
+                            setNotifications(notifications); // revert on error
+                          }
+                        }
+                      }}
                       className={cn('w-10 h-6 rounded-full transition-all duration-300 flex items-center px-0.5 shrink-0',
                         notifications[item.key as keyof typeof notifications] ? 'bg-primary-500' : 'bg-gray-300')}
                     >
@@ -270,12 +328,19 @@ export default function SettingsPage() {
                     <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Ubah Password</p>
                   </div>
                   <div className="space-y-3">
-                    <input type="password" placeholder="Password saat ini" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
-                    <input type="password" placeholder="Password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
-                    <input type="password" placeholder="Konfirmasi password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.current} onChange={e => setPasswordForm(p => ({...p, current: e.target.value}))} placeholder="Password saat ini" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.new} onChange={e => setPasswordForm(p => ({...p, new: e.target.value}))} placeholder="Password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    <input type="password" value={passwordForm.confirm} onChange={e => setPasswordForm(p => ({...p, confirm: e.target.value}))} placeholder="Konfirmasi password baru" className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{ color: 'var(--surface-text)' }} />
+                    {passwordForm.new && passwordForm.confirm && passwordForm.new !== passwordForm.confirm && (
+                      <p className="text-xs text-danger-500">Password tidak cocok</p>
+                    )}
                   </div>
-                  <button className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm">
-                    <Save className="w-4 h-4" /> Update Password
+                  <button 
+                    onClick={handleUpdatePassword}
+                    disabled={passwordStatus === 'saving'}
+                    className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all glow-sm disabled:opacity-70">
+                    {passwordStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                    {passwordStatus === 'ok' ? '✅ Update Berhasil!' : passwordStatus === 'err' ? '❌ Gagal Update' : 'Update Password'}
                   </button>
                 </div>
                 <div className="p-4 glass-sm rounded-xl">
