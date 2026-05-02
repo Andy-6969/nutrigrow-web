@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Nutrigrow Web — Bitanic Pro V4",
+  title: "Nutrigrow Web",
   description: "Sistem pemantau lahan pertanian dan smart fertigation terintegrasi dengan IoT, Fuzzy Logic, dan prediksi cuaca untuk pertanian presisi Indonesia.",
   keywords: ["NutriGrow", "smart fertigation", "IoT", "pertanian", "irigasi", "dashboard"],
   manifest: '/manifest.json',
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     title: 'Nutrigrow Web',
   },
   icons: {
-    icon: '/logo-bitanic.jpg',
-    apple: '/logo-bitanic.jpg',
+    icon: '/logo-bitanic-round.png',
+    apple: '/logo-bitanic-round.png',
   },
 };
 

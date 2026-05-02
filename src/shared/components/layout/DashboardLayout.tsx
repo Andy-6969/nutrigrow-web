@@ -122,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
           <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
-            <img src="/logo-bitanic.jpg" alt="Bitanic" className="w-full h-full object-cover" />
+            <img src="/logo-bitanic-round.png" alt="Bitanic" className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
