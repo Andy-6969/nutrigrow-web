@@ -13,20 +13,12 @@ import type {
 
 // ─── Zones ───────────────────────────
 export const mockZones: Zone[] = [
-  { id: 'z1', farm_id: 'f1', name: 'Zona 1 - Sawah Utara', area_ha: 2.5, crop_type: 'Padi', status: 'irrigating', latitude: -6.8150, longitude: 107.6150 },
-  { id: 'z2', farm_id: 'f1', name: 'Zona 2 - Kebun Timur', area_ha: 1.8, crop_type: 'Jagung', status: 'idle', latitude: -6.8160, longitude: 107.6180 },
-  { id: 'z3', farm_id: 'f1', name: 'Zona 3 - Ladang Selatan', area_ha: 3.2, crop_type: 'Cabai', status: 'delayed', latitude: -6.8180, longitude: 107.6160 },
-  { id: 'z4', farm_id: 'f1', name: 'Zona 4 - Persemaian', area_ha: 0.8, crop_type: 'Tomat', status: 'error', latitude: -6.8170, longitude: 107.6140 },
-  { id: 'z5', farm_id: 'f1', name: 'Zona 5 - Kebun Barat', area_ha: 2.0, crop_type: 'Mentimun', status: 'fertigating', latitude: -6.8155, longitude: 107.6130 },
+  { id: 'z1', farm_id: 'f1', name: 'Kebun Indoor', area_ha: 4.5, crop_type: 'Cabai', status: 'idle', latitude: -6.8150, longitude: 107.6150 },
 ];
 
 // ─── Current Sensor Readings ─────────
 export const mockSensorData: Record<string, SensorData> = {
-  z1: { soil_moisture: 62.5, temperature: 31.2, humidity: 68.0, ph: 6.8, battery: 85, rssi: -72, recorded_at: '2026-04-18T09:30:00Z' },
-  z2: { soil_moisture: 45.3, temperature: 29.8, humidity: 72.5, ph: 7.1, battery: 92, rssi: -65, recorded_at: '2026-04-18T09:30:00Z' },
-  z3: { soil_moisture: 55.8, temperature: 32.5, humidity: 58.3, ph: 6.5, battery: 78, rssi: -80, recorded_at: '2026-04-18T09:30:00Z' },
-  z4: { soil_moisture: 28.1, temperature: 33.8, humidity: 45.2, ph: 5.9, battery: 15, rssi: -95, recorded_at: '2026-04-18T08:15:00Z' },
-  z5: { soil_moisture: 70.2, temperature: 30.1, humidity: 75.8, ph: 7.0, battery: 88, rssi: -68, recorded_at: '2026-04-18T09:30:00Z' },
+  z1: { soil_moisture: 0, temperature: 0, humidity: 0, ph: 0, battery: undefined, rssi: undefined, recorded_at: new Date().toISOString() },
 };
 
 // ─── Sensor History (24h) ────────────
@@ -44,15 +36,11 @@ export const mockSensorHistory = Array.from({ length: 48 }, (_, i) => {
 
 // ─── Devices ─────────────────────────
 export const mockDevices: Device[] = [
-  { id: 'd1', zone_id: 'z1', zone_name: 'Zona 1', device_type: 'sensor', firmware_version: '3.2.1', battery_level: 85, rssi: -72, last_heartbeat: '2026-04-18T09:28:00Z', is_online: true },
-  { id: 'd2', zone_id: 'z1', zone_name: 'Zona 1', device_type: 'actuator', firmware_version: '3.2.1', battery_level: 90, rssi: -68, last_heartbeat: '2026-04-18T09:29:00Z', is_online: true },
-  { id: 'd3', zone_id: 'z2', zone_name: 'Zona 2', device_type: 'sensor', firmware_version: '3.2.0', battery_level: 92, rssi: -65, last_heartbeat: '2026-04-18T09:30:00Z', is_online: true },
-  { id: 'd4', zone_id: 'z3', zone_name: 'Zona 3', device_type: 'sensor', firmware_version: '3.1.5', battery_level: 78, rssi: -80, last_heartbeat: '2026-04-18T09:25:00Z', is_online: true },
-  { id: 'd5', zone_id: 'z4', zone_name: 'Zona 4', device_type: 'sensor', firmware_version: '3.0.2', battery_level: 15, rssi: -95, last_heartbeat: '2026-04-18T08:15:00Z', is_online: false },
-  { id: 'd6', zone_id: 'z4', zone_name: 'Zona 4', device_type: 'actuator', firmware_version: '3.0.2', battery_level: 22, rssi: -92, last_heartbeat: '2026-04-18T08:10:00Z', is_online: false },
-  { id: 'd7', zone_id: 'z5', zone_name: 'Zona 5', device_type: 'sensor', firmware_version: '3.2.1', battery_level: 88, rssi: -68, last_heartbeat: '2026-04-18T09:30:00Z', is_online: true },
-  { id: 'gw1', zone_id: '', zone_name: 'Gateway', device_type: 'gateway', firmware_version: '2.1.0', battery_level: 100, rssi: -45, last_heartbeat: '2026-04-18T09:30:00Z', is_online: true },
+  { id: 'd1', zone_id: 'z1', zone_name: 'Kebun Indoor', device_type: 'sensor',   firmware_version: '3.2.1', battery_level: 85, rssi: -72, last_heartbeat: new Date().toISOString(), is_online: true },
+  { id: 'd2', zone_id: 'z1', zone_name: 'Kebun Indoor', device_type: 'actuator', firmware_version: '3.2.1', battery_level: 90, rssi: -68, last_heartbeat: new Date().toISOString(), is_online: true },
+  { id: 'd3', zone_id: 'z1', zone_name: 'Kebun Indoor', device_type: 'gateway',  firmware_version: '3.2.1', battery_level: 100, rssi: -55, last_heartbeat: new Date().toISOString(), is_online: true },
 ];
+
 
 // ─── Eco-Savings ─────────────────────
 export const mockEcoSavings: EcoSavingsData = {
