@@ -50,6 +50,7 @@ interface BMKGRawData {
     kelembaban?: number;
     cuaca?: string;
     angin_kecepatan?: number;
+    angin_arah?: string;
   };
   prakiraan_6jam?: Array<{
     waktu?: string;
@@ -139,6 +140,7 @@ export async function fetchWeather(): Promise<WeatherData> {
       icon:              weatherIcon(cuacaDesc),
       pop:               willRain ? 80 : 10,
       wind_speed:        raw.cuaca_sekarang?.angin_kecepatan ?? 0,
+      wind_direction:    raw.cuaca_sekarang?.angin_arah ?? '-',
       forecast,
       akan_hujan:        willRain,
       rekomendasi_siram: rekSiram,

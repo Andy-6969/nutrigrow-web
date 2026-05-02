@@ -258,37 +258,63 @@ export default function OverviewPage() {
                 <p className="text-sm capitalize mt-0.5" style={textMuted}>{weather?.description ?? 'Memuat...'}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2.5 mb-3">
+
+            {/* Metrics Grid: Kelembaban, Kecepatan Angin, Arah Angin */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <div style={subCard} className="p-2.5">
                 <Droplets className="w-3.5 h-3.5 text-blue-400 mb-1" />
                 <p className="text-[10px] mb-0.5" style={textMuted}>Kelembaban</p>
                 <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.humidity ?? '--'}%</p>
               </div>
               <div style={subCard} className="p-2.5">
-                <CloudDrizzle className="w-3.5 h-3.5 mb-1" style={{ color: weather?.akan_hujan ? '#f59e0b' : '#10b981' }} />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Akan Hujan</p>
-                <p className="font-mono text-sm font-semibold" style={{ color: weather?.akan_hujan ? '#f59e0b' : '#10b981' }}>
-                  {weather ? (weather.akan_hujan ? 'Ya ⚠️' : 'Tidak ✓') : '--'}
-                </p>
+                <Wind className="w-3.5 h-3.5 text-cyan-400 mb-1" />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Kec. Angin</p>
+                <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.wind_speed ?? '--'} <span className="text-[9px] font-normal" style={textSubtle}>km/j</span></p>
               </div>
               <div style={subCard} className="p-2.5">
-                <Sprout className="w-3.5 h-3.5 mb-1" style={{ color: weather?.rekomendasi_siram ? '#10b981' : '#ef4444' }} />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Rek. Siram</p>
-                <p className="font-mono text-sm font-semibold" style={{ color: weather?.rekomendasi_siram ? '#10b981' : '#ef4444' }}>
-                  {weather ? (weather.rekomendasi_siram ? 'Siram ✓' : 'Tunda ✗') : '--'}
-                </p>
-              </div>
-              <div style={subCard} className="p-2.5">
-                <MapPin className="w-3.5 h-3.5 text-purple-400 mb-1" />
-                <p className="text-[10px] mb-0.5" style={textMuted}>Lokasi</p>
-                <p className="text-[11px] font-semibold leading-tight" style={textMain}>{weather?.lokasi ?? '--'}</p>
+                <Thermometer className="w-3.5 h-3.5 text-orange-400 mb-1" />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Arah Angin</p>
+                <p className="text-[11px] font-semibold leading-tight" style={textMain}>{weather?.wind_direction ?? '--'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 pt-2" style={{ borderTop: '1px solid var(--surface-border)' }}>
+
+            {/* Update Timestamp */}
+            <div className="flex items-center gap-1.5 pt-2 mb-3" style={{ borderTop: '1px solid var(--surface-border)' }}>
               <Clock className="w-3 h-3" style={textSubtle} />
               <p className="text-[10px] font-mono" style={textSubtle}>
                 Update: {weather?.last_update ? new Date(weather.last_update).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
               </p>
+            </div>
+
+            {/* Status Badges: Akan Hujan, Rek. Siram, Lokasi */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                style={{
+                  background: weather?.akan_hujan ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
+                  color: weather?.akan_hujan ? '#f59e0b' : '#10b981',
+                  border: `1px solid ${weather?.akan_hujan ? 'rgba(245,158,11,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                }}>
+                <CloudDrizzle className="w-3 h-3" />
+                {weather ? (weather.akan_hujan ? 'Hujan ⚠️' : 'Cerah ✓') : '--'}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                style={{
+                  background: weather?.rekomendasi_siram ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                  color: weather?.rekomendasi_siram ? '#10b981' : '#ef4444',
+                  border: `1px solid ${weather?.rekomendasi_siram ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                }}>
+                <Sprout className="w-3 h-3" />
+                {weather ? (weather.rekomendasi_siram ? 'Siram ✓' : 'Tunda ✗') : '--'}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                style={{
+                  background: 'rgba(168,85,247,0.10)',
+                  color: '#c084fc',
+                  border: '1px solid rgba(168,85,247,0.2)',
+                }}>
+                <MapPin className="w-3 h-3" />
+                {weather?.lokasi ?? '--'}
+              </span>
             </div>
           </div>
 

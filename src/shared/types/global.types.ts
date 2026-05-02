@@ -114,7 +114,8 @@ export interface WeatherData {
   description: string;
   icon: string;
   pop: number; // probability of precipitation
-  wind_speed: number;
+  wind_speed: number;        // km/jam (BMKG: ws)
+  wind_direction: string;    // arah angin dari (BMKG: wd)
   forecast: WeatherForecast[];
   // BMKG-specific fields
   akan_hujan: boolean;

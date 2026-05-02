@@ -84,6 +84,7 @@ export const mockWeather: WeatherData = {
   icon: '⛅',
   pop: 45,
   wind_speed: 12,
+  wind_direction: 'Barat Daya',
   akan_hujan: false,
   rekomendasi_siram: true,
   last_update: new Date().toISOString(),
