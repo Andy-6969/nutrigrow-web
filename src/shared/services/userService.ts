@@ -2,7 +2,7 @@ import { supabase } from '@/shared/lib/supabase';
 import type { UserProfile } from '@/shared/types/global.types';
 
 export interface UpdateProfileDTO {
-  full_name?: string;
+  nama?: string;        // DB column name in user_profiles
   avatar_url?: string;
 }
 

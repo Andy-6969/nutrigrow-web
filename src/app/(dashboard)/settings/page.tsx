@@ -108,7 +108,7 @@ export default function SettingsPage() {
     if (!profile) return;
     setSaveStatus('saving');
     try {
-      await userService.updateProfile(profile.id, { full_name: fullName });
+      await userService.updateProfile(profile.id, { nama: fullName });
       await refreshProfile();
       setSaveStatus('ok');
     } catch (error) {
