@@ -1,17 +1,19 @@
 import { supabase } from '@/shared/lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { OverrideLog } from '@/shared/types/global.types';
+import { vpsApi } from '@/shared/lib/api';
 
 export interface IOverrideService {
   getActiveOverrides(): Promise<OverrideLog[]>;
   getOverrideHistory(): Promise<OverrideLog[]>;
   startOverride(zoneId: string, durationMinutes: number, reason?: string, mode?: 'water' | 'fertigation'): Promise<void>;
   stopOverride(overrideId: string): Promise<void>;
-  subscribeToOverrides(callback: (payload: any) => void): void;
+  subscribeToOverrides(callback: (payload: unknown) => void): void;
   unsubscribeFromOverrides(): void;
 }
 
 export class SupabaseOverrideService implements IOverrideService {
-  private channel: any = null;
+  private channel: RealtimeChannel | null = null;
 
   async getActiveOverrides(): Promise<OverrideLog[]> {
     const { data, error } = await supabase
@@ -57,9 +59,30 @@ export class SupabaseOverrideService implements IOverrideService {
     });
 
     if (error) throw error;
+
+    try {
+      await vpsApi.post('/actuator/toggle', {
+        zone_id: zoneId,
+        action: 'on',
+        mode: mode,
+        duration: durationMinutes
+      });
+    } catch (apiError) {
+      console.error('[overrideService] Failed to trigger actuator via VPS API:', apiError);
+      // Optional: you could revert the Supabase insert here or update status to 'failed'
+      throw apiError;
+    }
   }
 
   async stopOverride(overrideId: string): Promise<void> {
+    const { data: log, error: fetchError } = await supabase
+      .from('override_logs')
+      .select('zone_id')
+      .eq('id', overrideId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
     const { error } = await supabase
       .from('override_logs')
       .update({ 
@@ -69,9 +92,19 @@ export class SupabaseOverrideService implements IOverrideService {
       .eq('id', overrideId);
 
     if (error) throw error;
+
+    try {
+      await vpsApi.post('/actuator/toggle', { 
+        zone_id: log.zone_id, 
+        action: 'off' 
+      });
+    } catch (apiError) {
+      console.error('[overrideService] Failed to turn off actuator via VPS API:', apiError);
+      throw apiError;
+    }
   }
 
-  subscribeToOverrides(callback: (payload: any) => void): void {
+  subscribeToOverrides(callback: (payload: unknown) => void): void {
     if (this.channel) return;
     
     this.channel = supabase
