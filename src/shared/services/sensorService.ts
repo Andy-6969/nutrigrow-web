@@ -1,21 +1,28 @@
 import { supabase } from '@/shared/lib/supabase';
-import type { Zone, SensorData, Device } from '@/shared/types/global.types';
-import { mockZones, mockSensorData, mockDevices } from '@/shared/lib/mockData';
+import type { Zone, SensorData, Device, EcoSavingsData } from '@/shared/types/global.types';
+import { mockZones, mockSensorData, mockDevices, mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+export type SensorHistoryPoint = { time: string; soil_moisture: number; temperature: number; humidity: number; ph: number };
+
+type SupabasePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 export interface ISensorService {
   getZones(): Promise<Zone[]>;
   getSensorData(zoneId: string): Promise<SensorData>;
   getAllSensorData(): Promise<Record<string, SensorData>>;
+  getSensorHistory(zoneId: string): Promise<SensorHistoryPoint[]>;
+  getEcoSavings(): Promise<EcoSavingsData>;
   getDevices(): Promise<Device[]>;
-  subscribeToSensorUpdates(callback: (payload: any) => void): void;
+  subscribeToSensorUpdates(callback: (payload: SupabasePayload) => void): void;
   unsubscribeFromSensorUpdates(): void;
-  subscribeToZoneUpdates(callback: (payload: any) => void): void;
+  subscribeToZoneUpdates(callback: (payload: SupabasePayload) => void): void;
   unsubscribeFromZoneUpdates(): void;
 }
 
 export class SupabaseSensorService implements ISensorService {
-  private sensorChannel: any = null;
-  private zoneChannel: any = null;
+  private sensorChannel: ReturnType<typeof supabase.channel> | null = null;
+  private zoneChannel:   ReturnType<typeof supabase.channel> | null = null;
 
   async getZones(): Promise<Zone[]> {
     try {
@@ -40,8 +47,9 @@ export class SupabaseSensorService implements ISensorService {
       
       if (error) throw error;
       return data as SensorData;
-    } catch (error: any) {
-      if (error.code === 'PGRST116' || error.message?.includes('not found')) {
+    } catch (error) {
+      const e = error as { code?: string; message?: string };
+      if (e.code === 'PGRST116' || e.message?.includes('not found')) {
         return mockSensorData[zoneId] || { soil_moisture: 0, temperature: 0, humidity: 0, ph: 0, recorded_at: new Date().toISOString() };
       }
       return mockSensorData[zoneId] || { soil_moisture: 0, temperature: 0, humidity: 0, ph: 0, recorded_at: new Date().toISOString() };
@@ -66,6 +74,30 @@ export class SupabaseSensorService implements ISensorService {
     return result;
   }
 
+  /** Ambil tren sensor 24 jam terakhir untuk satu zona — pakai RPC Supabase kalau ada */
+  async getSensorHistory(zoneId: string): Promise<SensorHistoryPoint[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_sensor_history_24h', { p_zone_id: zoneId });
+      if (error || !data || data.length === 0) throw error ?? new Error('empty');
+      return data as SensorHistoryPoint[];
+    } catch {
+      console.warn('[sensorService] getSensorHistory failed, using mock data');
+      return mockSensorHistory;
+    }
+  }
+
+  /** Ambil kalkulasi eco-savings dari RPC Supabase — fallback ke mock */
+  async getEcoSavings(): Promise<EcoSavingsData> {
+    try {
+      const { data, error } = await supabase.rpc('get_eco_savings');
+      if (error || !data) throw error ?? new Error('empty');
+      return data as EcoSavingsData;
+    } catch {
+      console.warn('[sensorService] getEcoSavings failed, using mock data');
+      return mockEcoSavings;
+    }
+  }
+
   async getDevices(): Promise<Device[]> {
     try {
       const { data, error } = await supabase.from('devices').select('*');
@@ -77,9 +109,8 @@ export class SupabaseSensorService implements ISensorService {
     }
   }
 
-  subscribeToSensorUpdates(callback: (payload: any) => void): void {
+  subscribeToSensorUpdates(callback: (payload: SupabasePayload) => void): void {
     if (this.sensorChannel) return;
-    
     this.sensorChannel = supabase
       .channel('public:sensor_data')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, callback)
@@ -93,9 +124,8 @@ export class SupabaseSensorService implements ISensorService {
     }
   }
 
-  subscribeToZoneUpdates(callback: (payload: any) => void): void {
+  subscribeToZoneUpdates(callback: (payload: SupabasePayload) => void): void {
     if (this.zoneChannel) return;
-    
     this.zoneChannel = supabase
       .channel('public:zones')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'zones' }, callback)

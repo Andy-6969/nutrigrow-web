@@ -10,11 +10,11 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid
 } from 'recharts';
-import { mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
-import type { WeatherData, SensorData, Zone } from '@/shared/types/global.types';
-import { sensorService } from '@/shared/services/sensorService';
+import type { WeatherData, SensorData, Zone, EcoSavingsData } from '@/shared/types/global.types';
+import { sensorService, type SensorHistoryPoint } from '@/shared/services/sensorService';
+import { overrideService } from '@/shared/services/overrideService';
 import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
 
@@ -32,6 +32,8 @@ export default function OverviewPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
+  const [sensorHistory, setSensorHistory] = useState<SensorHistoryPoint[]>([]);
+  const [ecoSavings, setEcoSavings] = useState<EcoSavingsData | null>(null);
   const [zoneIndex, setZoneIndex] = useState(0);
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -47,17 +49,24 @@ export default function OverviewPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const [weatherData, fetchedZones, allSensors] = await Promise.all([
+      const [weatherData, fetchedZones, allSensors, savings] = await Promise.all([
         fetchWeather(
           Number(process.env.NEXT_PUBLIC_FARM_LAT) || undefined,
           Number(process.env.NEXT_PUBLIC_FARM_LON) || undefined,
         ),
         sensorService.getZones(),
         sensorService.getAllSensorData(),
+        sensorService.getEcoSavings(),
       ]);
       setWeather(weatherData);
       setZones(fetchedZones);
       setSensorDataMap(allSensors);
+      setEcoSavings(savings);
+      // Load sensor history untuk zona pertama
+      if (fetchedZones.length > 0) {
+        const hist = await sensorService.getSensorHistory(fetchedZones[0].id);
+        setSensorHistory(hist);
+      }
     };
     loadData();
     sensorService.subscribeToSensorUpdates((payload) => {
@@ -88,11 +97,16 @@ export default function OverviewPage() {
   const multiZone   = zones.length > 1;
 
   const handleManualOverride = async () => {
+    if (!selectedZone) return;
     setIsOverriding(true);
-    const modeLabel = IRRIGATION_MODES.find(m => m.id === irrigationMode)?.label ?? irrigationMode;
-    await new Promise(res => setTimeout(res, 2000));
-    alert(`Manual Override diaktifkan!\nZona: ${selectedZone?.name ?? '-'}\nMode: ${modeLabel}`);
-    setIsOverriding(false);
+    const svcMode: 'water' | 'fertigation' = irrigationMode === 'water' ? 'water' : 'fertigation';
+    try {
+      await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', svcMode);
+    } catch (err) {
+      console.error('[override] Failed:', err);
+    } finally {
+      setIsOverriding(false);
+    }
   };
 
   const slideInStyle: React.CSSProperties = animKey > 0 ? {
@@ -182,7 +196,7 @@ export default function OverviewPage() {
             </h3>
             <div className="flex-1 -ml-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockSensorHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={sensorHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="#10B981" stopOpacity={0.35}/>
@@ -392,7 +406,7 @@ export default function OverviewPage() {
             </div>
             <div className="mt-6 pt-4 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--surface-border)' }}>
               <span style={textMuted}>Total Estimasi Biaya</span>
-              <span className="font-mono text-emerald-500 font-semibold">Rp {formatNumber(mockEcoSavings.cost_saved_rupiah)}</span>
+              <span className="font-mono text-emerald-500 font-semibold">Rp {formatNumber(ecoSavings?.cost_saved_rupiah ?? 0)}</span>
             </div>
           </div>
 
