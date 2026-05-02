@@ -341,11 +341,14 @@ function FarmCard({
     setDeletingZone(true);
     const { error } = await zoneService.deleteZone(deleteZone.id);
     setDeletingZone(false);
+    
     if (error) {
-      // Tetap hapus dari state lokal walau Supabase error (mock mode)
-      console.warn('[zone] delete error (mock mode):', error);
+      console.error('[zone] delete error:', error);
+      alert(`Gagal menghapus zona: ${error}`);
+      setDeleteZone(null);
+      return;
     }
-    // Optimistic: langsung filter dari state lokal
+    
     setZones(prev => prev.filter(z => z.id !== deleteZone.id));
     const deleted = deleteZone;
     setDeleteZone(null);
