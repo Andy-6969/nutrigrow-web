@@ -1,6 +1,6 @@
 // src/shared/lib/constants.ts
 
-export const APP_NAME = 'NutriGrow';
+export const APP_NAME = 'Nutrigrow Web';
 export const APP_TAGLINE = 'Smart Fertigation System';
 export const APP_VERSION = '2.0.0';
 
