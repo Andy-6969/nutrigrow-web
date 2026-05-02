@@ -84,6 +84,64 @@ export default function OverviewPage() {
     };
   }, []);
 
+  // ── Auto-fallback: jika weekly_forecast kosong (race condition saat VPS write),
+  //    langsung fetch Open-Meteo menggunakan koordinat kebun (Depok/Beji)
+  useEffect(() => {
+    if (!weather) return;
+    if ((weather.weekly_forecast ?? []).length > 0) return; // data sudah ada, skip
+    if (weeklyOverride) return; // sudah ada override dari search, skip
+
+    // Koordinat default kebun (Beji, Depok)
+    const DEFAULT_LAT = -6.3885;
+    const DEFAULT_LON = 106.7814;
+    const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const wmoMap = (code: number): { icon: string; desc: string } => {
+      if (code === 0)  return { icon: '☀️', desc: 'Cerah' };
+      if (code <= 2)   return { icon: '⛅', desc: 'Berawan Sebagian' };
+      if (code === 3)  return { icon: '☁️', desc: 'Berawan' };
+      if (code <= 48)  return { icon: '🌫️', desc: 'Berkabut' };
+      if (code <= 55)  return { icon: '🌦️', desc: 'Gerimis' };
+      if (code <= 65)  return { icon: '🌧️', desc: 'Hujan' };
+      if (code <= 77)  return { icon: '❄️', desc: 'Salju' };
+      if (code <= 82)  return { icon: '🌧️', desc: 'Hujan Lebat' };
+      if (code === 95) return { icon: '⛈️', desc: 'Hujan Petir' };
+      if (code <= 99)  return { icon: '⛈️', desc: 'Hujan Petir + Es' };
+      return { icon: '🌤️', desc: 'Cerah' };
+    };
+
+    const autoFetch = async () => {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT_LAT}&longitude=${DEFAULT_LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FJakarta&forecast_days=7`
+        );
+        const json = await res.json();
+        const daily = json.daily;
+        if (daily?.time) {
+          const days: import('@/shared/types/global.types').WeeklyForecastDay[] = daily.time.map((date: string, i: number) => {
+            const { icon, desc } = wmoMap(daily.weathercode?.[i] ?? 0);
+            const d = new Date(date + 'T00:00:00');
+            return {
+              date,
+              day_name: HARI[d.getDay()] ?? '?',
+              temp_max: daily.temperature_2m_max?.[i] ?? 0,
+              temp_min: daily.temperature_2m_min?.[i] ?? 0,
+              precipitation_probability: daily.precipitation_probability_max?.[i] ?? 0,
+              precipitation_sum: daily.precipitation_sum?.[i] ?? 0,
+              weather_code: daily.weathercode?.[i] ?? 0,
+              icon, description: desc,
+            };
+          });
+          setWeeklyOverride(days);
+          // Tidak perlu update weeklyLocation agar tetap tampil lokasi dari weather.lokasi
+        }
+      } catch {
+        // Gagal juga tidak apa-apa, biarkan "Data weekly belum tersedia"
+      }
+    };
+
+    autoFetch();
+  }, [weather, weeklyOverride]);
+
   const navigate = useCallback((dir: 'prev' | 'next') => {
     if (zones.length <= 1) return;
     setSlideDir(dir === 'next' ? 'right' : 'left');
