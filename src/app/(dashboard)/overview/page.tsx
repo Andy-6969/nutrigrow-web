@@ -50,10 +50,7 @@ export default function OverviewPage() {
   useEffect(() => {
     const loadData = async () => {
       const [weatherData, fetchedZones, allSensors, savings] = await Promise.all([
-        fetchWeather(
-          Number(process.env.NEXT_PUBLIC_FARM_LAT) || undefined,
-          Number(process.env.NEXT_PUBLIC_FARM_LON) || undefined,
-        ),
+        fetchWeather(),
         sensorService.getZones(),
         sensorService.getAllSensorData(),
         sensorService.getEcoSavings(),

@@ -27,7 +27,7 @@ export default function SchedulesPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [showForm, setShowForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
@@ -181,9 +181,9 @@ export default function SchedulesPage() {
         <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--surface-text)' }}>📋 Daftar Jadwal</h3>
         <div className="space-y-2">
           {isLoading ? (
-             <div className="text-sm py-8 text-center flex justify-center items-center gap-2" style={{ color: 'var(--surface-text-muted)' }}>
-               <Loader2 className="w-5 h-5 animate-spin text-primary-500" /> Memuat jadwal...
-             </div>
+            <div className="text-sm py-8 text-center flex justify-center items-center gap-2" style={{ color: 'var(--surface-text-muted)' }}>
+              <Loader2 className="w-5 h-5 animate-spin text-primary-500" /> Memuat jadwal...
+            </div>
           ) : schedules.map((schedule, i) => {
             const cron = parseCron(schedule.cron_expression);
             return (
