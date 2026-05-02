@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Droplets, Leaf, Zap, CloudRain,
   Wind, Thermometer, Power, Calendar,
-  ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout
+  ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout,
+  Search, X, Loader2
 } from 'lucide-react';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
@@ -35,6 +36,18 @@ export default function OverviewPage() {
   const [animKey, setAnimKey] = useState(0);
   const [isOverriding, setIsOverriding] = useState(false);
   const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'fertigation'>('water');
+
+  // ── Weekly forecast search state ──
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; admin1: string; country: string; latitude: number; longitude: number }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isFetchingWeekly, setIsFetchingWeekly] = useState(false);
+  const [weeklyOverride, setWeeklyOverride] = useState<import('@/shared/types/global.types').WeeklyForecastDay[] | null>(null);
+  const [weeklyLocation, setWeeklyLocation] = useState<string | null>(null);
+  const [weeklyUpdatedAt, setWeeklyUpdatedAt] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const IRRIGATION_MODES = [
     { id: 'water' as const,       label: 'Air Biasa', emoji: '💧', desc: 'Hanya air bersih',    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
@@ -77,6 +90,94 @@ export default function OverviewPage() {
     setZoneIndex(prev => dir === 'next' ? (prev + 1) % zones.length : (prev - 1 + zones.length) % zones.length);
     setAnimKey(k => k + 1);
   }, [zones.length]);
+
+  // ── Close dropdown on outside click ──
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // ── Geocoding: cari lokasi ──
+  const handleSearchInput = (val: string) => {
+    setSearchQuery(val);
+    if (!val.trim()) { setSearchResults([]); setShowDropdown(false); return; }
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(val)}&count=6&language=id&format=json`
+        );
+        const json = await res.json();
+        setSearchResults(json.results ?? []);
+        setShowDropdown(true);
+      } catch { setSearchResults([]); }
+      finally { setIsSearching(false); }
+    }, 400);
+  };
+
+  // ── Fetch 7-day forecast dari Open-Meteo untuk lokasi terpilih ──
+  const selectLocation = async (loc: { name: string; admin1: string; country: string; latitude: number; longitude: number }) => {
+    setShowDropdown(false);
+    setSearchQuery(`${loc.name}, ${loc.admin1}`);
+    setSearchResults([]);
+    setIsFetchingWeekly(true);
+    const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const wmoMap = (code: number): { icon: string; desc: string } => {
+      if (code === 0)  return { icon: '☀️', desc: 'Cerah' };
+      if (code <= 2)   return { icon: '⛅', desc: 'Berawan Sebagian' };
+      if (code === 3)  return { icon: '☁️', desc: 'Berawan' };
+      if (code <= 48)  return { icon: '🌫️', desc: 'Berkabut' };
+      if (code <= 55)  return { icon: '🌦️', desc: 'Gerimis' };
+      if (code <= 65)  return { icon: '🌧️', desc: 'Hujan' };
+      if (code <= 77)  return { icon: '❄️', desc: 'Salju' };
+      if (code <= 82)  return { icon: '🌧️', desc: 'Hujan Lebat' };
+      if (code === 95) return { icon: '⛈️', desc: 'Hujan Petir' };
+      if (code <= 99)  return { icon: '⛈️', desc: 'Hujan Petir + Es' };
+      return { icon: '🌤️', desc: 'Cerah' };
+    };
+    try {
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FJakarta&forecast_days=7`
+      );
+      const json = await res.json();
+      const daily = json.daily;
+      if (daily?.time) {
+        const days: import('@/shared/types/global.types').WeeklyForecastDay[] = daily.time.map((date: string, i: number) => {
+          const { icon, desc } = wmoMap(daily.weathercode?.[i] ?? 0);
+          const d = new Date(date + 'T00:00:00');
+          return {
+            date,
+            day_name: HARI[d.getDay()] ?? '?',
+            temp_max: daily.temperature_2m_max?.[i] ?? 0,
+            temp_min: daily.temperature_2m_min?.[i] ?? 0,
+            precipitation_probability: daily.precipitation_probability_max?.[i] ?? 0,
+            precipitation_sum: daily.precipitation_sum?.[i] ?? 0,
+            weather_code: daily.weathercode?.[i] ?? 0,
+            icon, description: desc,
+          };
+        });
+        setWeeklyOverride(days);
+        setWeeklyLocation(`${loc.name}, ${loc.admin1}`);
+        setWeeklyUpdatedAt(new Date().toISOString());
+      }
+    } catch { /* biarkan data lama tetap tampil */ }
+    finally { setIsFetchingWeekly(false); }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setWeeklyOverride(null);
+    setWeeklyLocation(null);
+    setWeeklyUpdatedAt(null);
+    setShowDropdown(false);
+  };
 
   const selectedZone = zones[zoneIndex] ?? null;
   const liveSensor  = selectedZone ? (sensorDataMap[selectedZone.id] ?? null) : null;
@@ -193,14 +294,67 @@ export default function OverviewPage() {
 
           {/* Weekly Forecast */}
           <div style={card} className="p-6 flex-1 min-h-[300px] flex flex-col">
-            <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
+            {/* Header */}
+            <h3 className="text-sm font-semibold mb-3 tracking-wider flex items-center gap-2" style={textMuted}>
               <Calendar className="w-4 h-4 text-cyan-400" />
               PRAKIRAAN 7 HARI
               <span className="ml-auto text-[9px] font-mono" style={textSubtle}>Open-Meteo</span>
             </h3>
-            <div className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden mb-4 pr-1">
-              {(weather?.weekly_forecast ?? []).length > 0 ? (
-                weather!.weekly_forecast.map((day, i) => {
+
+            {/* Search Box */}
+            <div ref={searchRef} className="relative mb-3">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+                {isSearching
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" style={{ color: '#06b6d4' }} />
+                  : <Search className="w-3.5 h-3.5 shrink-0" style={{ color: '#06b6d4' }} />
+                }
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => handleSearchInput(e.target.value)}
+                  onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                  placeholder="Cari lokasi lain..."
+                  className="flex-1 bg-transparent outline-none text-[11px] placeholder:opacity-40"
+                  style={{ color: 'var(--surface-text)' }}
+                />
+                {searchQuery && (
+                  <button onClick={clearSearch} className="shrink-0 hover:opacity-70 transition-opacity">
+                    <X className="w-3.5 h-3.5" style={textSubtle} />
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdown hasil pencarian */}
+              {showDropdown && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
+                  style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+                  {searchResults.map(loc => (
+                    <button key={loc.id}
+                      onClick={() => selectLocation(loc)}
+                      className="w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-white/5 transition-colors duration-150"
+                    >
+                      <MapPin className="w-3 h-3 shrink-0 text-purple-400" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold truncate" style={{ color: 'var(--surface-text)' }}>{loc.name}</p>
+                        <p className="text-[9px] truncate" style={textSubtle}>{loc.admin1}, {loc.country}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* List 7 hari */}
+            <div className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden mb-3 pr-1 relative">
+              {isFetchingWeekly && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10"
+                  style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                </div>
+              )}
+              {((weeklyOverride ?? weather?.weekly_forecast) ?? []).length > 0 ? (
+                (weeklyOverride ?? weather!.weekly_forecast).map((day, i) => {
                   const isToday = i === 0;
                   const rainHigh = day.precipitation_probability > 50;
                   return (
@@ -218,7 +372,7 @@ export default function OverviewPage() {
                       <span className="text-[10px] font-medium flex-1 leading-[1.1] line-clamp-2" style={textMain}>
                         {day.description}
                       </span>
-                      <div 
+                      <div
                         className="flex items-center gap-1 shrink-0 justify-end w-12 cursor-help"
                         title={`Suhu Maks: ${Math.round(day.temp_max)}°C | Suhu Min: ${Math.round(day.temp_min)}°C`}
                       >
@@ -235,22 +389,26 @@ export default function OverviewPage() {
                   );
                 })
               ) : (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center h-full">
                   <p className="text-xs" style={textSubtle}>Data weekly belum tersedia</p>
                 </div>
               )}
             </div>
-            
+
             {/* Footer Lokasi & Update */}
             <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--surface-border)' }}>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 text-purple-400" />
-                <p className="text-[10px] font-semibold" style={textMuted}>{weather?.lokasi ?? '--'}</p>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <MapPin className="w-3 h-3 text-purple-400 shrink-0" />
+                <p className="text-[10px] font-semibold truncate" style={textMuted}>
+                  {weeklyLocation ?? weather?.lokasi ?? '--'}
+                </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Clock className="w-3 h-3" style={textSubtle} />
                 <p className="text-[10px] font-mono" style={textSubtle}>
-                  {weather?.last_update ? new Date(weather.last_update).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                  {(weeklyUpdatedAt ?? weather?.last_update)
+                    ? new Date(weeklyUpdatedAt ?? weather!.last_update).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    : '--'}
                 </p>
               </div>
             </div>
