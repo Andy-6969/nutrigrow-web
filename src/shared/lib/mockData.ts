@@ -84,6 +84,10 @@ export const mockWeather: WeatherData = {
   icon: '⛅',
   pop: 45,
   wind_speed: 12,
+  akan_hujan: false,
+  rekomendasi_siram: true,
+  last_update: new Date().toISOString(),
+  lokasi: 'Bojongkulur, Bojonggede',
   forecast: [
     { dt: Date.now() + 3600000 * 3, temp: 30, humidity: 68, pop: 35, description: 'Cerah', icon: '☀️' },
     { dt: Date.now() + 3600000 * 6, temp: 32, humidity: 60, pop: 20, description: 'Cerah', icon: '☀️' },

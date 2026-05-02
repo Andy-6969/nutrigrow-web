@@ -116,6 +116,11 @@ export interface WeatherData {
   pop: number; // probability of precipitation
   wind_speed: number;
   forecast: WeatherForecast[];
+  // BMKG-specific fields
+  akan_hujan: boolean;
+  rekomendasi_siram: boolean;
+  last_update: string;       // ISO timestamp from created_at
+  lokasi: string;            // "Desa, Kecamatan"
 }
 
 export interface WeatherForecast {

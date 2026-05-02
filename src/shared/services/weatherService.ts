@@ -18,6 +18,12 @@ function weatherIcon(desc: string): string {
 
 // ─── Interface raw_data JSON dari VPS/BMKG ────────────────
 interface BMKGRawData {
+  lokasi?: {
+    provinsi?: string;
+    kotkab?: string;
+    kecamatan?: string;
+    desa?: string;
+  };
   cuaca_sekarang?: {
     suhu?: number;
     kelembaban?: number;
@@ -32,6 +38,8 @@ interface BMKGRawData {
     tp?: number; // total precipitation
   }>;
   akan_hujan?: boolean;
+  rekomendasi_siram?: boolean;
+  updated_at?: string;
 }
 
 /**
@@ -59,6 +67,14 @@ export async function fetchWeather(): Promise<WeatherData> {
 
     const cuacaDesc = data.cuaca ?? raw.cuaca_sekarang?.cuaca ?? 'Cerah';
     const willRain  = data.akan_hujan ?? raw.akan_hujan ?? false;
+    const rekSiram  = data.rekomendasi_siram ?? raw.rekomendasi_siram ?? !willRain;
+
+    // Bangun string lokasi dari raw_data atau kolom tabel
+    const lokasiParts = [
+      raw.lokasi?.desa ?? data.desa,
+      raw.lokasi?.kecamatan ?? data.kecamatan,
+    ].filter(Boolean);
+    const lokasi = lokasiParts.length > 0 ? lokasiParts.join(', ') : 'Tidak diketahui';
 
     // Map prakiraan_6jam ke WeatherForecast[]
     const forecast: WeatherForecast[] = (raw.prakiraan_6jam ?? []).map((f, i) => ({
@@ -71,13 +87,17 @@ export async function fetchWeather(): Promise<WeatherData> {
     }));
 
     return {
-      temperature: data.suhu ?? raw.cuaca_sekarang?.suhu ?? 0,
-      humidity:    data.kelembaban ?? raw.cuaca_sekarang?.kelembaban ?? 0,
-      description: cuacaDesc,
-      icon:        weatherIcon(cuacaDesc),
-      pop:         willRain ? 80 : 10,
-      wind_speed:  raw.cuaca_sekarang?.angin_kecepatan ?? 0,
+      temperature:      data.suhu ?? raw.cuaca_sekarang?.suhu ?? 0,
+      humidity:         data.kelembaban ?? raw.cuaca_sekarang?.kelembaban ?? 0,
+      description:      cuacaDesc,
+      icon:             weatherIcon(cuacaDesc),
+      pop:              willRain ? 80 : 10,
+      wind_speed:       raw.cuaca_sekarang?.angin_kecepatan ?? 0,
       forecast,
+      akan_hujan:       willRain,
+      rekomendasi_siram: rekSiram,
+      last_update:      data.created_at ?? new Date().toISOString(),
+      lokasi,
     };
   } catch (err) {
     console.warn('[weatherService] Failed to fetch from Supabase, using mock:', err);

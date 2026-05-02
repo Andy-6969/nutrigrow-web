@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Droplets, Leaf, Zap, CloudRain,
   Wind, Thermometer, Power, Activity,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -151,32 +151,52 @@ export default function OverviewPage() {
         {/* ── LEFT COLUMN ── */}
         <div className="xl:col-span-3 space-y-6 flex flex-col">
 
-          {/* Weather Card */}
+          {/* Weather Forecast Card */}
           <div style={card} className="p-6">
             <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
               <CloudRain className="w-4 h-4 text-cyan-400" />
-              KONDISI LINGKUNGAN
+              WEATHER FORECAST
             </h3>
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-6xl drop-shadow-lg">{weather?.icon ?? '🌤️'}</span>
+            <div className="flex items-center gap-4 mb-5">
+              <span className="text-5xl drop-shadow-lg">{weather?.icon ?? '🌤️'}</span>
               <div>
-                <p className="text-4xl font-bold" style={textMain}>
+                <p className="text-3xl font-bold" style={textMain}>
                   {weather?.temperature ?? '--'}°C
                 </p>
                 <p className="text-sm capitalize mt-0.5" style={textMuted}>{weather?.description ?? 'Memuat...'}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div style={subCard} className="p-3">
-                <Wind className="w-4 h-4 text-emerald-500 mb-1" />
-                <p className="text-xs mb-0.5" style={textMuted}>Angin</p>
-                <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.wind_speed ?? '--'} km/h</p>
-              </div>
-              <div style={subCard} className="p-3">
-                <Droplets className="w-4 h-4 text-blue-400 mb-1" />
-                <p className="text-xs mb-0.5" style={textMuted}>Kelembaban</p>
+            <div className="grid grid-cols-2 gap-2.5 mb-3">
+              <div style={subCard} className="p-2.5">
+                <Droplets className="w-3.5 h-3.5 text-blue-400 mb-1" />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Kelembaban</p>
                 <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.humidity ?? '--'}%</p>
               </div>
+              <div style={subCard} className="p-2.5">
+                <CloudDrizzle className="w-3.5 h-3.5 mb-1" style={{ color: weather?.akan_hujan ? '#f59e0b' : '#10b981' }} />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Akan Hujan</p>
+                <p className="font-mono text-sm font-semibold" style={{ color: weather?.akan_hujan ? '#f59e0b' : '#10b981' }}>
+                  {weather ? (weather.akan_hujan ? 'Ya ⚠️' : 'Tidak ✓') : '--'}
+                </p>
+              </div>
+              <div style={subCard} className="p-2.5">
+                <Sprout className="w-3.5 h-3.5 mb-1" style={{ color: weather?.rekomendasi_siram ? '#10b981' : '#ef4444' }} />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Rek. Siram</p>
+                <p className="font-mono text-sm font-semibold" style={{ color: weather?.rekomendasi_siram ? '#10b981' : '#ef4444' }}>
+                  {weather ? (weather.rekomendasi_siram ? 'Siram ✓' : 'Tunda ✗') : '--'}
+                </p>
+              </div>
+              <div style={subCard} className="p-2.5">
+                <MapPin className="w-3.5 h-3.5 text-purple-400 mb-1" />
+                <p className="text-[10px] mb-0.5" style={textMuted}>Lokasi</p>
+                <p className="text-[11px] font-semibold leading-tight" style={textMain}>{weather?.lokasi ?? '--'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 pt-2" style={{ borderTop: '1px solid var(--surface-border)' }}>
+              <Clock className="w-3 h-3" style={textSubtle} />
+              <p className="text-[10px] font-mono" style={textSubtle}>
+                Update: {weather?.last_update ? new Date(weather.last_update).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
+              </p>
             </div>
           </div>
 
