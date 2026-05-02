@@ -103,7 +103,7 @@ export default function SchedulesPage() {
       if (editingSchedule) {
         await scheduleService.updateSchedule(editingSchedule.id, formData);
       } else {
-        await scheduleService.createSchedule(formData);
+        await scheduleService.createSchedule({ ...formData, is_active: true });
       }
       setShowForm(false);
       fetchData();
