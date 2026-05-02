@@ -93,7 +93,7 @@ function ZoneBlock({
         left: layout.x, top: layout.y, width: layout.w, height: layout.h,
         borderColor: status.color,
         background: `linear-gradient(135deg, ${status.color}15, ${status.color}08)`,
-        cursor: dragStart.current ? 'grabbing' : 'grab',
+        cursor: 'grab',
         userSelect: 'none',
         zIndex: isSelected ? 20 : 10,
         // overflow must be visible so resize handles on corners aren't clipped
