@@ -8,8 +8,6 @@ export type ZonePayload = {
   area_ha: number;
   crop_type: string;
   status: ZoneStatus;
-  latitude?: number;
-  longitude?: number;
 };
 
 export const zoneService = {

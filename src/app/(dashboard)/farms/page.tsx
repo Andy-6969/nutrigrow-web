@@ -9,7 +9,6 @@ import type { Farm, Zone, ZoneStatus } from '@/shared/types/global.types';
 import { FarmCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
 import { useToast } from '@/shared/context/ToastContext';
 
-const ZONE_STATUSES: ZoneStatus[] = ['idle','irrigating','fertigating','delayed','error'];
 const EMPTY_ZONE = { name:'', area_ha: 0, crop_type:'', status:'idle' as ZoneStatus, latitude: undefined as number|undefined, longitude: undefined as number|undefined };
 
 /* ─ Zone Modal ────────────────────────────────────────────────────── */
@@ -20,8 +19,6 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
   const isEdit = !!initial;
   const [form, setForm] = useState(initial ? {
     name: initial.name, area_ha: initial.area_ha, crop_type: initial.crop_type,
-    status: initial.status as ZoneStatus,
-    latitude: initial.latitude, longitude: initial.longitude,
   } : { ...EMPTY_ZONE });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -32,9 +29,15 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
     if (!form.name.trim()) { setErr('Nama zona wajib diisi.'); return; }
     if (form.area_ha <= 0)  { setErr('Luas harus lebih dari 0.'); return; }
     setLoading(true); setErr('');
+    const payload = {
+      name: form.name,
+      area_ha: form.area_ha,
+      crop_type: form.crop_type,
+    };
+    
     const result = isEdit
-      ? await zoneService.updateZone(initial!.id, form)
-      : await zoneService.createZone({ farm_id: farmId, ...form });
+      ? await zoneService.updateZone(initial!.id, payload)
+      : await zoneService.createZone({ farm_id: farmId, ...payload, status: 'idle' });
     setLoading(false);
     if (result.error) { setErr(result.error); return; }
     onSaved();
@@ -68,23 +71,6 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
               <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Jenis Tanaman</label>
               <input value={form.crop_type} onChange={e=>set('crop_type',e.target.value)} placeholder="Padi, Jagung..."
                 className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Latitude</label>
-              <input type="number" step="any" value={form.latitude??''} onChange={e=>set('latitude',parseFloat(e.target.value)||undefined)}
-                placeholder="-6.815" className="w-full px-3 py-2 rounded-xl glass-sm text-sm font-mono outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Longitude</label>
-              <input type="number" step="any" value={form.longitude??''} onChange={e=>set('longitude',parseFloat(e.target.value)||undefined)}
-                placeholder="107.615" className="w-full px-3 py-2 rounded-xl glass-sm text-sm font-mono outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Status Awal</label>
-              <select value={form.status} onChange={e=>set('status',e.target.value as ZoneStatus)}
-                className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}>
-                {ZONE_STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
-              </select>
             </div>
           </div>
           {err && <p className="text-xs text-danger-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/>{err}</p>}
