@@ -102,6 +102,7 @@ function ZoneBlock({
       onPointerDown={onDragDown}
       onPointerMove={onDragMove}
       onPointerUp={onDragUp}
+      onClick={e => e.stopPropagation()}
     >
       {/* Inner clip — keeps Lottie + content inside card bounds while resize handles escape */}
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
