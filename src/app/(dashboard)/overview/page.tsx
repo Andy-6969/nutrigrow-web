@@ -15,6 +15,28 @@ import { overrideService } from '@/shared/services/overrideService';
 import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
 
+// Static particle data — defined outside component to avoid re-creation
+const PARTICLES = [
+  { x: 3,  y: 5,  size: 2,   color: 'rgba(16,185,129,0.7)',  dur: 14, del: 0   },
+  { x: 12, y: 20, size: 1.5, color: 'rgba(6,182,212,0.6)',   dur: 18, del: 1.5 },
+  { x: 22, y: 45, size: 2.5, color: 'rgba(16,185,129,0.5)',  dur: 12, del: 3   },
+  { x: 35, y: 10, size: 1,   color: 'rgba(99,102,241,0.6)',  dur: 20, del: 0.5 },
+  { x: 48, y: 60, size: 2,   color: 'rgba(6,182,212,0.5)',   dur: 16, del: 2   },
+  { x: 58, y: 30, size: 1.5, color: 'rgba(16,185,129,0.7)',  dur: 13, del: 4   },
+  { x: 67, y: 70, size: 1,   color: 'rgba(6,182,212,0.4)',   dur: 22, del: 1   },
+  { x: 75, y: 15, size: 2,   color: 'rgba(52,211,153,0.6)',  dur: 17, del: 3.5 },
+  { x: 82, y: 50, size: 1.5, color: 'rgba(16,185,129,0.5)',  dur: 15, del: 0.8 },
+  { x: 90, y: 35, size: 2.5, color: 'rgba(99,102,241,0.5)',  dur: 19, del: 2.5 },
+  { x: 8,  y: 75, size: 1,   color: 'rgba(6,182,212,0.6)',   dur: 11, del: 5   },
+  { x: 18, y: 90, size: 2,   color: 'rgba(16,185,129,0.6)',  dur: 16, del: 1.2 },
+  { x: 30, y: 55, size: 1.5, color: 'rgba(52,211,153,0.5)',  dur: 21, del: 3.8 },
+  { x: 42, y: 85, size: 1,   color: 'rgba(6,182,212,0.5)',   dur: 14, del: 0.3 },
+  { x: 55, y: 40, size: 2,   color: 'rgba(16,185,129,0.7)',  dur: 18, del: 2.8 },
+  { x: 72, y: 25, size: 2.5, color: 'rgba(6,182,212,0.4)',   dur: 23, del: 1.7 },
+  { x: 85, y: 65, size: 1,   color: 'rgba(52,211,153,0.7)',  dur: 15, del: 0.6 },
+  { x: 93, y: 10, size: 2,   color: 'rgba(16,185,129,0.5)',  dur: 20, del: 3.2 },
+];
+
 function toCondition(status?: string): GreenhouseCondition {
   if (!status) return 'idle';
   if (status === 'irrigating')  return 'irrigating';
@@ -48,6 +70,10 @@ export default function OverviewPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Scroll state for parallax + progress ──
+  const [scrollY, setScrollY] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const IRRIGATION_MODES = [
     { id: 'water' as const,       label: 'Air Biasa', emoji: '💧', desc: 'Hanya air bersih',    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
@@ -141,6 +167,18 @@ export default function OverviewPage() {
 
     autoFetch();
   }, [weather, weeklyOverride]);
+
+  // ── Scroll parallax + progress bar ──
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollTop = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollY(scrollTop);
+      setScrollProgress(maxScroll > 0 ? scrollTop / maxScroll : 0);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const navigate = useCallback((dir: 'prev' | 'next') => {
     if (zones.length <= 1) return;
@@ -290,11 +328,98 @@ export default function OverviewPage() {
         @keyframes slideInLeft  { from{opacity:0;transform:translateX(-48px)} to{opacity:1;transform:translateX(0)} }
       `}</style>
 
-      {/* Background glows — adapt opacity via CSS vars */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[150px] pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)' }} />
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)' }} />
+
+
+      {/* ── SCROLL PROGRESS BAR ── */}
+      <div className="fixed top-0 left-0 right-0 h-0.5 z-[200] pointer-events-none">
+        <div className="h-full transition-all duration-75"
+          style={{
+            width: `${scrollProgress * 100}%`,
+            background: 'linear-gradient(90deg, #10b981, #06b6d4, #6366f1)',
+            boxShadow: '0 0 10px rgba(16,185,129,0.8), 0 0 20px rgba(6,182,212,0.4)',
+          }} />
+      </div>
+
+      {/* ═══════ CINEMATIC BACKGROUND ═══════ */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+        {/* Aurora blob 1 — emerald primary */}
+        <div className="absolute rounded-full"
+          style={{
+            top: '5%', left: '8%', width: '650px', height: '650px',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.16) 0%, rgba(5,150,105,0.06) 50%, transparent 70%)',
+            filter: 'blur(60px)',
+            animation: 'aurora1 14s ease-in-out infinite',
+            transform: `translateY(${scrollY * -0.06}px)`,
+          }} />
+        {/* Aurora blob 2 — cyan top-right */}
+        <div className="absolute rounded-full"
+          style={{
+            top: '-12%', right: '4%', width: '580px', height: '580px',
+            background: 'radial-gradient(circle, rgba(6,182,212,0.13) 0%, rgba(8,145,178,0.05) 50%, transparent 70%)',
+            filter: 'blur(75px)',
+            animation: 'aurora2 17s ease-in-out infinite',
+            transform: `translateY(${scrollY * -0.04}px)`,
+          }} />
+        {/* Aurora blob 3 — indigo bottom-right */}
+        <div className="absolute rounded-full"
+          style={{
+            bottom: '2%', right: '18%', width: '480px', height: '480px',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.10) 0%, rgba(79,70,229,0.04) 50%, transparent 70%)',
+            filter: 'blur(70px)',
+            animation: 'aurora3 20s ease-in-out infinite',
+            transform: `translateY(${scrollY * -0.03}px)`,
+          }} />
+        {/* Aurora blob 4 — teal bottom sweep */}
+        <div className="absolute rounded-full"
+          style={{
+            bottom: '-8%', left: '32%', width: '750px', height: '380px',
+            background: 'radial-gradient(ellipse, rgba(20,184,166,0.09) 0%, transparent 70%)',
+            filter: 'blur(90px)',
+            animation: 'aurora2 22s ease-in-out infinite reverse',
+          }} />
+
+        {/* Animated grid overlay */}
+        <div className="absolute inset-0"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(16,185,129,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.022) 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
+            animation: 'gridDrift 14s linear infinite',
+          }} />
+
+        {/* Scanline horizontal sweep */}
+        <div className="absolute left-0 right-0 h-px"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, rgba(16,185,129,0) 10%, rgba(16,185,129,0.5) 35%, rgba(6,182,212,0.4) 50%, rgba(16,185,129,0.5) 65%, rgba(16,185,129,0) 90%, transparent 100%)',
+            boxShadow: '0 0 14px rgba(16,185,129,0.35)',
+            animation: 'scanSweep 10s linear infinite',
+          }} />
+
+        {/* Pulse rings from center */}
+        {[0, 2, 4].map((delay, i) => (
+          <div key={i} className="absolute rounded-full border"
+            style={{
+              width: '600px', height: '600px',
+              top: '50%', left: '50%',
+              borderColor: i === 0 ? 'rgba(16,185,129,0.06)' : i === 1 ? 'rgba(6,182,212,0.05)' : 'rgba(99,102,241,0.04)',
+              animation: `pulseRing 7s ease-out infinite`,
+              animationDelay: `${delay}s`,
+            }} />
+        ))}
+
+        {/* Floating particles */}
+        {PARTICLES.map((p, i) => (
+          <div key={i} className="absolute rounded-full"
+            style={{
+              left: `${p.x}%`,
+              bottom: `${p.y}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              background: p.color,
+              boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
+              animation: `particleFloat ${p.dur}s ${p.del}s ease-in-out infinite`,
+            }} />
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative z-10 max-w-[1800px] mx-auto">
 
