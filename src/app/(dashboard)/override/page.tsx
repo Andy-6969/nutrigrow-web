@@ -13,16 +13,17 @@ import { overrideService } from '@/shared/services/overrideService';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { useT } from '@/shared/context/LanguageContext';
 
+type ActuatorTarget = 'pump' | 'solenoid';
+
 export default function OverridePage() {
   const [selectedZone, setSelectedZone] = useState('');
   const [duration, setDuration] = useState(30);
-  const [overrideMode, setOverrideMode] = useState<'water' | 'fertigation'>('water');
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
   const [activeOverrides, setActiveOverrides] = useState<OverrideLog[]>([]);
   const [overrideHistory, setOverrideHistory] = useState<OverrideLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isActivating, setIsActivating] = useState(false);
+  const [isActivating, setIsActivating] = useState<ActuatorTarget | null>(null);
   const [now, setNow] = useState(Date.now());
   const { canControlZone } = useRBAC();
   const t = useT();
@@ -75,41 +76,45 @@ export default function OverridePage() {
     };
   }, [fetchData]);
 
-  const activeOverrideForSelectedZone = activeOverrides.find(o => o.zone_id === selectedZone);
-  const isOverrideActive = !!activeOverrideForSelectedZone;
-  // Calculate if ANY override is active globally for the red warning badge
-  const isAnyOverrideActive = activeOverrides.length > 0;
-
-  const getRemainingTime = () => {
-    if (!activeOverrideForSelectedZone) return 0;
-    const startedAt = new Date(activeOverrideForSelectedZone.started_at).getTime();
-    const durationMs = activeOverrideForSelectedZone.duration_minutes * 60 * 1000;
-    const endsAt = startedAt + durationMs;
-    const remaining = Math.max(0, Math.floor((endsAt - now) / 1000));
-    return remaining;
+  // Check active overrides for pump/solenoid separately per zone
+  const getActiveOverrideByTarget = (zoneId: string, target: ActuatorTarget) => {
+    return activeOverrides.find(o => o.zone_id === zoneId && o.mode === target);
   };
 
-  const handleActivate = async () => {
+  const isPumpActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump') : false;
+  const isSolenoidActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'solenoid') : false;
+  const isAnyOverrideActive = activeOverrides.length > 0;
+
+  const getRemainingTime = (override: OverrideLog | undefined) => {
+    if (!override) return 0;
+    const startedAt = new Date(override.started_at).getTime();
+    const durationMs = override.duration_minutes * 60 * 1000;
+    const endsAt = startedAt + durationMs;
+    return Math.max(0, Math.floor((endsAt - now) / 1000));
+  };
+
+  const handleActivate = async (target: ActuatorTarget) => {
     if (!selectedZone) return;
-    setIsActivating(true);
+    setIsActivating(target);
     try {
-      await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard", overrideMode);
+      await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard", 'water', target);
     } catch (e) {
-      console.error("Failed to start override:", e);
+      console.error(`Failed to start override (${target}):`, e);
     } finally {
-      setIsActivating(false);
+      setIsActivating(null);
     }
   };
 
-  const handleDeactivate = async () => {
-    if (!activeOverrideForSelectedZone) return;
-    setIsActivating(true);
+  const handleDeactivate = async (target: ActuatorTarget) => {
+    const override = getActiveOverrideByTarget(selectedZone, target);
+    if (!override) return;
+    setIsActivating(target);
     try {
-      await overrideService.stopOverride(activeOverrideForSelectedZone.id);
+      await overrideService.stopOverride(override.id, target);
     } catch (e) {
-      console.error("Failed to stop override:", e);
+      console.error(`Failed to stop override (${target}):`, e);
     } finally {
-      setIsActivating(false);
+      setIsActivating(null);
     }
   };
 
@@ -130,7 +135,7 @@ export default function OverridePage() {
         {/* Control Panel */}
         <div className={cn(
           'glass p-6 space-y-5 opacity-0 animate-fade-in-up',
-          isOverrideActive && 'animate-pulse-glow'
+          (isPumpActive || isSolenoidActive) && 'animate-pulse-glow'
         )} style={{ animationFillMode: 'forwards' }}>
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>🔧 {t('override_panel')}</h3>
@@ -148,7 +153,7 @@ export default function OverridePage() {
               {isLoading ? (
                 <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_zones')}</div>
               ) : zones.map(zone => {
-                const status = ZONE_STATUS[zone.status];
+                const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS];
                 const sensor = sensorDataMap[zone.id];
                 const hasActiveOverride = activeOverrides.some(o => o.zone_id === zone.id);
                 const isAllowed = canControlZone(zone.id);
@@ -176,43 +181,12 @@ export default function OverridePage() {
                         {!isAllowed && <span className="ml-2 text-[10px] bg-gray-500 text-white px-1.5 py-0.5 rounded">🔒 {t('override_locked')}</span>}
                       </p>
                       <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                        {status.label} • 💧 {sensor?.soil_moisture ?? 0}%
+                        {t(status.key)} • 💧 {sensor?.soil_moisture ?? 0}%
                       </p>
                     </div>
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Mode Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--surface-text)' }}>{t('override_mode_label')}</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setOverrideMode('water')}
-                disabled={isOverrideActive}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                  overrideMode === 'water' ? 'border-primary-500 bg-primary-50/50 text-primary-700' : 'border-transparent bg-white/20 hover:bg-white/40',
-                  isOverrideActive && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                <span className="text-2xl">💧</span>
-                <span className="text-xs font-bold">{t('override_mode_water')}</span>
-              </button>
-              <button
-                onClick={() => setOverrideMode('fertigation')}
-                disabled={isOverrideActive}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                  overrideMode === 'fertigation' ? 'border-purple-500 bg-purple-50/50 text-purple-700' : 'border-transparent bg-white/20 hover:bg-white/40',
-                  isOverrideActive && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                <span className="text-2xl">🧪</span>
-                <span className="text-xs font-bold">{t('override_mode_fertigation')}</span>
-              </button>
             </div>
           </div>
 
@@ -227,55 +201,120 @@ export default function OverridePage() {
               max={120}
               value={duration}
               onChange={e => setDuration(Number(e.target.value))}
-              disabled={isOverrideActive}
+              disabled={isPumpActive && isSolenoidActive}
               className="w-full h-2 bg-primary-200 rounded-lg cursor-pointer disabled:opacity-50"
             />
             <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-              <span>1 menit</span>
-              <span>60 menit</span>
-              <span>120 menit</span>
+              <span>1 {t('override_minutes')}</span>
+              <span>60 {t('override_minutes')}</span>
+              <span>120 {t('override_minutes')}</span>
             </div>
           </div>
 
-          {/* Timer Display */}
-          {isOverrideActive && (
-            <div className="text-center py-4 glass-sm rounded-xl">
-              <p className="text-xs mb-1" style={{ color: 'var(--surface-text-muted)' }}>{t('override_remaining')}</p>
-              <p className="text-4xl font-mono font-bold text-primary-500">{formatTimer(getRemainingTime())}</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-                {zones.find(z => z.id === selectedZone)?.name}
-              </p>
-            </div>
-          )}
+          {/* ════ Separated Actuator Controls ════ */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium" style={{ color: 'var(--surface-text)' }}>
+              🎛️ {t('override_actuator_control')}
+            </label>
 
-          {/* Action Button */}
-          {!isOverrideActive ? (
-            <button
-              onClick={handleActivate}
-              disabled={!selectedZone || isActivating || isLoading}
-              className={cn(
-                'w-full py-4 rounded-xl font-bold text-white text-lg transition-all duration-300 flex justify-center items-center',
-                selectedZone && !isActivating
-                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl glow-sm hover:glow-md active:scale-[0.98]'
-                  : 'bg-gray-300 cursor-not-allowed'
+            {/* PUMP Control (Tuya) */}
+            <div className={cn(
+              'p-4 rounded-xl border-2 transition-all',
+              isPumpActive ? 'border-primary-500 bg-primary-50/30' : 'border-transparent',
+            )} style={{ borderColor: isPumpActive ? undefined : 'var(--surface-border)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">💧</span>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_pump')}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Tuya Smart Plug</p>
+                  </div>
+                </div>
+                {isPumpActive && (
+                  <div className="text-right">
+                    <p className="text-lg font-mono font-bold text-primary-500">
+                      {formatTimer(getRemainingTime(getActiveOverrideByTarget(selectedZone, 'pump')))}
+                    </p>
+                    <p className="text-[10px] text-primary-400">{t('override_remaining')}</p>
+                  </div>
+                )}
+              </div>
+              
+              {!isPumpActive ? (
+                <button
+                  onClick={() => handleActivate('pump')}
+                  disabled={!selectedZone || isActivating === 'pump' || isLoading}
+                  className={cn(
+                    'w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all duration-300 flex justify-center items-center gap-2',
+                    selectedZone && isActivating !== 'pump'
+                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg glow-sm hover:glow-md active:scale-[0.98]'
+                      : 'bg-gray-300 cursor-not-allowed'
+                  )}
+                >
+                  <Play className="w-4 h-4" />
+                  {isActivating === 'pump' ? t('override_processing') : t('override_pump_on')}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleDeactivate('pump')}
+                  disabled={isActivating === 'pump'}
+                  className="w-full py-2.5 rounded-xl font-bold text-white text-sm bg-danger-500 hover:bg-danger-600 shadow-lg transition-all active:scale-[0.98] glow-danger flex justify-center items-center gap-2"
+                >
+                  <Square className="w-4 h-4" />
+                  {isActivating === 'pump' ? t('override_processing') : t('override_pump_off')}
+                </button>
               )}
-            >
-              <Play className="w-5 h-5 mr-2" />
-              {isActivating ? t('override_processing') : t('override_activate')}
-            </button>
-          ) : (
-            <button
-              onClick={handleDeactivate}
-              disabled={isActivating}
-              className={cn(
-                "w-full py-4 rounded-xl font-bold text-white text-lg bg-danger-500 hover:bg-danger-600 shadow-lg transition-all duration-200 active:scale-[0.98] glow-danger flex justify-center items-center",
-                isActivating && "opacity-70 cursor-not-allowed"
+            </div>
+
+            {/* SOLENOID Control (MQTT) */}
+            <div className={cn(
+              'p-4 rounded-xl border-2 transition-all',
+              isSolenoidActive ? 'border-purple-500 bg-purple-50/30' : 'border-transparent',
+            )} style={{ borderColor: isSolenoidActive ? undefined : 'var(--surface-border)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔧</span>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_solenoid')}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → ESP32</p>
+                  </div>
+                </div>
+                {isSolenoidActive && (
+                  <div className="text-right">
+                    <p className="text-lg font-mono font-bold text-purple-500">
+                      {formatTimer(getRemainingTime(getActiveOverrideByTarget(selectedZone, 'solenoid')))}
+                    </p>
+                    <p className="text-[10px] text-purple-400">{t('override_remaining')}</p>
+                  </div>
+                )}
+              </div>
+              
+              {!isSolenoidActive ? (
+                <button
+                  onClick={() => handleActivate('solenoid')}
+                  disabled={!selectedZone || isActivating === 'solenoid' || isLoading}
+                  className={cn(
+                    'w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all duration-300 flex justify-center items-center gap-2',
+                    selectedZone && isActivating !== 'solenoid'
+                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-lg glow-sm hover:glow-md active:scale-[0.98]'
+                      : 'bg-gray-300 cursor-not-allowed'
+                  )}
+                >
+                  <Play className="w-4 h-4" />
+                  {isActivating === 'solenoid' ? t('override_processing') : t('override_solenoid_on')}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleDeactivate('solenoid')}
+                  disabled={isActivating === 'solenoid'}
+                  className="w-full py-2.5 rounded-xl font-bold text-white text-sm bg-danger-500 hover:bg-danger-600 shadow-lg transition-all active:scale-[0.98] glow-danger flex justify-center items-center gap-2"
+                >
+                  <Square className="w-4 h-4" />
+                  {isActivating === 'solenoid' ? t('override_processing') : t('override_solenoid_off')}
+                </button>
               )}
-            >
-              <Square className="w-5 h-5 mr-2" />
-              {isActivating ? t('override_processing') : t('override_deactivate')}
-            </button>
-          )}
+            </div>
+          </div>
 
           {/* Warning */}
           <div className="flex items-start gap-2 p-3 rounded-xl bg-accent-200/20 border border-accent-400/30">
@@ -293,7 +332,7 @@ export default function OverridePage() {
           </h3>
           <div className="space-y-3">
             {isLoading ? (
-               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>Memuat riwayat...</div>
+               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_history')}</div>
             ) : [...activeOverrides, ...overrideHistory].map(log => (
               <div key={log.id} className="glass-sm p-4 flex items-start gap-3 hover:scale-[1.01] transition-transform">
                 <div className={cn(
@@ -313,9 +352,13 @@ export default function OverridePage() {
                     </span>
                     <span className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
+                      log.mode === 'pump' ? 'bg-primary-100 text-primary-700' : 
+                      log.mode === 'solenoid' ? 'bg-purple-100 text-purple-700' : 
                       log.mode === 'fertigation' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
                     )}>
-                      {log.mode === 'fertigation' ? `🧪 ${t('override_nutrition')}` : `💧 ${t('override_water_only')}`}
+                      {log.mode === 'pump' ? `💧 ${t('override_pump')}` : 
+                       log.mode === 'solenoid' ? `🔧 ${t('override_solenoid')}` :
+                       log.mode === 'fertigation' ? `🧪 ${t('override_nutrition')}` : `💧 ${t('override_water_only')}`}
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>

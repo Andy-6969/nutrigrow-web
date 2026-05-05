@@ -11,9 +11,10 @@ import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import type { WeatherData, SensorData, Zone, EcoSavingsData } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
-import { overrideService } from '@/shared/services/overrideService';
 import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
+import { useT } from '@/shared/context/LanguageContext';
+import { overrideService } from '@/shared/services/overrideService';
 
 // Static particle data — defined outside component to avoid re-creation
 const PARTICLES = [
@@ -59,7 +60,6 @@ export default function OverviewPage() {
   const [isOverriding, setIsOverriding] = useState(false);
   const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'fertigation'>('water');
 
-  // ── Weekly forecast search state ──
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; admin1: string; country: string; latitude: number; longitude: number }>>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -71,14 +71,15 @@ export default function OverviewPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Scroll state for parallax + progress ──
   const [scrollY, setScrollY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
 
+  const t = useT();
+
   const IRRIGATION_MODES = [
-    { id: 'water' as const,       label: 'Air Biasa', emoji: '💧', desc: 'Hanya air bersih',    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
-    { id: 'fertilizer' as const,  label: 'Pupuk Cair',emoji: '🧪', desc: 'Hanya larutan pupuk', color: '#a78bfa', glowColor: 'rgba(167,139,250,0.35)', borderColor: 'rgba(167,139,250,0.5)', bgColor: 'rgba(167,139,250,0.08)' },
-    { id: 'fertigation' as const, label: 'Air + Pupuk',emoji: '⚗️',desc: 'Campuran seimbang',   color: '#34d399', glowColor: 'rgba(52,211,153,0.35)',  borderColor: 'rgba(52,211,153,0.5)',  bgColor: 'rgba(52,211,153,0.08)'  },
+    { id: 'water' as const,       label: t('override_mode_water'), emoji: '💧', desc: t('overview_water_desc'),    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
+    { id: 'fertilizer' as const,  label: t('overview_fertilizer_liquid'),emoji: '🧪', desc: t('overview_fertilizer_desc'), color: '#a78bfa', glowColor: 'rgba(167,139,250,0.35)', borderColor: 'rgba(167,139,250,0.5)', bgColor: 'rgba(167,139,250,0.08)' },
+    { id: 'fertigation' as const, label: t('override_mode_fertigation'),emoji: '⚗️',desc: t('overview_fertigation_desc'),   color: '#34d399', glowColor: 'rgba(52,211,153,0.35)',  borderColor: 'rgba(52,211,153,0.5)',  bgColor: 'rgba(52,211,153,0.08)'  },
   ];
   const selectedMode = IRRIGATION_MODES.find(m => m.id === irrigationMode)!;
 
@@ -110,29 +111,26 @@ export default function OverviewPage() {
     };
   }, []);
 
-  // ── Auto-fallback: jika weekly_forecast kosong (race condition saat VPS write),
-  //    langsung fetch Open-Meteo menggunakan koordinat kebun (Depok/Beji)
   useEffect(() => {
     if (!weather) return;
-    if ((weather.weekly_forecast ?? []).length > 0) return; // data sudah ada, skip
-    if (weeklyOverride) return; // sudah ada override dari search, skip
+    if ((weather.weekly_forecast ?? []).length > 0) return;
+    if (weeklyOverride) return;
 
-    // Koordinat default kebun (Beji, Depok)
     const DEFAULT_LAT = -6.3885;
     const DEFAULT_LON = 106.7814;
-    const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const HARI = t('common_lang_code') === 'id' ? ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const wmoMap = (code: number): { icon: string; desc: string } => {
-      if (code === 0)  return { icon: '☀️', desc: 'Cerah' };
-      if (code <= 2)   return { icon: '⛅', desc: 'Berawan Sebagian' };
-      if (code === 3)  return { icon: '☁️', desc: 'Berawan' };
-      if (code <= 48)  return { icon: '🌫️', desc: 'Berkabut' };
-      if (code <= 55)  return { icon: '🌦️', desc: 'Gerimis' };
-      if (code <= 65)  return { icon: '🌧️', desc: 'Hujan' };
-      if (code <= 77)  return { icon: '❄️', desc: 'Salju' };
-      if (code <= 82)  return { icon: '🌧️', desc: 'Hujan Lebat' };
-      if (code === 95) return { icon: '⛈️', desc: 'Hujan Petir' };
-      if (code <= 99)  return { icon: '⛈️', desc: 'Hujan Petir + Es' };
-      return { icon: '🌤️', desc: 'Cerah' };
+      if (code === 0)  return { icon: '☀️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
+      if (code <= 2)   return { icon: '⛅', desc: t('common_lang_code') === 'id' ? 'Berawan Sebagian' : 'Partly Cloudy' };
+      if (code === 3)  return { icon: '☁️', desc: t('common_lang_code') === 'id' ? 'Berawan' : 'Cloudy' };
+      if (code <= 48)  return { icon: '🌫️', desc: t('common_lang_code') === 'id' ? 'Berkabut' : 'Foggy' };
+      if (code <= 55)  return { icon: '🌦️', desc: t('common_lang_code') === 'id' ? 'Gerimis' : 'Drizzle' };
+      if (code <= 65)  return { icon: '🌧️', desc: t('common_lang_code') === 'id' ? 'Hujan' : 'Rain' };
+      if (code <= 77)  return { icon: '❄️', desc: t('common_lang_code') === 'id' ? 'Salju' : 'Snow' };
+      if (code <= 82)  return { icon: '🌧️', desc: t('common_lang_code') === 'id' ? 'Hujan Lebat' : 'Heavy Rain' };
+      if (code === 95) return { icon: '⛈️', desc: t('common_lang_code') === 'id' ? 'Hujan Petir' : 'Thunderstorm' };
+      if (code <= 99)  return { icon: '⛈️', desc: t('common_lang_code') === 'id' ? 'Hujan Petir + Es' : 'Thunderstorm + Hail' };
+      return { icon: '🌤️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
     };
 
     const autoFetch = async () => {
@@ -158,17 +156,12 @@ export default function OverviewPage() {
             };
           });
           setWeeklyOverride(days);
-          // Tidak perlu update weeklyLocation agar tetap tampil lokasi dari weather.lokasi
         }
-      } catch {
-        // Gagal juga tidak apa-apa, biarkan "Data weekly belum tersedia"
-      }
+      } catch { }
     };
-
     autoFetch();
-  }, [weather, weeklyOverride]);
+  }, [weather, weeklyOverride, t]);
 
-  // ── Scroll parallax + progress bar ──
   useEffect(() => {
     const onScroll = () => {
       const scrollTop = window.scrollY;
@@ -187,7 +180,6 @@ export default function OverviewPage() {
     setAnimKey(k => k + 1);
   }, [zones.length]);
 
-  // ── Close dropdown on outside click ──
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -198,7 +190,6 @@ export default function OverviewPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Geocoding: cari lokasi ──
   const handleSearchInput = (val: string) => {
     setSearchQuery(val);
     if (!val.trim()) { setSearchResults([]); setShowDropdown(false); return; }
@@ -217,25 +208,24 @@ export default function OverviewPage() {
     }, 400);
   };
 
-  // ── Fetch 7-day forecast dari Open-Meteo untuk lokasi terpilih ──
   const selectLocation = async (loc: { name: string; admin1: string; country: string; latitude: number; longitude: number }) => {
     setShowDropdown(false);
     setSearchQuery(`${loc.name}, ${loc.admin1}`);
     setSearchResults([]);
     setIsFetchingWeekly(true);
-    const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const HARI = t('common_lang_code') === 'id' ? ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const wmoMap = (code: number): { icon: string; desc: string } => {
-      if (code === 0)  return { icon: '☀️', desc: 'Cerah' };
-      if (code <= 2)   return { icon: '⛅', desc: 'Berawan Sebagian' };
-      if (code === 3)  return { icon: '☁️', desc: 'Berawan' };
-      if (code <= 48)  return { icon: '🌫️', desc: 'Berkabut' };
-      if (code <= 55)  return { icon: '🌦️', desc: 'Gerimis' };
-      if (code <= 65)  return { icon: '🌧️', desc: 'Hujan' };
-      if (code <= 77)  return { icon: '❄️', desc: 'Salju' };
-      if (code <= 82)  return { icon: '🌧️', desc: 'Hujan Lebat' };
-      if (code === 95) return { icon: '⛈️', desc: 'Hujan Petir' };
-      if (code <= 99)  return { icon: '⛈️', desc: 'Hujan Petir + Es' };
-      return { icon: '🌤️', desc: 'Cerah' };
+      if (code === 0)  return { icon: '☀️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
+      if (code <= 2)   return { icon: '⛅', desc: t('common_lang_code') === 'id' ? 'Berawan Sebagian' : 'Partly Cloudy' };
+      if (code === 3)  return { icon: '☁️', desc: t('common_lang_code') === 'id' ? 'Berawan' : 'Cloudy' };
+      if (code <= 48)  return { icon: '🌫️', desc: t('common_lang_code') === 'id' ? 'Berkabut' : 'Foggy' };
+      if (code <= 55)  return { icon: '🌦️', desc: t('common_lang_code') === 'id' ? 'Gerimis' : 'Drizzle' };
+      if (code <= 65)  return { icon: '🌧️', desc: t('common_lang_code') === 'id' ? 'Hujan' : 'Rain' };
+      if (code <= 77)  return { icon: '❄️', desc: t('common_lang_code') === 'id' ? 'Salju' : 'Snow' };
+      if (code <= 82)  return { icon: '🌧️', desc: t('common_lang_code') === 'id' ? 'Hujan Lebat' : 'Heavy Rain' };
+      if (code === 95) return { icon: '⛈️', desc: t('common_lang_code') === 'id' ? 'Hujan Petir' : 'Thunderstorm' };
+      if (code <= 99)  return { icon: '⛈️', desc: t('common_lang_code') === 'id' ? 'Hujan Petir + Es' : 'Thunderstorm + Hail' };
+      return { icon: '🌤️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
     };
     try {
       const res = await fetch(
@@ -262,7 +252,7 @@ export default function OverviewPage() {
         setWeeklyLocation(`${loc.name}, ${loc.admin1}`);
         setWeeklyUpdatedAt(new Date().toISOString());
       }
-    } catch { /* biarkan data lama tetap tampil */ }
+    } catch { }
     finally { setIsFetchingWeekly(false); }
   };
 
@@ -298,7 +288,6 @@ export default function OverviewPage() {
     animation: `slideIn${slideDir === 'right' ? 'Right' : 'Left'} 0.35s cubic-bezier(0.4,0,0.2,1) both`,
   } : {};
 
-  /* ── shared card style ── */
   const card: React.CSSProperties = {
     background: 'var(--glass-bg)',
     backdropFilter: `blur(var(--glass-blur))`,
@@ -328,9 +317,6 @@ export default function OverviewPage() {
         @keyframes slideInLeft  { from{opacity:0;transform:translateX(-48px)} to{opacity:1;transform:translateX(0)} }
       `}</style>
 
-
-
-      {/* ── SCROLL PROGRESS BAR ── */}
       <div className="fixed top-0 left-0 right-0 h-0.5 z-[200] pointer-events-none">
         <div className="h-full transition-all duration-75"
           style={{
@@ -340,9 +326,7 @@ export default function OverviewPage() {
           }} />
       </div>
 
-      {/* ═══════ CINEMATIC BACKGROUND ═══════ */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        {/* Aurora blob 1 — emerald primary */}
         <div className="absolute rounded-full"
           style={{
             top: '5%', left: '8%', width: '650px', height: '650px',
@@ -351,7 +335,6 @@ export default function OverviewPage() {
             animation: 'aurora1 14s ease-in-out infinite',
             transform: `translateY(${scrollY * -0.06}px)`,
           }} />
-        {/* Aurora blob 2 — cyan top-right */}
         <div className="absolute rounded-full"
           style={{
             top: '-12%', right: '4%', width: '580px', height: '580px',
@@ -360,7 +343,6 @@ export default function OverviewPage() {
             animation: 'aurora2 17s ease-in-out infinite',
             transform: `translateY(${scrollY * -0.04}px)`,
           }} />
-        {/* Aurora blob 3 — indigo bottom-right */}
         <div className="absolute rounded-full"
           style={{
             bottom: '2%', right: '18%', width: '480px', height: '480px',
@@ -369,7 +351,6 @@ export default function OverviewPage() {
             animation: 'aurora3 20s ease-in-out infinite',
             transform: `translateY(${scrollY * -0.03}px)`,
           }} />
-        {/* Aurora blob 4 — teal bottom sweep */}
         <div className="absolute rounded-full"
           style={{
             bottom: '-8%', left: '32%', width: '750px', height: '380px',
@@ -378,7 +359,6 @@ export default function OverviewPage() {
             animation: 'aurora2 22s ease-in-out infinite reverse',
           }} />
 
-        {/* Animated grid overlay */}
         <div className="absolute inset-0"
           style={{
             backgroundImage: 'linear-gradient(rgba(16,185,129,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.022) 1px, transparent 1px)',
@@ -386,7 +366,6 @@ export default function OverviewPage() {
             animation: 'gridDrift 14s linear infinite',
           }} />
 
-        {/* Scanline horizontal sweep */}
         <div className="absolute left-0 right-0 h-px"
           style={{
             background: 'linear-gradient(90deg, transparent 0%, rgba(16,185,129,0) 10%, rgba(16,185,129,0.5) 35%, rgba(6,182,212,0.4) 50%, rgba(16,185,129,0.5) 65%, rgba(16,185,129,0) 90%, transparent 100%)',
@@ -394,7 +373,6 @@ export default function OverviewPage() {
             animation: 'scanSweep 10s linear infinite',
           }} />
 
-        {/* Pulse rings from center */}
         {[0, 2, 4].map((delay, i) => (
           <div key={i} className="absolute rounded-full border"
             style={{
@@ -406,7 +384,6 @@ export default function OverviewPage() {
             }} />
         ))}
 
-        {/* Floating particles */}
         {PARTICLES.map((p, i) => (
           <div key={i} className="absolute rounded-full"
             style={{
@@ -430,7 +407,7 @@ export default function OverviewPage() {
           <div style={card} className="p-6 animate-card-entrance animate-delay-1">
             <h3 className="text-sm font-semibold mb-4 tracking-wider flex items-center gap-2" style={textMuted}>
               <CloudRain className="w-4 h-4 text-cyan-400" />
-              WEATHER FORECAST
+              {t('overview_weather').toUpperCase()}
               <span className="ml-auto text-[9px] font-mono" style={textSubtle}>BMKG</span>
             </h3>
             <div className="flex items-center gap-4 mb-5">
@@ -439,11 +416,10 @@ export default function OverviewPage() {
                 <p className="text-3xl font-bold" style={textMain}>
                   {weather?.temperature ?? '--'}°C
                 </p>
-                <p className="text-sm capitalize mt-0.5" style={textMuted}>{weather?.description ?? 'Memuat...'}</p>
+                <p className="text-sm capitalize mt-0.5" style={textMuted}>{weather?.description ?? t('common_loading')}</p>
               </div>
             </div>
 
-            {/* Metrics Grid: icon-only */}
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div style={subCard} className="p-2.5 flex flex-col items-center text-center">
                 <Droplets className="w-4 h-4 text-blue-400 mb-1.5" />
@@ -459,15 +435,13 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            {/* Update Timestamp */}
             <div className="flex items-center gap-1.5 pt-2 mb-3" style={{ borderTop: '1px solid var(--surface-border)' }}>
               <Clock className="w-3 h-3" style={textSubtle} />
               <p className="text-[10px] font-mono" style={textSubtle}>
-                Update: {weather?.last_update ? new Date(weather.last_update).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
+                {t('overview_last_update')}: {weather?.last_update ? new Date(weather.last_update).toLocaleString(t('common_lang_code') === 'id' ? 'id-ID' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
               </p>
             </div>
 
-            {/* Status Badges: Akan Hujan, Rek. Siram, Lokasi */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
                 style={{
@@ -476,7 +450,7 @@ export default function OverviewPage() {
                   border: `1px solid ${weather?.akan_hujan ? 'rgba(245,158,11,0.25)' : 'rgba(16,185,129,0.25)'}`,
                 }}>
                 <CloudDrizzle className="w-3 h-3" />
-                {weather ? (weather.akan_hujan ? 'Hujan ⚠️' : 'Cerah ✓') : '--'}
+                {weather ? (weather.akan_hujan ? t('overview_rain_warning') : t('overview_clear_ok')) : '--'}
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
                 style={{
@@ -485,7 +459,7 @@ export default function OverviewPage() {
                   border: `1px solid ${weather?.rekomendasi_siram ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
                 }}>
                 <Sprout className="w-3 h-3" />
-                {weather ? (weather.rekomendasi_siram ? 'Siram ✓' : 'Tunda ✗') : '--'}
+                {weather ? (weather.rekomendasi_siram ? t('overview_water_ok') : t('overview_delay_warning')) : '--'}
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
                 style={{
@@ -501,14 +475,12 @@ export default function OverviewPage() {
 
           {/* Weekly Forecast */}
           <div style={card} className="p-6 flex-1 min-h-[300px] flex flex-col animate-card-entrance animate-delay-3">
-            {/* Header */}
             <h3 className="text-sm font-semibold mb-3 tracking-wider flex items-center gap-2" style={textMuted}>
               <Calendar className="w-4 h-4 text-cyan-400" />
-              PRAKIRAAN 7 HARI
+              {t('overview_forecast').toUpperCase()}
               <span className="ml-auto text-[9px] font-mono" style={textSubtle}>Open-Meteo</span>
             </h3>
 
-            {/* Search Box */}
             <div ref={searchRef} className="relative mb-3 z-50">
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors focus-within:border-cyan-500/50"
                 style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid var(--surface-border)' }}>
@@ -521,7 +493,7 @@ export default function OverviewPage() {
                   value={searchQuery}
                   onChange={e => handleSearchInput(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-                  placeholder="Cari lokasi lain..."
+                  placeholder={t('overview_search_location')}
                   className="flex-1 bg-transparent outline-none text-[11px] placeholder:opacity-50"
                   style={{ color: 'var(--surface-text)' }}
                 />
@@ -532,12 +504,11 @@ export default function OverviewPage() {
                 )}
               </div>
 
-              {/* Dropdown hasil pencarian */}
               {showDropdown && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)]"
                   style={{ 
-                    background: 'rgba(15, 23, 42, 0.95)', // Warna solid gelap (slate-900)
-                    backdropFilter: 'blur(24px)',         // Efek blur sangat kuat
+                    background: 'rgba(15, 23, 42, 0.95)',
+                    backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
                     border: '1px solid rgba(255,255,255,0.1)' 
                   }}>
@@ -558,7 +529,6 @@ export default function OverviewPage() {
               )}
             </div>
 
-            {/* List 7 hari */}
             <div className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden mb-3 pr-1 relative">
               {isFetchingWeekly && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10"
@@ -579,7 +549,7 @@ export default function OverviewPage() {
                       }}
                     >
                       <span className="text-[11px] font-bold w-7 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
-                        {isToday ? 'Hari' : day.day_name}
+                        {isToday ? (t('common_lang_code') === 'id' ? 'Hari' : 'Today') : day.day_name}
                       </span>
                       <span className="text-xl w-7 text-center shrink-0 drop-shadow-sm">{day.icon}</span>
                       <span className="text-[10px] font-medium flex-1 leading-[1.1] line-clamp-2" style={textMain}>
@@ -587,7 +557,7 @@ export default function OverviewPage() {
                       </span>
                       <div
                         className="flex items-center gap-1 shrink-0 justify-end w-12 cursor-help"
-                        title={`Suhu Maks: ${Math.round(day.temp_max)}°C | Suhu Min: ${Math.round(day.temp_min)}°C`}
+                        title={t('common_lang_code') === 'id' ? `Suhu Maks: ${Math.round(day.temp_max)}°C | Suhu Min: ${Math.round(day.temp_min)}°C` : `Max Temp: ${Math.round(day.temp_max)}°C | Min Temp: ${Math.round(day.temp_min)}°C`}
                       >
                         <span className="text-xs font-mono font-bold" style={textMain}>{Math.round(day.temp_max)}°</span>
                         <span className="text-[10px] font-mono" style={textSubtle}>{Math.round(day.temp_min)}°</span>
@@ -603,12 +573,11 @@ export default function OverviewPage() {
                 })
               ) : (
                 <div className="flex-1 flex items-center justify-center h-full">
-                  <p className="text-xs" style={textSubtle}>Data weekly belum tersedia</p>
+                  <p className="text-xs" style={textSubtle}>{t('common_no_data')}</p>
                 </div>
               )}
             </div>
 
-            {/* Footer Lokasi & Update */}
             <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--surface-border)' }}>
               <div className="flex items-center gap-1.5 min-w-0">
                 <MapPin className="w-3 h-3 text-purple-400 shrink-0" />
@@ -620,7 +589,7 @@ export default function OverviewPage() {
                 <Clock className="w-3 h-3" style={textSubtle} />
                 <p className="text-[10px] font-mono" style={textSubtle}>
                   {(weeklyUpdatedAt ?? weather?.last_update)
-                    ? new Date(weeklyUpdatedAt ?? weather!.last_update).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    ? new Date(weeklyUpdatedAt ?? weather!.last_update).toLocaleTimeString(t('common_lang_code') === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' })
                     : '--'}
                 </p>
               </div>
@@ -631,7 +600,6 @@ export default function OverviewPage() {
         {/* ── CENTER COLUMN (HUD) ── */}
         <div className="xl:col-span-6 flex flex-col items-center justify-center relative min-h-[500px] animate-card-entrance animate-delay-2">
 
-          {/* HUD Header */}
           <div className="absolute top-0 text-center w-full z-20 px-12" style={slideInStyle} key={`header-${animKey}`}>
             <h2 className="text-3xl font-extrabold tracking-[0.2em] uppercase" style={textMain}>
               {selectedZone ? (selectedZone.name.split(' - ')[1] || selectedZone.name) : 'Main Greenhouse'}
@@ -639,12 +607,12 @@ export default function OverviewPage() {
             <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
               <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: zoneStatus?.color ?? '#10b981' }} />
               <span className="text-xs font-mono tracking-widest" style={{ color: '#10b981' }}>
-                SYSTEM ONLINE // NODE {String(zoneIndex + 1).padStart(2, '0')} of {String(zones.length).padStart(2, '0')}
+                SYSTEM ONLINE // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
               </span>
               {selectedZone && zoneStatus && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                   style={{ backgroundColor: `${zoneStatus.color}20`, color: zoneStatus.color }}>
-                  {zoneStatus.icon} {zoneStatus.label}
+                  {zoneStatus.icon} {t(zoneStatus.key)}
                 </span>
               )}
             </div>
@@ -655,25 +623,22 @@ export default function OverviewPage() {
             )}
           </div>
 
-          {/* Nav Arrow LEFT */}
           {multiZone && (
             <button onClick={() => navigate('prev')}
               className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md hover:scale-110 transition-all duration-200 shadow-xl"
               style={{ background: 'var(--surface-card)', border: 'var(--glass-border)', color: 'var(--surface-text-muted)' }}
-              title="Zona Sebelumnya"
+              title={t('common_lang_code') === 'id' ? 'Zona Sebelumnya' : 'Previous Zone'}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
 
-          {/* Greenhouse + HUD Badges */}
           <div className="relative w-full max-w-[560px] aspect-square flex items-center justify-center overflow-hidden"
             key={`scene-${animKey}`} style={slideInStyle}>
             <div className="w-[90%] h-[90%] relative z-10">
               <GreenhouseAnimation condition={animCondition} />
             </div>
 
-            {/* Badges */}
             {[
               { pos: 'top-[16%] left-[12%]',    icon: <Droplets className="w-3.5 h-3.5 text-blue-400"/>,          val: `${liveSensor?.soil_moisture ?? '--'}%`, label: 'Soil' },
               { pos: 'top-[26%] right-[8%]',    icon: <Thermometer className="w-3.5 h-3.5 text-orange-400"/>,     val: `${liveSensor?.temperature ?? '--'}°C`,  label: 'Temp' },
@@ -688,25 +653,22 @@ export default function OverviewPage() {
               </div>
             ))}
 
-            {/* HUD Rings */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] rounded-full pointer-events-none"
               style={{ border: '1px solid var(--surface-border)' }} />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[130%] border-dashed rounded-full pointer-events-none"
               style={{ border: '1px dashed var(--surface-border)', animation: 'spin 60s linear infinite' }} />
           </div>
 
-          {/* Nav Arrow RIGHT */}
           {multiZone && (
             <button onClick={() => navigate('next')}
               className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md hover:scale-110 transition-all duration-200 shadow-xl"
               style={{ background: 'var(--surface-card)', border: 'var(--glass-border)', color: 'var(--surface-text-muted)' }}
-              title="Zona Berikutnya"
+              title={t('common_lang_code') === 'id' ? 'Zona Berikutnya' : 'Next Zone'}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           )}
 
-          {/* Dot Indicators */}
           {multiZone && (
             <div className="absolute bottom-2 flex items-center gap-2">
               {zones.map((_, i) => (
@@ -726,9 +688,8 @@ export default function OverviewPage() {
         {/* ── RIGHT COLUMN ── */}
         <div className="xl:col-span-3 space-y-6 flex flex-col">
 
-          {/* Irrigation Mode Selector */}
           <div style={card} className="p-4 animate-card-entrance animate-delay-3">
-            <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>Mode Penyiraman</p>
+            <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>{t('override_mode_label').toUpperCase()}</p>
             <div className="grid grid-cols-3 gap-2">
               {IRRIGATION_MODES.map(mode => {
                 const isActive = irrigationMode === mode.id;
@@ -759,7 +720,6 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* Manual Override Button */}
           <button onClick={handleManualOverride} disabled={isOverriding}
             className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
               isOverriding ? 'cursor-not-allowed opacity-80' : 'cursor-pointer')}
@@ -777,26 +737,25 @@ export default function OverviewPage() {
               </div>
               <div className="text-center">
                 <p className="font-mono font-bold tracking-widest text-lg" style={textMain}>
-                  {isOverriding ? 'MENYIRAM...' : 'MANUAL OVERRIDE'}
+                  {isOverriding ? t('overview_watering') : t('overview_manual_override')}
                 </p>
                 <p className="text-xs mt-1 uppercase tracking-widest" style={textMuted}>
-                  {isOverriding ? 'Proses Berjalan' : (selectedZone?.name.split(' - ')[1] || 'Siram Sekarang')}
+                  {isOverriding ? (t('common_lang_code') === 'id' ? 'Proses Berjalan' : 'Running Process') : (selectedZone?.name.split(' - ')[1] || t('overview_water_now'))}
                 </p>
               </div>
             </div>
           </button>
 
-          {/* Eco-Savings */}
           <div style={card} className="p-6 flex-1 flex flex-col justify-between animate-card-entrance animate-delay-6">
             <h3 className="text-sm font-semibold mb-6 tracking-wider flex items-center gap-2" style={textMuted}>
               <Leaf className="w-4 h-4 text-emerald-500" />
-              ECO-SAVINGS IMPACT
+              {t('overview_ecosavings').toUpperCase()} IMPACT
             </h3>
             <div className="space-y-5">
               {[
-                { icon: <Droplets className="w-5 h-5 text-blue-400"/>,   bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.25)',  label: 'Air Dihemat',    val: formatNumber(ecoSavings?.water_saved_liters ?? 0),   unit: 'L'   },
-                { icon: <Leaf className="w-5 h-5 text-emerald-400"/>,    bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.25)',  label: 'Pupuk Dihemat',  val: formatNumber(ecoSavings?.fertilizer_saved_kg ?? 0),  unit: 'kg'  },
-                { icon: <Zap className="w-5 h-5 text-purple-400"/>,      bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.25)',  label: 'Energi Dihemat', val: formatNumber(ecoSavings?.energy_saved_kwh ?? 0),     unit: 'kWh' },
+                { icon: <Droplets className="w-5 h-5 text-blue-400"/>,   bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.25)',  label: t('eco_water_saved'),    val: formatNumber(ecoSavings?.water_saved_liters ?? 0),   unit: 'L'   },
+                { icon: <Leaf className="w-5 h-5 text-emerald-400"/>,    bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.25)',  label: t('eco_fertilizer_saved'),  val: formatNumber(ecoSavings?.fertilizer_saved_kg ?? 0),  unit: 'kg'  },
+                { icon: <Zap className="w-5 h-5 text-purple-400"/>,      bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.25)',  label: t('eco_energy_saved'), val: formatNumber(ecoSavings?.energy_saved_kwh ?? 0),     unit: 'kWh' },
               ].map((item, i) => (
                 <div key={i}>
                   <div className="flex items-center gap-4">
@@ -816,7 +775,7 @@ export default function OverviewPage() {
               ))}
             </div>
             <div className="mt-6 pt-4 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--surface-border)' }}>
-              <span style={textMuted}>Total Estimasi Biaya</span>
+              <span style={textMuted}>{t('eco_cost_saved')}</span>
               <span className="font-mono text-emerald-500 font-semibold">Rp {formatNumber(ecoSavings?.cost_saved_rupiah ?? 0)}</span>
             </div>
           </div>

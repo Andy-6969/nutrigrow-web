@@ -48,6 +48,7 @@ export interface SensorData {
   temperature: number;
   humidity: number;
   ph: number;
+  tds?: number;
   battery?: number;
   rssi?: number;
   recorded_at: string;
@@ -152,7 +153,7 @@ export interface OverrideLog {
   zone_id: string;
   zone_name: string;
   user_name: string;
-  mode: 'water' | 'fertigation';
+  mode: 'water' | 'fertigation' | 'pump' | 'solenoid';
   duration_minutes: number;
   reason?: string;
   started_at: string;

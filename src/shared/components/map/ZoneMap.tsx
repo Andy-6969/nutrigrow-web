@@ -106,7 +106,7 @@ export default function ZoneMap({ zones, sensorData, className }: ZoneMapProps) 
         <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-2 py-1 rounded border border-white/10 text-[10px] whitespace-nowrap text-white font-medium z-10 shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
           <div class="font-bold">${zone.name}</div>
           <div class="flex items-center gap-1">
-            <span style="color: ${status.color}">●</span> ${status.label} • ${sensor?.soil_moisture ?? 0}% 💧
+            <span style="color: ${status.color}">●</span> ${status.key} • ${sensor?.soil_moisture ?? 0}% 💧
           </div>
         </div>
       `;
@@ -187,7 +187,7 @@ export default function ZoneMap({ zones, sensorData, className }: ZoneMapProps) 
             {Object.entries(ZONE_STATUS).map(([key, status]) => (
               <div key={key} className="flex items-center gap-2 text-[10px] text-white/80">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }}></span>
-                {status.label}
+                {status.key}
               </div>
             ))}
           </div>

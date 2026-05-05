@@ -1,6 +1,4 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect } from 'react';
 import { Settings, User, Bell, Shield, Monitor, Save, Moon, Sun, Globe, Lock, Smartphone, CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -14,6 +12,7 @@ import { useLanguage, useT } from '@/shared/context/LanguageContext';
 function ExpoTokenSection({ userId }: { userId: string }) {
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
+  const t = useT();
 
   const handleSave = async () => {
     if (!token.startsWith('ExponentPushToken[')) {
@@ -30,10 +29,10 @@ function ExpoTokenSection({ userId }: { userId: string }) {
     <div className="p-4 glass-sm rounded-xl space-y-3">
       <div className="flex items-center gap-2">
         <Smartphone className="w-4 h-4 text-primary-500" />
-        <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>Expo Push Token</p>
+        <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>{t('settings_expo_token')}</p>
       </div>
       <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-        Daftarkan token notifikasi dari aplikasi mobile NutriGrow agar bisa menerima push notification di HP.
+        {t('settings_expo_hint')}
       </p>
       <div className="flex gap-2">
         <input
@@ -49,14 +48,14 @@ function ExpoTokenSection({ userId }: { userId: string }) {
           className="px-4 py-2 bg-primary-500 text-white rounded-xl text-xs font-semibold hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center gap-1.5"
         >
           {status === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-          Simpan
+          {t('settings_expo_save')}
         </button>
       </div>
       {status === 'ok' && (
-        <p className="text-xs text-primary-600 flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5" /> Token berhasil disimpan!</p>
+        <p className="text-xs text-primary-600 flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5" /> {t('settings_expo_ok')}</p>
       )}
       {status === 'err' && (
-        <p className="text-xs text-danger-600 flex items-center gap-1"><XCircle className="w-3.5 h-3.5" /> Format token tidak valid. Harus diawali ExponentPushToken[</p>
+        <p className="text-xs text-danger-600 flex items-center gap-1"><XCircle className="w-3.5 h-3.5" /> {t('settings_expo_error')}</p>
       )}
     </div>
   );
@@ -96,7 +95,6 @@ export default function SettingsPage() {
     }
   }, [profile]);
 
-  // Sync dark mode dari localStorage saat mount
   useEffect(() => {
     const saved = localStorage.getItem('nutrigrow-theme');
     const isDark = saved === 'dark';
@@ -191,7 +189,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{profile?.full_name || 'Pengguna'}</p>
                   <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>
-                    {profile?.role === 'super_admin' ? '⭐ Super Admin' : profile?.role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : '👤 Tamu'} • Bitanic
+                    {profile?.role === 'super_admin' ? '⭐ Super Admin' : profile?.role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : '👤 Guest'} • Bitanic
                   </p>
                 </div>
               </div>
@@ -229,10 +227,10 @@ export default function SettingsPage() {
 
               <div className="space-y-3">
                 {[
-                  { key: 'smart_delay', label: '⏸️ Smart Delay', desc: 'Notifikasi saat penyiraman ditunda karena prediksi hujan' },
-                  { key: 'cycle_complete', label: '✅ Siklus Selesai', desc: 'Notifikasi saat siklus penyiraman otomatis selesai' },
-                  { key: 'device_alert', label: '🔴 Alert Perangkat', desc: 'Notifikasi darurat saat sensor/aktuator offline >5 menit' },
-                  { key: 'override', label: '🔧 Manual Override', desc: 'Notifikasi saat operator mengaktifkan override' },
+                  { key: 'smart_delay', label: `⏸️ ${t('settings_notif_smart_delay')}`, desc: t('notifications_smart_delay_desc') || 'Notifikasi saat penyiraman ditunda karena prediksi hujan' },
+                  { key: 'cycle_complete', label: `✅ ${t('settings_notif_cycle_complete')}`, desc: t('notifications_cycle_desc') || 'Notifikasi saat siklus penyiraman otomatis selesai' },
+                  { key: 'device_alert', label: `🔴 ${t('settings_notif_device_alert')}`, desc: t('notifications_alert_desc') || 'Notifikasi darurat saat sensor/aktuator offline >5 menit' },
+                  { key: 'override', label: `🔧 ${t('settings_notif_override')}`, desc: t('notifications_override_desc') || 'Notifikasi saat operator mengaktifkan override' },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between p-4 glass-sm rounded-xl">
                     <div>
@@ -263,15 +261,14 @@ export default function SettingsPage() {
                 ))}
               </div>
 
-              {/* Expo Push Token Section */}
               <div className="pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
                 <p className="text-xs font-bold mb-3 uppercase tracking-wider" style={{ color: 'var(--surface-text-muted)' }}>
-                  📱 Perangkat Mobile
+                  📱 {t('settings_mobile_devices') || 'Perangkat Mobile'}
                 </p>
                 {profile?.id ? (
                   <ExpoTokenSection userId={profile.id} />
                 ) : (
-                  <p className="text-xs text-center py-4" style={{ color: 'var(--surface-text-muted)' }}>Login terlebih dahulu untuk mendaftarkan perangkat.</p>
+                  <p className="text-xs text-center py-4" style={{ color: 'var(--surface-text-muted)' }}>{t('settings_login_required') || 'Login terlebih dahulu untuk mendaftarkan perangkat.'}</p>
                 )}
               </div>
             </div>

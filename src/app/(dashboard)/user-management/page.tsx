@@ -6,25 +6,10 @@ import {
   Crown, Sprout, Clock, Trash2, ChevronDown, X, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/shared/lib/supabase';
+import { useT } from '@/shared/context/LanguageContext';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { cn } from '@/shared/lib/utils';
-import type { AppRole } from '@/shared/types/global.types';
-
-/*
- * ⚠️ REQUIRED: Super Admin must be able to SELECT all user_profiles.
- * Run this SQL in Supabase SQL Editor if you haven't already:
- *
- * -- Allow super_admin to read ALL profiles (not just their own)
- * CREATE POLICY "Super admin can read all profiles"
- *   ON public.user_profiles FOR SELECT TO authenticated
- *   USING (
- *     id = auth.uid()
- *     OR (SELECT r.name FROM public.roles r
- *         JOIN public.user_profiles up ON up.role_id = r.id
- *         WHERE up.id = auth.uid()) = 'super_admin'
- *   );
- */
 
 // ─── Types ───────────────────────────────────────────────────
 interface RoleRow {
@@ -45,17 +30,9 @@ interface UserRow {
   roles: RoleRow | null;
 }
 
-// ─── Role display config ─────────────────────────────────────
-const ROLE_CONFIG: Record<string, {
-  label: string; icon: typeof Crown; color: string; bg: string; border: string;
-}> = {
-  super_admin:   { label: 'Super Admin',      icon: Crown,  color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200/60' },
-  pemilik_kebun: { label: 'Pemilik Kebun',    icon: Sprout, color: 'text-primary-700', bg: 'bg-primary-50', border: 'border-primary-200/60' },
-  guest:         { label: 'Tamu (Karantina)', icon: Clock,  color: 'text-orange-700',  bg: 'bg-orange-50',  border: 'border-orange-200/60' },
-};
-
 // ─── Component ───────────────────────────────────────────────
 export default function UserManagementPage() {
+  const t = useT();
   const { session } = useAuth();
   const { hasRole } = useRBAC();
 
@@ -78,6 +55,15 @@ export default function UserManagementPage() {
     userId: string; userName: string; selectedZones: string[];
   } | null>(null);
 
+  // ─── Role display config ─────────────────────────────────────
+  const ROLE_CONFIG: Record<string, {
+    label: string; icon: typeof Crown; color: string; bg: string; border: string;
+  }> = {
+    super_admin:   { label: t('usermgmt_super_admin'), icon: Crown,  color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200/60' },
+    pemilik_kebun: { label: t('nav_farms'),           icon: Sprout, color: 'text-primary-700', bg: 'bg-primary-50', border: 'border-primary-200/60' },
+    guest:         { label: t('usermgmt_quarantine'), icon: Clock,  color: 'text-orange-700',  bg: 'bg-orange-50',  border: 'border-orange-200/60' },
+  };
+
   // ─── Fetch users ─────────────────────────────────────────
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -93,14 +79,14 @@ export default function UserManagementPage() {
     } catch (err: any) {
       console.error('[UserManagement] Fetch error:', err);
       if (err.code === '42501' || err.message?.includes('policy')) {
-        setError('Akses ditolak oleh RLS. Jalankan SQL policy untuk Super Admin (lihat komentar di source code).');
+        setError('Akses ditolak oleh RLS. Jalankan SQL policy untuk Super Admin.');
       } else {
-        setError(err.message ?? 'Gagal memuat data pengguna.');
+        setError((err.message ?? t('usermgmt_loading_error')) || 'Gagal memuat data pengguna.');
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // ─── Fetch available roles ───────────────────────────────
   const fetchRoles = useCallback(async () => {
@@ -125,24 +111,11 @@ export default function UserManagementPage() {
         .maybeSingle();
 
       if (updateErr) throw updateErr;
+      if (!data) throw new Error('Update ditolak oleh RLS policy.');
 
-      if (!data) {
-        throw new Error(
-          'Update ditolak oleh RLS policy. Pastikan Anda sudah menjalankan SQL:\n\n' +
-          'CREATE POLICY "Super admin can update any profile"\n' +
-          '  ON public.user_profiles FOR UPDATE TO authenticated\n' +
-          '  USING (\n' +
-          '    (SELECT r.name FROM public.roles r\n' +
-          '     JOIN public.user_profiles up ON up.role_id = r.id\n' +
-          '     WHERE up.id = auth.uid()) = \'super_admin\'\n' +
-          '  );'
-        );
-      }
-
-      // Re-fetch to ensure consistency
       await fetchUsers();
     } catch (err: any) {
-      alert('Gagal mengubah role:\n\n' + (err.message ?? 'Unknown error'));
+      alert(t('common_error') + ':\n\n' + (err.message ?? 'Unknown error'));
     } finally {
       setUpdatingId(null);
       setConfirm(null);
@@ -164,7 +137,7 @@ export default function UserManagementPage() {
       await fetchUsers();
       setAssignZonesModal(null);
     } catch (err: any) {
-      alert('Gagal mengupdate zona:\n\n' + (err.message ?? 'Unknown error'));
+      alert(t('common_error') + ':\n\n' + (err.message ?? 'Unknown error'));
     } finally {
       setUpdatingId(null);
     }
@@ -174,17 +147,14 @@ export default function UserManagementPage() {
   const kickUser = async (userId: string) => {
     setUpdatingId(userId);
     try {
-      // Call server-side function that deletes from auth.users (CASCADE removes user_profiles too)
       const { error: rpcErr } = await supabase.rpc('kick_user', {
         target_user_id: userId,
       });
 
       if (rpcErr) throw rpcErr;
-
-      // Remove from local state
       setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err: any) {
-      alert('Gagal menghapus user:\n\n' + (err.message ?? 'Unknown error'));
+      alert(t('common_error') + ':\n\n' + (err.message ?? 'Unknown error'));
     } finally {
       setUpdatingId(null);
       setKickConfirm(null);
@@ -200,7 +170,6 @@ export default function UserManagementPage() {
     return matchSearch && matchRole;
   });
 
-  // ─── Stats ───────────────────────────────────────────────
   const stats = {
     total: users.length,
     active: users.filter(u => u.roles?.name !== 'guest' && u.is_active).length,
@@ -208,15 +177,14 @@ export default function UserManagementPage() {
     admins: users.filter(u => u.roles?.name === 'super_admin').length,
   };
 
-  // ─── Guard ───────────────────────────────────────────────
   if (!hasRole('super_admin')) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="glass-heavy p-8 text-center max-w-sm">
           <Shield className="w-12 h-12 text-danger-500 mx-auto mb-3" />
-          <h2 className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>Akses Ditolak</h2>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{t('usermgmt_access_denied')}</h2>
           <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-            Hanya Super Admin yang dapat mengelola pengguna.
+            {t('usermgmt_admin_only')}
           </p>
         </div>
       </div>
@@ -225,24 +193,22 @@ export default function UserManagementPage() {
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
-      {/* Header */}
       <div className="opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
           <ShieldCheck className="w-5 h-5 text-primary-500" />
-          Kelola Pengguna
+          {t('usermgmt_title')}
         </h2>
         <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-          Kelola akses, peran, dan status pengguna dalam sistem NutriGrow.
+          {t('usermgmt_subtitle')}
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}>
         {[
-          { label: 'Total Pengguna', value: stats.total, icon: Users, iconColor: 'text-secondary-500', bg: 'from-secondary-50 to-secondary-100/50' },
-          { label: 'Aktif', value: stats.active, icon: ShieldCheck, iconColor: 'text-primary-500', bg: 'from-primary-50 to-primary-100/50' },
-          { label: 'Karantina', value: stats.quarantine, icon: Clock, iconColor: 'text-orange-500', bg: 'from-orange-50 to-orange-100/50' },
-          { label: 'Super Admin', value: stats.admins, icon: Crown, iconColor: 'text-amber-500', bg: 'from-amber-50 to-amber-100/50' },
+          { label: t('usermgmt_total_users'), value: stats.total, icon: Users, iconColor: 'text-secondary-500', bg: 'from-secondary-50 to-secondary-100/50' },
+          { label: t('usermgmt_active'), value: stats.active, icon: ShieldCheck, iconColor: 'text-primary-500', bg: 'from-primary-50 to-primary-100/50' },
+          { label: t('usermgmt_quarantine'), value: stats.quarantine, icon: Clock, iconColor: 'text-orange-500', bg: 'from-orange-50 to-orange-100/50' },
+          { label: t('usermgmt_super_admin'), value: stats.admins, icon: Crown, iconColor: 'text-amber-500', bg: 'from-amber-50 to-amber-100/50' },
         ].map((s, i) => (
           <div key={i} className={cn('glass p-4 rounded-2xl bg-gradient-to-br', s.bg)}>
             <div className="flex items-center justify-between mb-2">
@@ -254,13 +220,12 @@ export default function UserManagementPage() {
         ))}
       </div>
 
-      {/* Search + Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
           <input
             type="text"
-            placeholder="Cari nama atau email..."
+            placeholder={t('usermgmt_search')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
@@ -274,7 +239,7 @@ export default function UserManagementPage() {
             className="appearance-none pl-4 pr-10 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
             style={{ color: 'var(--surface-text)' }}
           >
-            <option value="all">Semua Role</option>
+            <option value="all">{t('usermgmt_all_roles')}</option>
             {roles.map(r => (
               <option key={r.id} value={r.name}>
                 {ROLE_CONFIG[r.name]?.label ?? r.name}
@@ -290,61 +255,55 @@ export default function UserManagementPage() {
           style={{ color: 'var(--surface-text-muted)' }}
         >
           <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
-          Refresh
+          {t('common_refresh')}
         </button>
       </div>
 
-      {/* Error State */}
       {error && (
         <div className="p-4 rounded-xl bg-danger-50 border border-danger-500/20 text-danger-600 text-sm flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Gagal memuat data</p>
+            <p className="font-semibold">{t('usermgmt_loading_error') || 'Gagal memuat data'}</p>
             <p className="text-xs mt-1">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
-          <span className="ml-3 text-sm" style={{ color: 'var(--surface-text-muted)' }}>Memuat data pengguna...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--surface-text-muted)' }}>{t('usermgmt_loading')}</span>
         </div>
       )}
 
-      {/* User Table */}
       {!isLoading && !error && (
         <div className="glass rounded-2xl overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms', animationFillMode: 'forwards' }}>
-          {/* Table Header */}
           <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider border-b" style={{ color: 'var(--surface-text-muted)', borderColor: 'var(--surface-border)' }}>
-            <div className="col-span-4">Pengguna</div>
-            <div className="col-span-2">Peran</div>
-            <div className="col-span-2">Status</div>
-            <div className="col-span-2">Bergabung</div>
-            <div className="col-span-2 text-right">Aksi</div>
+            <div className="col-span-4">{t('usermgmt_col_name')}</div>
+            <div className="col-span-2">{t('usermgmt_col_role')}</div>
+            <div className="col-span-2">{t('usermgmt_col_status')}</div>
+            <div className="col-span-2">{t('usermgmt_joined')}</div>
+            <div className="col-span-2 text-right">{t('usermgmt_col_action')}</div>
           </div>
 
-          {/* Empty */}
           {filtered.length === 0 && (
             <div className="py-16 text-center">
               <Users className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--surface-text-subtle)' }} />
               <p className="text-sm font-medium" style={{ color: 'var(--surface-text-muted)' }}>
-                {search || filterRole !== 'all' ? 'Tidak ada pengguna yang cocok.' : 'Belum ada pengguna terdaftar.'}
+                {search || filterRole !== 'all' ? t('usermgmt_no_match') : t('usermgmt_no_users')}
               </p>
             </div>
           )}
 
-          {/* Rows */}
           {filtered.map((user, idx) => {
             const roleName = user.roles?.name ?? 'guest';
             const rc = ROLE_CONFIG[roleName] ?? ROLE_CONFIG.guest;
             const RoleIcon = rc.icon;
             const isCurrentUser = user.id === session?.user?.id;
             const isUpdating = updatingId === user.id;
-            const displayName = user.nama || 'Tanpa Nama';
+            const displayName = user.nama || t('common_no_name') || 'Tanpa Nama';
             const displayEmail = user.email || '—';
-            const joinedDate = new Date(user.created_at).toLocaleDateString('id-ID', {
+            const joinedDate = new Date(user.created_at).toLocaleDateString(t('common_lang_code') === 'en' ? 'en-US' : 'id-ID', {
               day: 'numeric', month: 'short', year: 'numeric',
             });
 
@@ -357,7 +316,6 @@ export default function UserManagementPage() {
                 )}
                 style={{ borderColor: 'var(--surface-border)' }}
               >
-                {/* User Info */}
                 <div className="col-span-4 flex items-center gap-3">
                   {user.avatar_url ? (
                     <img
@@ -382,14 +340,13 @@ export default function UserManagementPage() {
                     <p className="text-sm font-semibold truncate flex items-center gap-1.5" style={{ color: 'var(--surface-text)' }}>
                       {displayName}
                       {isCurrentUser && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700">Anda</span>
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700">{t('usermgmt_you_badge')}</span>
                       )}
                     </p>
                     <p className="text-[11px] truncate" style={{ color: 'var(--surface-text-muted)' }}>{displayEmail}</p>
                   </div>
                 </div>
 
-                {/* Role Badge */}
                 <div className="col-span-2 flex items-center">
                   <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border', rc.bg, rc.color, rc.border)}>
                     <RoleIcon className="w-3.5 h-3.5" />
@@ -397,29 +354,25 @@ export default function UserManagementPage() {
                   </span>
                 </div>
 
-                {/* Status */}
                 <div className="col-span-2 flex items-center">
                   {user.is_active ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary-600">
-                      <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse-glow" /> Aktif
+                      <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse-glow" /> {t('common_active')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                      <span className="w-2 h-2 rounded-full bg-gray-300" /> Nonaktif
+                      <span className="w-2 h-2 rounded-full bg-gray-300" /> {t('common_inactive')}
                     </span>
                   )}
                 </div>
 
-                {/* Joined */}
                 <div className="col-span-2 flex items-center">
                   <span className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>{joinedDate}</span>
                 </div>
 
-                {/* Actions */}
                 <div className="col-span-2 flex items-center justify-end gap-2">
                   {!isCurrentUser && (
                     <>
-                      {/* Role selector */}
                       <select
                         value={user.role_id}
                         onChange={e => {
@@ -443,7 +396,6 @@ export default function UserManagementPage() {
                         ))}
                       </select>
 
-                      {/* Assign Zones button (only for pemilik_kebun) */}
                       {user.roles?.name === 'pemilik_kebun' && (
                         <button
                           onClick={() => setAssignZonesModal({
@@ -453,18 +405,17 @@ export default function UserManagementPage() {
                           })}
                           disabled={isUpdating}
                           className="p-1.5 rounded-lg transition-colors hover:bg-primary-50 text-primary-600"
-                          title="Tugaskan Zona"
+                          title={t('usermgmt_assign_zones')}
                         >
                           {isUpdating && updatingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sprout className="w-4 h-4" />}
                         </button>
                       )}
 
-                      {/* Kick (delete) button */}
                       <button
                         onClick={() => setKickConfirm({ userId: user.id, userName: displayName })}
                         disabled={isUpdating}
                         className="p-1.5 rounded-lg transition-colors hover:bg-danger-50 text-danger-500"
-                        title="Hapus User"
+                        title={t('usermgmt_kick_user')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -477,7 +428,6 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* Confirmation Modal */}
       {confirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirm(null)} />
@@ -491,10 +441,9 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="text-center">
-              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>Konfirmasi Perubahan Role</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--surface-text)' }}>{t('usermgmt_confirm_role_title')}</h3>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
-                Anda akan mengubah peran <strong>{confirm.userName}</strong> menjadi{' '}
-                <strong className="text-primary-600">{confirm.newRoleName}</strong>.
+                {t('usermgmt_confirm_role_desc').replace('{name}', confirm.userName).replace('{role}', confirm.newRoleName)}
               </p>
             </div>
             <div className="flex gap-3 pt-2">
@@ -503,21 +452,20 @@ export default function UserManagementPage() {
                 className="flex-1 py-2.5 rounded-xl border font-medium text-sm transition-all hover:bg-white/30 active:scale-[0.98]"
                 style={{ borderColor: 'var(--surface-border)', color: 'var(--surface-text-muted)' }}
               >
-                Batal
+                {t('common_cancel')}
               </button>
               <button
                 onClick={() => handleRoleChange(confirm.userId, confirm.newRoleId)}
                 disabled={updatingId !== null}
                 className="flex-1 py-2.5 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {updatingId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Konfirmasi'}
+                {updatingId ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common_confirm')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Kick Modal */}
       {kickConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setKickConfirm(null)} />
@@ -531,9 +479,9 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="text-center">
-              <h3 className="text-base font-bold text-danger-600">Hapus Pengguna?</h3>
+              <h3 className="text-base font-bold text-danger-600">{t('usermgmt_delete_user_title')}</h3>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
-                Data profil <strong>{kickConfirm.userName}</strong> akan dihapus dari sistem secara permanen.
+                {t('usermgmt_delete_user_desc').replace('{name}', kickConfirm.userName)}
               </p>
             </div>
             <div className="flex gap-3 pt-2">
@@ -542,21 +490,20 @@ export default function UserManagementPage() {
                 className="flex-1 py-2.5 rounded-xl border font-medium text-sm transition-all hover:bg-white/30 active:scale-[0.98]"
                 style={{ borderColor: 'var(--surface-border)', color: 'var(--surface-text-muted)' }}
               >
-                Batal
+                {t('common_cancel')}
               </button>
               <button
                 onClick={() => kickUser(kickConfirm.userId)}
                 disabled={updatingId !== null}
                 className="flex-1 py-2.5 rounded-xl bg-danger-500 text-white font-semibold text-sm hover:bg-danger-600 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {updatingId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Hapus'}
+                {updatingId ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common_delete')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Assign Zones Modal */}
       {assignZonesModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setAssignZonesModal(null)} />
@@ -571,10 +518,10 @@ export default function UserManagementPage() {
             </div>
             <div className="text-center">
               <h3 className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>
-                Tugas Zona
+                {t('usermgmt_assign_zones_title')}
               </h3>
               <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
-                Pilih zona mana saja yang bisa diakses oleh <strong>{assignZonesModal.userName}</strong>.
+                {t('usermgmt_assign_zones_desc').replace('{name}', assignZonesModal.userName)}
               </p>
             </div>
             
@@ -600,7 +547,7 @@ export default function UserManagementPage() {
                       className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300"
                     />
                     <span className="text-sm font-medium flex-1" style={{ color: 'var(--surface-text)' }}>
-                      Zona {num}
+                      {t('common_zone')} {num}
                     </span>
                   </label>
                 );
@@ -613,19 +560,18 @@ export default function UserManagementPage() {
                 className="py-2.5 rounded-xl text-sm font-bold bg-gray-100 hover:bg-gray-200 transition-colors"
                 style={{ color: 'var(--surface-text)' }}
               >
-                Batal
+                {t('common_cancel')}
               </button>
               <button
                 onClick={handleAssignZones}
                 className="py-2.5 rounded-xl text-sm font-bold bg-primary-500 hover:bg-primary-600 text-white shadow-lg glow-sm transition-colors"
               >
-                Simpan
+                {t('common_save')}
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

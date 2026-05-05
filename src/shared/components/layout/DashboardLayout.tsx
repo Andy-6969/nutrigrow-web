@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <img src="/logo-bitanic.jpg" alt="Bitanic" className="w-full h-full object-cover" />
           </div>
           <div className="w-6 h-6 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-          <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>Memuat sesi...</p>
+          <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>{t('common_loading')}</p>
         </div>
       </div>
     );
@@ -98,6 +98,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const theme = next ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('nutrigrow-theme', theme);
+  };
+
+  const getRoleLabel = () => {
+    if (role === 'super_admin') return `⭐ ${t('usermgmt_super_admin')}`;
+    if (role === 'pemilik_kebun') return `🌱 ${t('common_farm')} Owner`; // "Owner" could be translated too
+    return role;
   };
 
   return (
@@ -236,7 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               style={{ color: 'var(--topbar-text-muted)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              title="Toggle tema"
+              title={t('settings_dark_mode')}
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -246,6 +252,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="/notifications"
               className="p-2 rounded-lg transition-colors relative"
               style={{ color: 'var(--topbar-text-muted)' }}
+              title={t('nav_notifications')}
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -273,9 +280,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               )}
               <div className="hidden md:block">
-                <p className="text-sm font-medium" style={{ color: 'var(--topbar-text)' }}>{profile?.full_name || 'Pengguna'}</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--topbar-text)' }}>{profile?.full_name || t('common_no_name')}</p>
                 <p className="text-[11px]" style={{ color: 'var(--topbar-text-muted)' }}>
-                  {role === 'super_admin' ? '⭐ Super Admin' : role === 'pemilik_kebun' ? '🌱 Pemilik Kebun' : t('nav_logout')}
+                  {getRoleLabel()}
                 </p>
               </div>
               <button

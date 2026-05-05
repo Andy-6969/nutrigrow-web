@@ -44,7 +44,7 @@ export class SupabaseOverrideService implements IOverrideService {
     return (data ?? []) as OverrideLog[];
   }
 
-  async startOverride(zoneId: string, durationMinutes: number, reason?: string, mode: 'water' | 'fertigation' = 'water'): Promise<void> {
+  async startOverride(zoneId: string, durationMinutes: number, reason?: string, mode: 'water' | 'fertigation' = 'water', target?: 'pump' | 'solenoid'): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const userName = session?.user?.user_metadata?.full_name || session?.user?.email || 'System User';
 
@@ -52,7 +52,7 @@ export class SupabaseOverrideService implements IOverrideService {
       zone_id: zoneId,
       zone_name: `Zone ${zoneId}`, // Typically, you'd fetch the zone name first or join
       user_name: userName,
-      mode,
+      mode: target || mode,
       duration_minutes: durationMinutes,
       reason,
       status: 'active'
@@ -65,16 +65,16 @@ export class SupabaseOverrideService implements IOverrideService {
         zone_id: zoneId,
         action: 'on',
         mode: mode,
-        duration: durationMinutes
+        duration: durationMinutes,
+        target: target || undefined,
       });
     } catch (apiError) {
       console.error('[overrideService] Failed to trigger actuator via VPS API:', apiError);
-      // Optional: you could revert the Supabase insert here or update status to 'failed'
       throw apiError;
     }
   }
 
-  async stopOverride(overrideId: string): Promise<void> {
+  async stopOverride(overrideId: string, target?: 'pump' | 'solenoid'): Promise<void> {
     const { data: log, error: fetchError } = await supabase
       .from('override_logs')
       .select('zone_id')
@@ -96,7 +96,8 @@ export class SupabaseOverrideService implements IOverrideService {
     try {
       await vpsApi.post('/actuator/toggle', { 
         zone_id: log.zone_id, 
-        action: 'off' 
+        action: 'off',
+        target: target || undefined,
       });
     } catch (apiError) {
       console.error('[overrideService] Failed to turn off actuator via VPS API:', apiError);

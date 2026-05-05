@@ -8,6 +8,7 @@ import { mockSensorData } from '@/shared/lib/mockData';
 import { cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import { sensorService } from '@/shared/services/sensorService';
+import { useT } from '@/shared/context/LanguageContext';
 import type { Zone, SensorData } from '@/shared/types/global.types';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
@@ -45,13 +46,13 @@ function ZoneBlock({
   const isActive = zone.status === 'irrigating' || zone.status === 'fertigating';
   const isFertigating = zone.status === 'fertigating';
 
+  const t = useT();
   const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const resizeStart = useRef<{ mx: number; my: number; ox: number; oy: number; ow: number; oh: number; dir: string } | null>(null);
   const layoutRef = useRef(layout);
-  // useLayoutEffect runs synchronously so layoutRef is always current when handlers fire
+  
   useLayoutEffect(() => { layoutRef.current = layout; });
 
-  /* ── Drag handlers ── */
   const onDragDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).dataset.resizeHandle) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -66,7 +67,6 @@ function ZoneBlock({
   };
   const onDragUp = () => { dragStart.current = null; };
 
-  /* ── Resize handlers ── */
   const onResizeDown = (e: React.PointerEvent, dir: string) => {
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -97,7 +97,6 @@ function ZoneBlock({
         cursor: 'grab',
         userSelect: 'none',
         zIndex: isSelected ? 20 : 10,
-        // overflow must be visible so resize handles on corners aren't clipped
         overflow: 'visible',
       }}
       onPointerDown={onDragDown}
@@ -105,9 +104,7 @@ function ZoneBlock({
       onPointerUp={onDragUp}
       onClick={e => e.stopPropagation()}
     >
-      {/* Inner clip — keeps Lottie + content inside card bounds while resize handles escape */}
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-        {/* Lottie water overlay */}
         {isActive && (
           <div className="absolute inset-0 opacity-30" style={isFertigating ? { filter: 'hue-rotate(240deg) saturate(1.5)' } : undefined}>
             <Lottie animationData={waterFlowAnimation} loop autoplay style={{ width: '100%', height: '100%' }} rendererSettings={{ preserveAspectRatio: 'xMidYMid slice' }} />
@@ -118,7 +115,6 @@ function ZoneBlock({
         )}
       </div>
 
-      {/* Content */}
       <div className="absolute inset-0 z-10 p-3 flex flex-col justify-between pointer-events-none">
         <div className="flex items-start justify-between">
           <div>
@@ -132,11 +128,10 @@ function ZoneBlock({
             <div className="glass-sm px-1.5 py-0.5 text-[10px] font-mono font-bold" style={{ color: 'var(--surface-text)' }}>💧 {sensor.soil_moisture}%</div>
             <div className="glass-sm px-1.5 py-0.5 text-[10px] font-mono font-bold hidden sm:block" style={{ color: 'var(--surface-text)' }}>🌡️ {sensor.temperature}°C</div>
           </div>
-          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${status.color}20`, color: status.color }}>{status.label}</span>
+          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${status.color}20`, color: status.color }}>{t(status.key)}</span>
         </div>
       </div>
 
-      {/* Resize handles — only shown when selected */}
       {isSelected && RESIZE_DIRS.map(dir => (
         <div
           key={dir}
@@ -157,24 +152,26 @@ function ZoneBlock({
 }
 
 export default function AgriTwinPage() {
+  const t = useT();
   const router = useRouter();
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [layouts, setLayouts] = useState<Record<string, ZoneLayout>>({});
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
 
-  const handleFullscreen = useCallback(() => {
+  const handleFullscreen = () => {
+    if (!mapRef.current) return;
     if (!document.fullscreenElement) {
-      mapRef.current?.requestFullscreen();
-      setIsFullscreen(true);
+      mapRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -184,12 +181,13 @@ export default function AgriTwinPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
       try {
         const fetchedZones = await sensorService.getZones();
-        const fetchedSensors = await sensorService.getAllSensorData();
         setZones(fetchedZones);
-        setSensorDataMap(fetchedSensors);
-        // Init layouts in a 2-column grid
+        const sensors = await sensorService.getAllSensorData();
+        setSensorDataMap(sensors);
+
         const initLayouts: Record<string, ZoneLayout> = {};
         fetchedZones.forEach((z, i) => {
           const col = i % 2, row = Math.floor(i / 2);
@@ -227,56 +225,50 @@ export default function AgriTwinPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
           <Map className="w-5 h-5 text-primary-500" />
-          Agri-Twin — Digital Twin Lahan
+          {t('agri_title')}
         </h2>
         <div className="flex items-center gap-2">
           {activeCount > 0 && (
             <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-100 text-primary-700">
-              <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />{activeCount} zona aktif
+              <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />{activeCount} {t('agri_active_zones_suffix') || 'zona aktif'}
             </span>
           )}
           <button
             onClick={handleFullscreen}
-            title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? t('agri_exit_fullscreen') : t('agri_fullscreen')}
             className="p-2 glass-sm rounded-lg hover:bg-white/60 transition-all border border-white/10">
-            {isFullscreen
-              ? <Minimize2 className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
-              : <Maximize2 className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />}
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Map canvas */}
-        <div ref={mapRef} className="lg:col-span-3">
-          <div className="glass p-4 relative" style={{ minHeight: 560 }}>
+        <div ref={mapRef} className={cn('lg:col-span-3 transition-all', isFullscreen && 'fixed inset-0 z-[100] bg-white p-6')}>
+          <div className="glass p-4 relative h-full" style={{ minHeight: isFullscreen ? '100%' : 560 }}>
             {isLoading ? (
               <div className="flex items-center justify-center" style={{ minHeight: 500 }}>
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-10 h-10 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-                  <p className="text-sm font-mono text-primary-400">LOADING DIGITAL TWIN...</p>
+                  <p className="text-sm font-mono text-primary-400">{t('agri_loading')}</p>
                 </div>
               </div>
             ) : (
               <div
-                className="relative bg-black/5 rounded-2xl border-2 border-dashed border-primary-200/50 overflow-hidden"
+                className="relative bg-black/5 rounded-2xl border-2 border-dashed border-primary-200/50 overflow-hidden h-full"
                 style={{ minHeight: 500 }}
                 onClick={() => setSelectedZone(null)}
               >
-                {/* Legend */}
                 <div className="absolute top-3 left-3 z-30 flex flex-wrap gap-1.5">
                   {Object.entries(ZONE_STATUS).map(([key, val]) => (
                     <span key={key} className="text-[9px] font-semibold px-2 py-0.5 rounded-full glass-sm flex items-center gap-1">
-                      <span>{val.icon}</span> {val.label}
+                      <span>{val.icon}</span> {t(val.key)}
                     </span>
                   ))}
                 </div>
-                {/* Hint text */}
                 <p className="absolute bottom-3 left-3 text-[10px] z-30" style={{ color: 'var(--surface-text-muted)' }}>
-                  💡 Drag zona untuk memindahkan • Tarik sudut zona untuk resize
+                  💡 {t('agri_hint')}
                 </p>
 
-                {/* Zone blocks */}
                 {zones.map(zone => {
                   const layout = layouts[zone.id];
                   if (!layout) return null;
@@ -297,13 +289,12 @@ export default function AgriTwinPage() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           {selected ? (
             <div className="glass p-5 animate-slide-in-right" style={{ animationFillMode: 'forwards' }}>
               <div className="flex items-center gap-2 mb-4">
                 <Info className="w-4 h-4 text-primary-500" />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>Detail Zona</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('agri_zone_detail')}</h3>
               </div>
               <div className="space-y-4">
                 <div>
@@ -312,36 +303,40 @@ export default function AgriTwinPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="glass-sm p-3 rounded-xl border border-primary-100/50">
-                    <p className="text-[10px] text-primary-600 font-bold uppercase mb-1">Kelembaban</p>
+                    <p className="text-[10px] text-primary-600 font-bold uppercase mb-1">{t('agri_soil_moisture')}</p>
                     <p className="text-xl font-mono font-bold" style={{ color: 'var(--surface-text)' }}>{selectedSensor?.soil_moisture ?? '—'}%</p>
                   </div>
                   <div className="glass-sm p-3 rounded-xl border border-secondary-100/50">
-                    <p className="text-[10px] text-secondary-600 font-bold uppercase mb-1">Suhu Udara</p>
+                    <p className="text-[10px] text-secondary-600 font-bold uppercase mb-1">{t('agri_air_temp')}</p>
                     <p className="text-xl font-mono font-bold" style={{ color: 'var(--surface-text)' }}>{selectedSensor?.temperature ?? '—'}°C</p>
                   </div>
                   <div className="glass-sm p-3 rounded-xl border border-accent-100/50">
-                    <p className="text-[10px] text-accent-600 font-bold uppercase mb-1">pH Tanah</p>
+                    <p className="text-[10px] text-accent-600 font-bold uppercase mb-1">{t('agri_ph')}</p>
                     <p className="text-xl font-mono font-bold" style={{ color: 'var(--surface-text)' }}>{selectedSensor?.ph ?? '—'}</p>
                   </div>
                   <div className="glass-sm p-3 rounded-xl border border-purple-100/50">
-                    <p className="text-[10px] text-purple-600 font-bold uppercase mb-1">Kelembaban Udara</p>
+                    <p className="text-[10px] text-purple-600 font-bold uppercase mb-1">{t('agri_humidity') || 'Kelembapan Udara'}</p>
                     <p className="text-xl font-mono font-bold" style={{ color: 'var(--surface-text)' }}>{selectedSensor?.humidity ?? '—'}%</p>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-primary-50/50 border border-primary-100">
-                  <p className="text-[10px] text-primary-700 font-bold uppercase mb-2">Status Operasional</p>
+                  <p className="text-[10px] text-primary-700 font-bold uppercase mb-2">{t('agri_operational')}</p>
                   <div className="flex items-center gap-3">
                     <div className="text-2xl">{ZONE_STATUS[selected.status as keyof typeof ZONE_STATUS]?.icon || '💤'}</div>
                     <div>
-                      <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{ZONE_STATUS[selected.status as keyof typeof ZONE_STATUS]?.label || 'Unknown'}</p>
-                      <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Real-time dari sensor</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>
+                        {selected.status && ZONE_STATUS[selected.status as keyof typeof ZONE_STATUS] 
+                          ? t(ZONE_STATUS[selected.status as keyof typeof ZONE_STATUS].key) 
+                          : 'Unknown'}
+                      </p>
+                      <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>{t('agri_realtime')}</p>
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => router.push('/monitoring')}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all active:scale-95">
-                  Buka Monitoring Detail
+                  {t('agri_open_monitoring')}
                 </button>
               </div>
             </div>
@@ -351,30 +346,29 @@ export default function AgriTwinPage() {
                 <Map className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>Pilih Zona</p>
-                <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>Klik pada zona di peta untuk melihat detail sensor real-time</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('agri_select_title') || 'Pilih Zona'}</p>
+                <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>{t('agri_select_hint')}</p>
               </div>
             </div>
           )}
 
-          {/* Farm Statistics */}
           <div className="glass p-5">
-            <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--surface-text)' }}>Ringkasan Lahan</h3>
+            <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--surface-text)' }}>{t('agri_summary')}</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs">
-                <span style={{ color: 'var(--surface-text-muted)' }}>Total Area</span>
+                <span style={{ color: 'var(--surface-text-muted)' }}>{t('agri_total_area')}</span>
                 <span className="font-bold" style={{ color: 'var(--surface-text)' }}>{zones.reduce((s, z) => s + z.area_ha, 0).toFixed(1)} Ha</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span style={{ color: 'var(--surface-text-muted)' }}>Zona Aktif</span>
+                <span style={{ color: 'var(--surface-text-muted)' }}>{t('agri_active_zones')}</span>
                 <span className="font-bold text-primary-600">{activeCount} / {zones.length}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span style={{ color: 'var(--surface-text-muted)' }}>Zona Error / Offline</span>
+                <span style={{ color: 'var(--surface-text-muted)' }}>{t('agri_error_zones')}</span>
                 <span className="font-bold text-danger-600">{zones.filter(z => z.status === 'error').length}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span style={{ color: 'var(--surface-text-muted)' }}>Smart Delay Aktif</span>
+                <span style={{ color: 'var(--surface-text-muted)' }}>{t('agri_delay_zones')}</span>
                 <span className="font-bold text-accent-600">{zones.filter(z => z.status === 'delayed').length}</span>
               </div>
             </div>

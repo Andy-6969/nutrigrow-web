@@ -65,7 +65,7 @@ export default function MonitoringPage() {
         </h2>
         <div className="flex gap-2 flex-wrap">
           {mockZones.map(zone => {
-            const status = ZONE_STATUS[zone.status];
+            const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS];
             return (
               <button
                 key={zone.id}
@@ -92,7 +92,7 @@ export default function MonitoringPage() {
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <GaugeCard
-            label={SENSOR_THRESHOLDS.soilMoisture.label}
+            label={t(SENSOR_THRESHOLDS.soilMoisture.key)}
             value={sensor.soil_moisture}
             unit={SENSOR_THRESHOLDS.soilMoisture.unit}
             icon={Droplets}
@@ -100,7 +100,7 @@ export default function MonitoringPage() {
             iconColor="#3B82F6"
           />
           <GaugeCard
-            label={SENSOR_THRESHOLDS.temperature.label}
+            label={t(SENSOR_THRESHOLDS.temperature.key)}
             value={sensor.temperature}
             unit={SENSOR_THRESHOLDS.temperature.unit}
             icon={Thermometer}
@@ -108,7 +108,7 @@ export default function MonitoringPage() {
             iconColor="#EF4444"
           />
           <GaugeCard
-            label={SENSOR_THRESHOLDS.humidity.label}
+            label={t(SENSOR_THRESHOLDS.humidity.key)}
             value={sensor.humidity}
             unit={SENSOR_THRESHOLDS.humidity.unit}
             icon={Wind}
@@ -116,7 +116,7 @@ export default function MonitoringPage() {
             iconColor="#10B981"
           />
           <GaugeCard
-            label={SENSOR_THRESHOLDS.ph.label}
+            label={t(SENSOR_THRESHOLDS.ph.key)}
             value={sensor.ph}
             unit=""
             icon={Beaker}
@@ -161,9 +161,9 @@ export default function MonitoringPage() {
                   border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
                 }}
               />
-              <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t('monitoring_soil_moisture')} />
-              <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t('monitoring_temperature')} />
-              <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t('monitoring_humidity')} />
+              <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
+              <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
+              <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
               <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name="pH" />
             </LineChart>
           </ResponsiveContainer>
