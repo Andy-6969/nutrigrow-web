@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Cpu, Wifi, WifiOff, Battery, Signal, Clock, Search, Download, FileSpreadsheet, CheckCircle } from 'lucide-react';
+import { Cpu, Wifi, WifiOff, Battery, Signal, Clock, Search, Download, FileSpreadsheet, CheckCircle, X, AlertCircle } from 'lucide-react';
 import { mockDevices, mockSensorData, mockSensorHistory, mockIrrigationLogs, mockOverrideLogs, mockZones } from '@/shared/lib/mockData';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import { useRBAC } from '@/shared/hooks/useRBAC';
@@ -103,6 +103,23 @@ export default function DevicesPage() {
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
+
+  // Daftar kolom yang bisa dipilih user saat export
+  // Kolom sinyal mentah (rssi) dikecualikan by default sesuai spec
+  const ALL_EXPORT_COLUMNS = [
+    { key: 'id',            label: 'ID Perangkat',    default: true  },
+    { key: 'type',          label: 'Tipe',             default: true  },
+    { key: 'zone',          label: 'Zona',             default: true  },
+    { key: 'status',        label: 'Status',           default: true  },
+    { key: 'battery',       label: 'Baterai (%)',      default: true  },
+    { key: 'rssi',          label: 'Sinyal RSSI (dBm)',default: false }, // dikecualikan
+    { key: 'firmware',      label: 'Firmware',         default: true  },
+    { key: 'last_heartbeat',label: 'Last Heartbeat',   default: true  },
+  ];
+  const [selectedCols, setSelectedCols] = useState<Record<string, boolean>>(
+    Object.fromEntries(ALL_EXPORT_COLUMNS.map(c => [c.key, c.default]))
+  );
   const { hasRole } = useRBAC();
   const t = useT();
 
@@ -123,89 +140,160 @@ export default function DevicesPage() {
   const handleExport = async () => {
     setExporting(true);
     setExported(false);
-    
-    // Lazy import
+    setShowExportModal(false);
+
     const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
-    const now = new Date();
+    const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
-    const deviceRows = mockDevices.map(d => ({
-      'ID Perangkat': d.id.toUpperCase(),
-      'Tipe': d.device_type === 'sensor' ? 'Sensor' : d.device_type === 'actuator' ? 'Aktuator' : 'Gateway',
-      'Zona': d.zone_name || '-',
-      'Status': d.is_online ? 'Online' : 'Offline',
-      'Baterai (%)': d.battery_level,
-      'RSSI (dBm)': d.rssi,
-      'Firmware': `v${d.firmware_version}`,
-      'Last Heartbeat': d.last_heartbeat ? new Date(d.last_heartbeat).toLocaleString('id-ID') : '-',
-    }));
-    const wsDevices = XLSX.utils.json_to_sheet(deviceRows);
-    XLSX.utils.book_append_sheet(wb, wsDevices, 'Perangkat');
+    // ── Sheet 1: Perangkat (dengan filter kolom sesuai pilihan user) ──
+    const deviceRows = mockDevices.map(d => {
+      const row: Record<string, string | number> = {};
+      if (selectedCols['id'])             row['ID Perangkat']    = d.id.toUpperCase();
+      if (selectedCols['type'])           row['Tipe']            = d.device_type === 'sensor' ? 'Sensor' : d.device_type === 'actuator' ? 'Aktuator' : 'Gateway';
+      if (selectedCols['zone'])           row['Zona']            = d.zone_name || '-';
+      if (selectedCols['status'])         row['Status']          = d.is_online ? 'Online' : 'Offline';
+      if (selectedCols['battery'])        row['Baterai (%)']     = d.battery_level;
+      if (selectedCols['rssi'])           row['Sinyal (dBm)']    = d.rssi;   // hanya jika dipilih
+      if (selectedCols['firmware'])       row['Firmware']        = `v${d.firmware_version}`;
+      if (selectedCols['last_heartbeat']) row['Last Heartbeat']  = d.last_heartbeat ? new Date(d.last_heartbeat).toLocaleString('id-ID') : '-';
+      return row;
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(deviceRows), 'Perangkat');
 
+    // ── Sheet 2: Data Sensor (tanpa kolom sinyal mentah/debug) ──
     const sensorRows = Object.entries(mockSensorData).map(([zoneId, s]) => {
       const zone = mockZones.find(z => z.id === zoneId);
       return {
-        'Zona': zone?.name ?? zoneId,
-        'Tanaman': zone?.crop_type ?? '-',
+        'Zona':                 zone?.name ?? zoneId,
+        'Tanaman':              zone?.crop_type ?? '-',
         'Kelembaban Tanah (%)': s.soil_moisture,
-        'Suhu (°C)': s.temperature,
+        'Suhu (°C)':            s.temperature,
         'Kelembaban Udara (%)': s.humidity,
-        'pH': s.ph,
-        'Baterai (%)': s.battery,
-        'RSSI (dBm)': s.rssi,
-        'Waktu Rekam': s.recorded_at ? new Date(s.recorded_at).toLocaleString('id-ID') : '-',
+        'pH':                   s.ph,
+        'TDS / EC (mS/cm)':     s.tds ?? '-',
+        'Baterai (%)':          s.battery ?? '-',
+        // kolom rssi & sinyal mentah TIDAK disertakan
+        'Waktu Rekam':          s.recorded_at ? new Date(s.recorded_at).toLocaleString('id-ID') : '-',
       };
     });
-    const wsSensor = XLSX.utils.json_to_sheet(sensorRows);
-    XLSX.utils.book_append_sheet(wb, wsSensor, 'Data Sensor');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sensorRows), 'Data Sensor');
 
+    // ── Sheet 3: Tren 24 Jam ──
     const historyRows = mockSensorHistory.map(h => ({
-      'Waktu': h.time,
-      'Kelembaban Tanah (%)': parseFloat(h.soil_moisture.toFixed(1)),
-      'Suhu (°C)': parseFloat(h.temperature.toFixed(1)),
-      'Kelembaban Udara (%)': parseFloat(h.humidity.toFixed(1)),
-      'pH': parseFloat(h.ph.toFixed(2)),
+      'Waktu':                    h.time,
+      'Kelembaban Tanah (%)':     parseFloat(h.soil_moisture.toFixed(1)),
+      'Suhu (°C)':                parseFloat(h.temperature.toFixed(1)),
+      'Kelembaban Udara (%)':     parseFloat(h.humidity.toFixed(1)),
+      'pH':                       parseFloat(h.ph.toFixed(2)),
     }));
-    const wsHistory = XLSX.utils.json_to_sheet(historyRows);
-    XLSX.utils.book_append_sheet(wb, wsHistory, 'Tren 24 Jam');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historyRows), 'Tren 24 Jam');
 
+    // ── Sheet 4: Log Irigasi ──
     const irrigRows = mockIrrigationLogs.map(l => ({
-      'ID Log': l.id.toUpperCase(),
-      'Zona': l.zone_name,
-      'Sumber': l.source === 'auto' ? 'Otomatis' : l.source === 'schedule' ? 'Jadwal' : 'Manual Override',
-      'Mode': l.mode === 'water' ? 'Air Biasa' : l.mode === 'fertigation' ? 'Fertigasi' : 'Pupuk Cair',
-      'Durasi (menit)': l.duration_minutes,
-      'Volume Air (L)': l.water_volume_liters ?? '-',
-      'Mulai': new Date(l.started_at).toLocaleString('id-ID'),
-      'Selesai': l.ended_at ? new Date(l.ended_at).toLocaleString('id-ID') : 'Berjalan',
-      'Status': l.status === 'completed' ? 'Selesai' : l.status === 'running' ? 'Berjalan' : 'Dibatalkan',
+      'ID Log':           l.id.toUpperCase(),
+      'Zona':             l.zone_name,
+      'Sumber':           l.source === 'auto' ? 'Otomatis' : l.source === 'schedule' ? 'Jadwal' : 'Manual Override',
+      'Mode':             l.mode === 'water' ? 'Air Biasa' : 'Fertigasi',
+      'Durasi (menit)':   l.duration_minutes,
+      'Volume Air (L)':   l.water_volume_liters ?? '-',
+      'Mulai':            new Date(l.started_at).toLocaleString('id-ID'),
+      'Selesai':          l.ended_at ? new Date(l.ended_at).toLocaleString('id-ID') : 'Berjalan',
+      'Status':           l.status === 'completed' ? 'Selesai' : l.status === 'running' ? 'Berjalan' : 'Dibatalkan',
     }));
-    const wsIrrig = XLSX.utils.json_to_sheet(irrigRows);
-    XLSX.utils.book_append_sheet(wb, wsIrrig, 'Log Irigasi');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(irrigRows), 'Log Irigasi');
 
+    // ── Sheet 5: Log Override ──
     const overrideRows = mockOverrideLogs.map(l => ({
-      'ID Log': l.id.toUpperCase(),
-      'Zona': l.zone_name,
-      'Operator': l.user_name,
-      'Mode': l.mode === 'water' ? 'Air Biasa' : l.mode === 'fertigation' ? 'Fertigasi' : 'Pupuk Cair',
-      'Durasi (menit)': l.duration_minutes,
-      'Alasan': l.reason || '-',
-      'Mulai': new Date(l.started_at).toLocaleString('id-ID'),
-      'Selesai': l.ended_at ? new Date(l.ended_at).toLocaleString('id-ID') : '-',
-      'Status': l.status === 'completed' ? 'Selesai' : l.status,
+      'ID Log':           l.id.toUpperCase(),
+      'Zona':             l.zone_name,
+      'Operator':         l.user_name,
+      'Mode':             l.mode === 'water' ? 'Air Biasa' : 'Fertigasi',
+      'Durasi (menit)':   l.duration_minutes,
+      'Alasan':           l.reason || '-',
+      'Mulai':            new Date(l.started_at).toLocaleString('id-ID'),
+      'Selesai':          l.ended_at ? new Date(l.ended_at).toLocaleString('id-ID') : '-',
+      'Status':           l.status === 'completed' ? 'Selesai' : l.status,
     }));
-    const wsOverride = XLSX.utils.json_to_sheet(overrideRows);
-    XLSX.utils.book_append_sheet(wb, wsOverride, 'Log Override');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overrideRows), 'Log Override');
 
-    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    XLSX.writeFile(wb, `NutriGrow_LaporanSensor_${dateStr}.xlsx`);
-    
+    XLSX.writeFile(wb, `nutrigrow_devices_${dateStr}.xlsx`);
     setExporting(false);
     setExported(true);
     setTimeout(() => setExported(false), 3000);
   };
 
   const canExport = hasRole('super_admin', 'pemilik_kebun');
+
+  // ── Export Modal ─────────────────────────────────────────────
+  const ExportModal = () => (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+      onClick={() => setShowExportModal(false)}>
+      <div className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+        style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            <span className="font-bold text-sm" style={{ color: 'var(--surface-text)' }}>Pilih Kolom Export</span>
+          </div>
+          <button onClick={() => setShowExportModal(false)} className="opacity-50 hover:opacity-100 transition-opacity">
+            <X className="w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
+          </button>
+        </div>
+
+        {/* Info */}
+        <div className="flex items-start gap-2 p-3 rounded-xl mb-4 text-xs"
+          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <span style={{ color: '#fbbf24' }}>Kolom <strong>Sinyal RSSI</strong> dikecualikan secara default karena berisi data teknis mentah yang tidak relevan untuk laporan.</span>
+        </div>
+
+        {/* Checklist kolom */}
+        <div className="space-y-2 mb-5">
+          {ALL_EXPORT_COLUMNS.map(col => (
+            <label key={col.key} className="flex items-center gap-3 cursor-pointer group">
+              <div
+                className={cn(
+                  'w-4 h-4 rounded flex items-center justify-center border transition-all',
+                  selectedCols[col.key] ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
+                )}
+                onClick={() => setSelectedCols(prev => ({ ...prev, [col.key]: !prev[col.key] }))}
+              >
+                {selectedCols[col.key] && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-sm" style={{ color: 'var(--surface-text)' }}>{col.label}</span>
+              {!col.default && (
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>debug</span>
+              )}
+            </label>
+          ))}
+        </div>
+
+        {/* Preview filename */}
+        <p className="text-[10px] font-mono mb-4" style={{ color: 'var(--surface-text-muted)' }}>
+          📄 nutrigrow_devices_{new Date().toISOString().slice(0,10)}.xlsx
+        </p>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button onClick={() => setShowExportModal(false)}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: 'var(--surface-border)', color: 'var(--surface-text-muted)' }}>
+            Batal
+          </button>
+          <button onClick={handleExport}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-all bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700">
+            <Download className="w-4 h-4 inline mr-1.5" />Export
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -228,7 +316,7 @@ export default function DevicesPage() {
 
           {canExport && (
             <button
-              onClick={handleExport}
+              onClick={() => setShowExportModal(true)}
               disabled={exporting}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 shadow-md',
@@ -311,6 +399,9 @@ export default function DevicesPage() {
           </p>
         </div>
       )}
+
+      {/* Export Modal */}
+      {showExportModal && <ExportModal />}
     </div>
   );
 }

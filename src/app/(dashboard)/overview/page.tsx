@@ -5,7 +5,7 @@ import {
   Droplets, Leaf, Zap, CloudRain,
   Wind, Thermometer, Power, Calendar,
   ChevronLeft, ChevronRight, MapPin, Clock, CloudDrizzle, Sprout,
-  Search, X, Loader2, Compass
+  Search, X, Loader2, Compass, Activity
 } from 'lucide-react';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
@@ -644,12 +644,25 @@ export default function OverviewPage() {
               { pos: 'top-[26%] right-[8%]',    icon: <Thermometer className="w-3.5 h-3.5 text-orange-400"/>,     val: `${liveSensor?.temperature ?? '--'}°C`,  label: 'Temp' },
               { pos: 'bottom-[21%] left-[8%]',  icon: <span className="w-3.5 h-3.5 flex items-center justify-center text-purple-400 font-bold text-[9px]">pH</span>, val: `${liveSensor?.ph ?? '--'}`, label: 'Acid' },
               { pos: 'bottom-[11%] right-[12%]',icon: <Wind className="w-3.5 h-3.5 text-cyan-400"/>,              val: `${liveSensor?.humidity ?? '--'}%`,      label: 'Humid' },
+              { pos: 'top-[50%] right-[4%]',    icon: <Activity className="w-3.5 h-3.5 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'mS/cm',
+                extra: liveSensor?.tds != null
+                  ? liveSensor.tds < 1.5 ? { label: 'RENDAH', color: '#60a5fa' }
+                  : liveSensor.tds > 2.5 ? { label: 'TINGGI', color: '#f87171' }
+                  : { label: 'NORMAL', color: '#4ade80' }
+                  : { label: 'NO SIGNAL', color: '#9ca3af' },
+              },
             ].map((b, i) => (
               <div key={i} className={`absolute ${b.pos} backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 shadow-xl z-20`}
                 style={{ background: 'var(--glass-bg)', border: 'var(--glass-border)' }}>
                 {b.icon}
                 <span className="font-mono text-xs font-semibold" style={textMain}>{b.val}</span>
                 <span className="text-[9px] uppercase tracking-wider" style={textMuted}>{b.label}</span>
+                {'extra' in b && b.extra && (
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full ml-1"
+                    style={{ background: `${b.extra.color}22`, color: b.extra.color, border: `1px solid ${b.extra.color}44` }}>
+                    {b.extra.label}
+                  </span>
+                )}
               </div>
             ))}
 
@@ -746,7 +759,65 @@ export default function OverviewPage() {
             </div>
           </button>
 
-          <div style={card} className="p-6 flex-1 flex flex-col justify-between animate-card-entrance animate-delay-6">
+          {/* ── TDS / EC Nutrisi Card ── */}
+          <div style={card} className="p-4 animate-card-entrance animate-delay-6">
+            <h3 className="text-[10px] font-mono tracking-widest mb-3 uppercase flex items-center gap-2" style={textMuted}>
+              <Activity className="w-3.5 h-3.5 text-violet-400" />
+              TDS / EC Nutrisi
+            </h3>
+            {(() => {
+              const tds = liveSensor?.tds;
+              const TDS_MIN = 1.5, TDS_MAX = 2.5;
+              const isNoSignal = tds == null;
+              const status = isNoSignal ? null
+                : tds < TDS_MIN ? { label: 'RENDAH', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' }
+                : tds > TDS_MAX ? { label: 'TINGGI', color: '#f87171', bg: 'rgba(248,113,113,0.12)' }
+                : { label: 'NORMAL', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
+              const pct = isNoSignal ? 0 : Math.min(100, Math.max(0, ((tds! - 0) / 4) * 100));
+              return (
+                <>
+                  <div className="flex items-end justify-between mb-2">
+                    <div>
+                      <span className="text-2xl font-bold font-mono" style={{ color: status?.color ?? '#9ca3af' }}>
+                        {isNoSignal ? '--' : tds!.toFixed(2)}
+                      </span>
+                      <span className="text-xs ml-1.5" style={textMuted}>mS/cm</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      style={{
+                        background: status?.bg ?? 'rgba(156,163,175,0.12)',
+                        color: status?.color ?? '#9ca3af',
+                        border: `1px solid ${status?.color ?? '#9ca3af'}44`,
+                      }}>
+                      {status?.label ?? 'NO SIGNAL'}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-border)' }}>
+                    <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+                      style={{
+                        width: `${pct}%`,
+                        background: isNoSignal
+                          ? '#6b7280'
+                          : `linear-gradient(90deg, ${status!.color}99, ${status!.color})`,
+                        boxShadow: status ? `0 0 8px ${status.color}66` : 'none',
+                      }} />
+                    {/* Range normal markers */}
+                    <div className="absolute inset-y-0 w-0.5 opacity-50" style={{ left: `${(TDS_MIN/4)*100}%`, background: '#4ade80' }} />
+                    <div className="absolute inset-y-0 w-0.5 opacity-50" style={{ left: `${(TDS_MAX/4)*100}%`, background: '#4ade80' }} />
+                  </div>
+                  <div className="flex justify-between text-[9px] mt-1" style={textSubtle}>
+                    <span>0</span>
+                    <span className="text-emerald-400/70">Normal: {TDS_MIN}–{TDS_MAX}</span>
+                    <span>4 mS/cm</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          <div style={card} className="p-6 flex-1 flex flex-col justify-between animate-card-entrance animate-delay-7">
             <h3 className="text-sm font-semibold mb-6 tracking-wider flex items-center gap-2" style={textMuted}>
               <Leaf className="w-4 h-4 text-emerald-500" />
               {t('overview_ecosavings').toUpperCase()} IMPACT
