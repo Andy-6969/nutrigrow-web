@@ -406,7 +406,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative z-10 max-w-[1800px] mx-auto">
 
         {/* ── LEFT COLUMN ── */}
-        <div className="xl:col-span-3 space-y-6 flex flex-col">
+        <div className="order-2 xl:order-1 xl:col-span-3 space-y-6 flex flex-col">
 
           {/* Weather Forecast Card */}
           <div style={card} className="p-6 animate-card-entrance animate-delay-1">
@@ -603,7 +603,7 @@ export default function OverviewPage() {
         </div>
 
         {/* ── CENTER COLUMN (HUD) ── */}
-        <div className="xl:col-span-6 flex flex-col items-center justify-center relative min-h-[500px] animate-card-entrance animate-delay-2">
+        <div className="order-1 xl:order-2 xl:col-span-6 flex flex-col items-center justify-center relative min-h-[400px] xl:min-h-[500px] mb-6 xl:mb-0 animate-card-entrance animate-delay-2">
 
           <div className="absolute top-0 text-center w-full z-20 px-12" style={slideInStyle} key={`header-${animKey}`}>
             <h2 className="text-3xl font-extrabold tracking-[0.2em] uppercase" style={textMain}>
@@ -645,11 +645,11 @@ export default function OverviewPage() {
             </div>
 
             {[
-              { pos: 'top-[12%] left-[8%]',    icon: <Droplets className="w-4 h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: 'Soil' },
-              { pos: 'top-[26%] right-[4%]',    icon: <Thermometer className="w-4 h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: 'Temp' },
-              { pos: 'bottom-[25%] left-[4%]',  icon: <span className="w-4 h-4 flex items-center justify-center text-purple-400 font-bold text-[10px]">pH</span>, val: liveSensor?.ph ? `${liveSensor.ph}` : '--', label: 'Acid' },
-              { pos: 'bottom-[11%] right-[8%]',icon: <Wind className="w-4 h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: 'Humid' },
-              { pos: 'top-[50%] right-[0%]',    icon: <Activity className="w-4 h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'mS/cm',
+              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: 'Soil' },
+              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: 'Temp' },
+              { pos: 'bottom-[25%] left-[0%] sm:left-[4%]',  icon: <span className="w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center text-purple-400 font-bold text-[8px] sm:text-[10px]">pH</span>, val: liveSensor?.ph ? `${liveSensor.ph}` : '--', label: 'Acid' },
+              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: 'Humid' },
+              { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'mS/cm',
                 extra: liveSensor?.tds != null
                   ? liveSensor.tds < 1.5 ? { label: 'RENDAH', color: '#60a5fa' }
                   : liveSensor.tds > 2.5 ? { label: 'TINGGI', color: '#f87171' }
@@ -657,7 +657,7 @@ export default function OverviewPage() {
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
             ].map((b, i) => (
-              <div key={i} className={`absolute ${b.pos} backdrop-blur-md rounded-full px-3.5 py-2 flex items-center gap-2 shadow-xl z-20 group transition-transform hover:scale-110 cursor-default`}
+              <div key={i} className={`absolute ${b.pos} backdrop-blur-md rounded-full px-2 py-1.5 sm:px-3.5 sm:py-2 flex items-center gap-1.5 sm:gap-2 shadow-xl z-20 group transition-transform hover:scale-110 cursor-default`}
                 style={{ background: 'var(--glass-bg)', border: 'var(--glass-border)' }}>
                 {/* Garis penghubung dashed ke tengah (visual only) */}
                 <div className="absolute top-1/2 left-1/2 -z-10 h-px border-t-[1.5px] border-dashed border-white/20 origin-left -translate-y-1/2 pointer-events-none opacity-50 hidden md:block"
@@ -668,10 +668,10 @@ export default function OverviewPage() {
                 />
                 
                 {b.icon}
-                <span className="font-mono text-sm font-bold" style={textMain}>{b.val}</span>
-                <span className="text-[10px] uppercase tracking-wider font-semibold" style={textMuted}>{b.label}</span>
+                <span className="font-mono text-xs sm:text-sm font-bold" style={textMain}>{b.val}</span>
+                <span className="text-[8px] sm:text-[10px] uppercase tracking-wider font-semibold" style={textMuted}>{b.label}</span>
                 {'extra' in b && b.extra && (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full ml-1"
+                  <span className="text-[7px] sm:text-[9px] font-bold px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full ml-0.5 sm:ml-1"
                     style={{ background: `${b.extra.color}22`, color: b.extra.color, border: `1px solid ${b.extra.color}44` }}>
                     {b.extra.label}
                   </span>
@@ -712,7 +712,7 @@ export default function OverviewPage() {
         </div>
 
         {/* ── RIGHT COLUMN ── */}
-        <div className="xl:col-span-3 space-y-6 flex flex-col">
+        <div className="order-3 xl:order-3 xl:col-span-3 space-y-6 flex flex-col">
 
           <div style={card} className="p-4 animate-card-entrance animate-delay-3">
             <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>{t('override_mode_label').toUpperCase()}</p>
