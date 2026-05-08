@@ -624,6 +624,8 @@ export default function OverviewPage() {
             {selectedZone && (
               <p className="text-[11px] font-mono mt-1" style={textSubtle}>
                 {selectedZone.crop_type} · {selectedZone.area_ha} ha
+                {selectedZone.plant_count ? ` · Pop: ${selectedZone.plant_count}` : ''}
+                {selectedZone.planting_date ? ` · HST: ${Math.max(0, Math.floor((new Date().getTime() - new Date(selectedZone.planting_date).getTime()) / (1000 * 60 * 60 * 24)))} Hari` : ''}
               </p>
             )}
           </div>

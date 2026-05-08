@@ -10,7 +10,7 @@ import type { Farm, Zone, ZoneStatus } from '@/shared/types/global.types';
 import { FarmCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
 import { useToast } from '@/shared/context/ToastContext';
 
-const EMPTY_ZONE = { name:'', area_ha: 0, crop_type:'', status:'idle' as ZoneStatus, latitude: undefined as number|undefined, longitude: undefined as number|undefined };
+const EMPTY_ZONE = { name:'', area_ha: 0, crop_type:'', status:'idle' as ZoneStatus, latitude: undefined as number|undefined, longitude: undefined as number|undefined, planting_date: '', plant_count: 0 };
 
 /* ─ Zone Modal ────────────────────────────────────────────────────── */
 function ZoneModal({ farmId, initial, onClose, onSaved }: {
@@ -21,6 +21,7 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
   const t = useT();
   const [form, setForm] = useState(initial ? {
     name: initial.name, area_ha: initial.area_ha, crop_type: initial.crop_type,
+    planting_date: initial.planting_date ?? '', plant_count: initial.plant_count ?? 0,
   } : { ...EMPTY_ZONE });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -35,6 +36,8 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
       name: form.name,
       area_ha: form.area_ha,
       crop_type: form.crop_type,
+      planting_date: form.planting_date || undefined,
+      plant_count: form.plant_count,
     };
     
     const result = isEdit
@@ -71,8 +74,18 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
             </div>
             <div>
               <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>{t('farms_crop')}</label>
-              <input value={form.crop_type} onChange={e=>set('crop_type',e.target.value)} placeholder="Padi, Jagung..."
+              <input value={form.crop_type} onChange={e=>set('crop_type',e.target.value)} placeholder="Tomat, Selada..."
                 className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Tgl Tanam</label>
+              <input type="date" value={form.planting_date} onChange={e=>set('planting_date',e.target.value)}
+                className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)', colorScheme: 'dark'}}/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{color:'var(--surface-text-muted)'}}>Jml Tanaman (Populasi)</label>
+              <input type="number" min={0} value={form.plant_count||''} onChange={e=>set('plant_count',parseInt(e.target.value)||0)}
+                placeholder="1000" className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500" style={{color:'var(--surface-text)'}}/>
             </div>
           </div>
           {err && <p className="text-xs text-danger-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/>{err}</p>}

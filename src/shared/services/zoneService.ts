@@ -8,6 +8,8 @@ export type ZonePayload = {
   area_ha: number;
   crop_type: string;
   status: ZoneStatus;
+  planting_date?: string;
+  plant_count?: number;
 };
 
 export const zoneService = {

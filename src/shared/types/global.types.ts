@@ -39,6 +39,8 @@ export interface Zone {
   latitude?: number;
   longitude?: number;
   layout_json?: Record<string, unknown>;
+  planting_date?: string;
+  plant_count?: number;
 }
 
 export interface SensorData {
