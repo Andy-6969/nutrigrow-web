@@ -85,16 +85,21 @@ export default function OverviewPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const [weatherData, fetchedZones, allSensors, savings] = await Promise.all([
-        fetchWeather(),
-        sensorService.getZones(),
-        sensorService.getAllSensorData(),
-        sensorService.getEcoSavings(),
-      ]);
-      setWeather(weatherData);
-      setZones(fetchedZones);
-      setSensorDataMap(allSensors);
-      setEcoSavings(savings);
+      try {
+        const [weatherRes, zonesRes, sensorsRes, savingsRes] = await Promise.allSettled([
+          fetchWeather(),
+          sensorService.getZones(),
+          sensorService.getAllSensorData(),
+          sensorService.getEcoSavings(),
+        ]);
+
+        if (weatherRes.status === 'fulfilled') setWeather(weatherRes.value);
+        if (zonesRes.status === 'fulfilled') setZones(zonesRes.value);
+        if (sensorsRes.status === 'fulfilled') setSensorDataMap(sensorsRes.value);
+        if (savingsRes.status === 'fulfilled') setEcoSavings(savingsRes.value);
+      } catch (err) {
+        console.error('Failed to load overview data:', err);
+      }
     };
     loadData();
     sensorService.subscribeToSensorUpdates((payload) => {
@@ -640,11 +645,11 @@ export default function OverviewPage() {
             </div>
 
             {[
-              { pos: 'top-[16%] left-[12%]',    icon: <Droplets className="w-3.5 h-3.5 text-blue-400"/>,          val: `${liveSensor?.soil_moisture ?? '--'}%`, label: 'Soil' },
-              { pos: 'top-[26%] right-[8%]',    icon: <Thermometer className="w-3.5 h-3.5 text-orange-400"/>,     val: `${liveSensor?.temperature ?? '--'}°C`,  label: 'Temp' },
-              { pos: 'bottom-[21%] left-[8%]',  icon: <span className="w-3.5 h-3.5 flex items-center justify-center text-purple-400 font-bold text-[9px]">pH</span>, val: `${liveSensor?.ph ?? '--'}`, label: 'Acid' },
-              { pos: 'bottom-[11%] right-[12%]',icon: <Wind className="w-3.5 h-3.5 text-cyan-400"/>,              val: `${liveSensor?.humidity ?? '--'}%`,      label: 'Humid' },
-              { pos: 'top-[50%] right-[4%]',    icon: <Activity className="w-3.5 h-3.5 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'mS/cm',
+              { pos: 'top-[12%] left-[8%]',    icon: <Droplets className="w-4 h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: 'Soil' },
+              { pos: 'top-[26%] right-[4%]',    icon: <Thermometer className="w-4 h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: 'Temp' },
+              { pos: 'bottom-[25%] left-[4%]',  icon: <span className="w-4 h-4 flex items-center justify-center text-purple-400 font-bold text-[10px]">pH</span>, val: liveSensor?.ph ? `${liveSensor.ph}` : '--', label: 'Acid' },
+              { pos: 'bottom-[11%] right-[8%]',icon: <Wind className="w-4 h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: 'Humid' },
+              { pos: 'top-[50%] right-[0%]',    icon: <Activity className="w-4 h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'mS/cm',
                 extra: liveSensor?.tds != null
                   ? liveSensor.tds < 1.5 ? { label: 'RENDAH', color: '#60a5fa' }
                   : liveSensor.tds > 2.5 ? { label: 'TINGGI', color: '#f87171' }
@@ -652,13 +657,21 @@ export default function OverviewPage() {
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
             ].map((b, i) => (
-              <div key={i} className={`absolute ${b.pos} backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 shadow-xl z-20`}
+              <div key={i} className={`absolute ${b.pos} backdrop-blur-md rounded-full px-3.5 py-2 flex items-center gap-2 shadow-xl z-20 group transition-transform hover:scale-110 cursor-default`}
                 style={{ background: 'var(--glass-bg)', border: 'var(--glass-border)' }}>
+                {/* Garis penghubung dashed ke tengah (visual only) */}
+                <div className="absolute top-1/2 left-1/2 -z-10 h-px border-t-[1.5px] border-dashed border-white/20 origin-left -translate-y-1/2 pointer-events-none opacity-50 hidden md:block"
+                  style={{ 
+                    width: '120px', 
+                    transform: `rotate(${i === 0 ? 45 : i === 1 ? 135 : i === 2 ? -45 : i === 3 ? -135 : 180}deg)` 
+                  }} 
+                />
+                
                 {b.icon}
-                <span className="font-mono text-xs font-semibold" style={textMain}>{b.val}</span>
-                <span className="text-[9px] uppercase tracking-wider" style={textMuted}>{b.label}</span>
+                <span className="font-mono text-sm font-bold" style={textMain}>{b.val}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold" style={textMuted}>{b.label}</span>
                 {'extra' in b && b.extra && (
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full ml-1"
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full ml-1"
                     style={{ background: `${b.extra.color}22`, color: b.extra.color, border: `1px solid ${b.extra.color}44` }}>
                     {b.extra.label}
                   </span>
@@ -733,9 +746,14 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          <button onClick={handleManualOverride} disabled={isOverriding}
+          <button onClick={() => {
+              if (window.confirm(t('common_lang_code') === 'id' ? `Mulai penyiraman manual untuk ${selectedZone?.name}?` : 'Start manual watering?')) {
+                handleManualOverride();
+              }
+            }} disabled={isOverriding}
             className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
-              isOverriding ? 'cursor-not-allowed opacity-80' : 'cursor-pointer')}
+              isOverriding ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl')}
+            style={!isOverriding ? { borderColor: selectedMode.borderColor } : { borderColor: 'var(--surface-border)' }}
           >
             <div className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
               style={{ background: `linear-gradient(135deg, ${selectedMode.color}, ${selectedMode.color}88, ${selectedMode.color})` }} />

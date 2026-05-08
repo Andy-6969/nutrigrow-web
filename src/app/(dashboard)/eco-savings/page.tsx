@@ -63,6 +63,27 @@ export default function EcoSavingsPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const t = useT();
 
+  const totalWaterSaved = mockEcoSavingsHistory.reduce((s, r) => s + r.water, 0);
+  const isEmpty = totalWaterSaved === 0;
+
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 animate-fade-in-up">
+        <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-2xl"
+          style={{ background: 'var(--glass-bg)', border: 'var(--glass-border)' }}>
+          <Leaf className="w-12 h-12 text-primary-500" />
+        </div>
+        <h2 className="text-2xl font-bold mb-3 tracking-tight" style={{ color: 'var(--surface-text)' }}>
+          {t('common_lang_code') === 'id' ? 'Belum Ada Data Penghematan' : 'No Savings Data Yet'}
+        </h2>
+        <p className="text-sm max-w-md mx-auto leading-relaxed" style={{ color: 'var(--surface-text-muted)' }}>
+          {t('common_lang_code') === 'id' 
+            ? 'Data penghematan air, pupuk, dan energi akan terakumulasi dan ditampilkan di sini setelah sesi penyiraman pertama selesai.'
+            : 'Water, fertilizer, and energy savings will accumulate and be displayed here after the first watering session.'}
+        </p>
+      </div>
+    );
+  }
   const exportCSV = () => {
     const headers = [t('eco_day'), t('eco_water_saved'), t('eco_fertilizer_saved'), t('eco_cost_saved'), t('eco_energy_saved')];
     const rows = mockEcoSavingsHistory.map(row =>
