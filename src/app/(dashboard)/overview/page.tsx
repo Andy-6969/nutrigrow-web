@@ -553,8 +553,8 @@ export default function OverviewPage() {
                         border: isToday ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--surface-border)',
                       }}
                     >
-                      <span className="text-[11px] font-bold w-7 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
-                        {isToday ? (t('common_lang_code') === 'id' ? 'Hari' : 'Today') : day.day_name}
+                      <span className="text-[11px] font-bold w-12 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
+                        {isToday ? (t('common_lang_code') === 'id' ? 'Hari Ini' : 'Today') : day.day_name}
                       </span>
                       <span className="text-xl w-7 text-center shrink-0 drop-shadow-sm">{day.icon}</span>
                       <span className="text-[10px] font-medium flex-1 leading-[1.1] line-clamp-2" style={textMain}>
