@@ -123,7 +123,7 @@ export default function OverviewPage() {
 
     const DEFAULT_LAT = -6.3885;
     const DEFAULT_LON = 106.7814;
-    const HARI = t('common_lang_code') === 'id' ? ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const HARI = t('common_lang_code') === 'id' ? ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const wmoMap = (code: number): { icon: string; desc: string } => {
       if (code === 0)  return { icon: '☀️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
       if (code <= 2)   return { icon: '⛅', desc: t('common_lang_code') === 'id' ? 'Berawan Sebagian' : 'Partly Cloudy' };
@@ -218,7 +218,7 @@ export default function OverviewPage() {
     setSearchQuery(`${loc.name}, ${loc.admin1}`);
     setSearchResults([]);
     setIsFetchingWeekly(true);
-    const HARI = t('common_lang_code') === 'id' ? ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const HARI = t('common_lang_code') === 'id' ? ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const wmoMap = (code: number): { icon: string; desc: string } => {
       if (code === 0)  return { icon: '☀️', desc: t('common_lang_code') === 'id' ? 'Cerah' : 'Clear' };
       if (code <= 2)   return { icon: '⛅', desc: t('common_lang_code') === 'id' ? 'Berawan Sebagian' : 'Partly Cloudy' };
@@ -553,7 +553,7 @@ export default function OverviewPage() {
                         border: isToday ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--surface-border)',
                       }}
                     >
-                      <span className="text-[11px] font-bold w-12 shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
+                      <span className="text-[11px] font-bold w-[72px] shrink-0" style={isToday ? { color: '#10b981' } : textMuted}>
                         {isToday ? (t('common_lang_code') === 'id' ? 'Hari Ini' : 'Today') : day.day_name}
                       </span>
                       <span className="text-xl w-7 text-center shrink-0 drop-shadow-sm">{day.icon}</span>
