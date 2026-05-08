@@ -3,7 +3,14 @@ import type { Zone, SensorData, Device, EcoSavingsData } from '@/shared/types/gl
 import { mockZones, mockSensorData, mockDevices, mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-export type SensorHistoryPoint = { time: string; soil_moisture: number; temperature: number; humidity: number; ph: number };
+export type SensorHistoryPoint = {
+  time: string;
+  soil_moisture: number;
+  temperature: number;
+  humidity: number;
+  ph: number;
+  tds?: number; // TDS / EC Nutrisi dalam mS/cm
+};
 
 type SupabasePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
@@ -79,7 +86,15 @@ export class SupabaseSensorService implements ISensorService {
     try {
       const { data, error } = await supabase.rpc('get_sensor_history_24h', { p_zone_id: zoneId });
       if (error || !data || data.length === 0) throw error ?? new Error('empty');
-      return data as SensorHistoryPoint[];
+      // RPC mengembalikan 'time_label', mapping ke 'time' sesuai interface
+      return (data as Array<Record<string, unknown>>).map(row => ({
+        time:          String(row.time_label ?? row.time ?? ''),
+        soil_moisture: Number(row.soil_moisture ?? 0),
+        temperature:   Number(row.temperature   ?? 0),
+        humidity:      Number(row.humidity      ?? 0),
+        ph:            Number(row.ph            ?? 0),
+        tds:           row.tds != null ? Number(row.tds) : undefined,
+      }));
     } catch {
       console.warn('[sensorService] getSensorHistory failed, using mock data');
       return mockSensorHistory;
@@ -89,7 +104,23 @@ export class SupabaseSensorService implements ISensorService {
   /** Ambil kalkulasi eco-savings dari RPC Supabase — fallback ke mock */
   async getEcoSavings(): Promise<EcoSavingsData> {
     try {
-      const { data, error } = await supabase.rpc('get_eco_savings');
+      // Ambil farm_id user dari session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+
+      let farmId: string | null = null;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('farm_id')
+          .eq('id', userId)
+          .single();
+        farmId = profile?.farm_id ?? null;
+      }
+
+      const { data, error } = await supabase.rpc('get_eco_savings', {
+        p_farm_id: farmId ?? undefined,
+      });
       if (error || !data) throw error ?? new Error('empty');
       return data as EcoSavingsData;
     } catch {
