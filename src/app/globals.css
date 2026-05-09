@@ -266,12 +266,15 @@ body {
   border: var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: var(--radius-lg);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s ease,
+              background 0.3s ease;
 }
 
 .glass:hover {
   background: var(--surface-card-hover);
-  box-shadow: var(--glass-shadow);
-  transition: background var(--transition-base), box-shadow var(--transition-base);
+  box-shadow: 0 8px 40px rgba(16, 185, 129, 0.12), var(--glass-shadow);
+  transform: translateY(-2px);
 }
 
 .glass-sm {
@@ -281,6 +284,12 @@ body {
   border: var(--glass-border);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
   border-radius: var(--radius-md);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-sm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.08);
 }
 
 /* Dark Forest — glass always dark tinted */
@@ -291,6 +300,108 @@ body {
   border: var(--glass-border);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   border-radius: var(--radius-xl);
+}
+
+/* ============================================
+   Floating Orbs — Premium Background FX
+   ============================================ */
+.floating-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  animation: orbFloat linear infinite;
+  will-change: transform;
+}
+
+.floating-orb--1 {
+  width: 300px;
+  height: 300px;
+  background: rgba(16, 185, 129, 0.12);
+  top: 10%;
+  left: 20%;
+  animation-duration: 25s;
+}
+
+.floating-orb--2 {
+  width: 250px;
+  height: 250px;
+  background: rgba(6, 182, 212, 0.10);
+  top: 60%;
+  right: 10%;
+  animation-duration: 30s;
+  animation-delay: -5s;
+}
+
+.floating-orb--3 {
+  width: 200px;
+  height: 200px;
+  background: rgba(139, 92, 246, 0.08);
+  bottom: 20%;
+  left: 50%;
+  animation-duration: 20s;
+  animation-delay: -10s;
+}
+
+@keyframes orbFloat {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(60px, -40px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 50px) scale(0.95);
+  }
+  75% {
+    transform: translate(40px, 20px) scale(1.05);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* ============================================
+   Premium Button Effects
+   ============================================ */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(16,185,129,0.4), rgba(6,182,212,0.2), rgba(139,92,246,0.2));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-premium:hover::before {
+  opacity: 1;
+}
+
+.btn-premium::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+}
+
+.btn-premium:active::after {
+  width: 300px;
+  height: 300px;
 }
 
 /* ============================================
@@ -309,10 +420,69 @@ body {
 }
 
 .gradient-mesh {
+  position: relative;
+  overflow: hidden;
+}
+
+.gradient-mesh::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background:
-    radial-gradient(at 15% 20%, rgba(16, 185, 129, 0.10) 0%, transparent 55%),
-    radial-gradient(at 85% 80%, rgba(6, 182, 212, 0.07) 0%, transparent 55%),
-    radial-gradient(at 50% 50%, rgba(4, 120, 87, 0.05) 0%, transparent 60%);
+    radial-gradient(ellipse 600px 400px at 10% 20%, rgba(16, 185, 129, 0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 500px at 80% 10%, rgba(6, 182, 212, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 700px 350px at 60% 90%, rgba(59, 130, 246, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 600px at 30% 70%, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+  animation: auroraDrift 20s ease-in-out infinite;
+}
+
+.gradient-mesh::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 450px 450px at 70% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 350px 350px at 20% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 60%);
+  animation: auroraDrift2 15s ease-in-out infinite;
+}
+
+.gradient-mesh > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes auroraDrift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(30px, -20px) scale(1.05);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(-20px, 15px) scale(0.97);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(15px, 25px) scale(1.03);
+    opacity: 0.9;
+  }
+}
+
+@keyframes auroraDrift2 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-30px, 20px) rotate(3deg);
+    opacity: 1;
+  }
 }
 
 /* ============================================

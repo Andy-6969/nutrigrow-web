@@ -302,6 +302,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 gradient-mesh">
+          {/* Floating Orbs — Premium ambient background */}
+          <div className="floating-orb floating-orb--1" />
+          <div className="floating-orb floating-orb--2" />
+          <div className="floating-orb floating-orb--3" />
           {children}
         </main>
       </div>
