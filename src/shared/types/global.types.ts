@@ -190,3 +190,24 @@ export interface Schedule {
   // Joined relation from public.zones
   zone_name?: string; 
 }
+
+export type ScoutingIssueType = 'hama' | 'penyakit' | 'infrastruktur' | 'lainnya';
+export type ScoutingSeverity = 'rendah' | 'sedang' | 'tinggi';
+export type ScoutingStatus = 'open' | 'in_progress' | 'resolved';
+
+export interface ScoutingLog {
+  id: string;
+  zone_id: string;
+  user_id?: string;
+  issue_type: ScoutingIssueType;
+  severity: ScoutingSeverity;
+  notes: string;
+  photo_url?: string;
+  status: ScoutingStatus;
+  created_at: string;
+  updated_at: string;
+  
+  // Joined relation fields
+  zone_name?: string;
+  user_name?: string;
+}
