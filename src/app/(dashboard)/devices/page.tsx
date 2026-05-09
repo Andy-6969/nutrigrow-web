@@ -64,19 +64,10 @@ function DeviceCard({ device, t }: { device: typeof mockDevices[0]; t: (k: strin
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="glass-sm p-2 text-center">
-          <Battery className={cn('w-4 h-4 mx-auto mb-0.5', batteryColor)} />
-          <p className={cn('text-sm font-bold', batteryColor)}>{device.battery_level}%</p>
-          <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>{t('devices_battery')}</p>
-        </div>
-        <div className="glass-sm p-2 text-center">
-          <Signal className="w-4 h-4 mx-auto mb-0.5 text-secondary-500" />
-          <p className="text-sm font-bold text-secondary-500">{device.rssi} dBm</p>
-          <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>
-            {t('devices_signal')} {'█'.repeat(signalBars)}{'░'.repeat(4 - signalBars)}
-          </p>
-        </div>
+      <div className="mb-3 glass-sm p-2 text-center rounded-xl flex flex-col items-center justify-center">
+        <Battery className={cn('w-4 h-4 mb-0.5', batteryColor)} />
+        <p className={cn('text-sm font-bold', batteryColor)}>{device.battery_level}%</p>
+        <p className="text-[9px]" style={{ color: 'var(--surface-text-muted)' }}>{t('devices_battery')}</p>
       </div>
 
       <div className="space-y-1.5 text-xs" style={{ color: 'var(--surface-text-muted)' }}>
@@ -113,7 +104,6 @@ export default function DevicesPage() {
     { key: 'zone',          label: 'Zona',             default: true  },
     { key: 'status',        label: 'Status',           default: true  },
     { key: 'battery',       label: 'Baterai (%)',      default: true  },
-    { key: 'rssi',          label: 'Sinyal RSSI (dBm)',default: false }, // dikecualikan
     { key: 'firmware',      label: 'Firmware',         default: true  },
     { key: 'last_heartbeat',label: 'Last Heartbeat',   default: true  },
   ];
@@ -154,7 +144,6 @@ export default function DevicesPage() {
       if (selectedCols['zone'])           row['Zona']            = d.zone_name || '-';
       if (selectedCols['status'])         row['Status']          = d.is_online ? 'Online' : 'Offline';
       if (selectedCols['battery'])        row['Baterai (%)']     = d.battery_level;
-      if (selectedCols['rssi'])           row['Sinyal (dBm)']    = d.rssi;   // hanya jika dipilih
       if (selectedCols['firmware'])       row['Firmware']        = `v${d.firmware_version}`;
       if (selectedCols['last_heartbeat']) row['Last Heartbeat']  = d.last_heartbeat ? new Date(d.last_heartbeat).toLocaleString('id-ID') : '-';
       return row;
@@ -245,13 +234,7 @@ export default function DevicesPage() {
           </button>
         </div>
 
-        {/* Info */}
-        <div className="flex items-start gap-2 p-3 rounded-xl mb-4 text-xs"
-          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-          <span style={{ color: '#fbbf24' }}>Kolom <strong>Sinyal RSSI</strong> dikecualikan secara default karena berisi data teknis mentah yang tidak relevan untuk laporan.</span>
-        </div>
-
+        {/* Info removed as RSSI is no longer needed */}
         {/* Checklist kolom */}
         <div className="space-y-2 mb-5">
           {ALL_EXPORT_COLUMNS.map(col => (
