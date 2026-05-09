@@ -41,6 +41,7 @@ export interface Zone {
   layout_json?: Record<string, unknown>;
   planting_date?: string;
   plant_count?: number;
+  recipe_id?: string | null;
 }
 
 export interface SensorData {
@@ -210,4 +211,37 @@ export interface ScoutingLog {
   // Joined relation fields
   zone_name?: string;
   user_name?: string;
+}
+
+export interface RecipePhase {
+  id: string;
+  recipe_id: string;
+  phase_order: number;
+  name: string;
+  emoji: string;
+  day_start: number;
+  day_end: number;
+  frequency_per_day: number;
+  irrigation_times: string[];
+  water_volume_liters: number;
+  ec_target_min: number;
+  ec_target_max: number;
+  ph_target_min: number;
+  ph_target_max: number;
+  notes?: string;
+}
+
+export interface NutrientRecipe {
+  id: string;
+  farm_id: string;
+  name: string;
+  plant_type: string;
+  description?: string;
+  is_default: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+
+  // Joined relations
+  phases?: RecipePhase[];
 }
