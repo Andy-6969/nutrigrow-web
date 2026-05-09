@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Activity, Droplets, Thermometer, Wind, Beaker } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line
 } from 'recharts';
-import { mockZones, mockSensorData, mockSensorHistory } from '@/shared/lib/mockData';
 import { cn, getThresholdColor, getSensorStatusColor } from '@/shared/lib/utils';
 import { SENSOR_THRESHOLDS, ZONE_STATUS } from '@/shared/lib/constants';
 import { useT } from '@/shared/context/LanguageContext';
+import { sensorService } from '@/shared/services/sensorService';
+import type { Zone, SensorData } from '@/shared/types/global.types';
+import type { SensorHistoryPoint } from '@/shared/services/sensorService';
 
 function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
   label: string; value: number; unit: string; icon: React.ElementType;
@@ -36,7 +38,7 @@ function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{value}</span>
+          <span className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{value.toFixed(1)}</span>
           <span className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>{unit}</span>
         </div>
       </div>
@@ -51,9 +53,68 @@ function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
 
 export default function MonitoringPage() {
   const t = useT();
-  const [selectedZone, setSelectedZone] = useState(mockZones[0].id);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [selectedZone, setSelectedZone] = useState<string>('');
+  const [sensorData, setSensorData] = useState<SensorData | null>(null);
+  const [history, setHistory] = useState<SensorHistoryPoint[]>([]);
   const [timeRange, setTimeRange] = useState('24h');
-  const sensor = mockSensorData[selectedZone];
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch zones on mount
+  useEffect(() => {
+    async function loadZones() {
+      const dbZones = await sensorService.getZones();
+      setZones(dbZones);
+      if (dbZones.length > 0) {
+        setSelectedZone(dbZones[0].id);
+      } else {
+        setIsLoading(false);
+      }
+    }
+    loadZones();
+  }, []);
+
+  // Fetch sensor data and history when selected zone changes
+  useEffect(() => {
+    if (!selectedZone) return;
+
+    let isMounted = true;
+    async function loadSensorData() {
+      setIsLoading(true);
+      try {
+        const [currentData, historyData] = await Promise.all([
+          sensorService.getSensorData(selectedZone),
+          sensorService.getSensorHistory(selectedZone)
+        ]);
+        
+        if (isMounted) {
+          setSensorData(currentData);
+          setHistory(historyData);
+        }
+      } catch (err) {
+        console.error('Failed to load sensor data', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadSensorData();
+
+    // Subscribe to realtime updates for the current zone
+    sensorService.subscribeToSensorUpdates((payload) => {
+      const newSensor = payload.new as SensorData;
+      if (newSensor && newSensor.zone_id === selectedZone && isMounted) {
+        setSensorData(newSensor);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      sensorService.unsubscribeFromSensorUpdates();
+    };
+  }, [selectedZone]);
+
+  const activeZone = zones.find(z => z.id === selectedZone);
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -64,8 +125,8 @@ export default function MonitoringPage() {
           {t('monitoring_title')}
         </h2>
         <div className="flex gap-2 flex-wrap">
-          {mockZones.map(zone => {
-            const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS];
+          {zones.map(zone => {
+            const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS] || ZONE_STATUS.idle;
             return (
               <button
                 key={zone.id}
@@ -78,97 +139,111 @@ export default function MonitoringPage() {
                 )}
                 style={selectedZone !== zone.id ? { color: 'var(--surface-text)' } : undefined}
               >
-                {status.icon} {zone.name.split(' - ')[1] || zone.name}
+                {status.icon} {zone.name}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Sensor Gauges */}
-      <div className="glass p-5 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--surface-text-muted)' }}>
-          📡 {t('monitoring_current')} — {mockZones.find(z => z.id === selectedZone)?.name}
-        </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <GaugeCard
-            label={t(SENSOR_THRESHOLDS.soilMoisture.key)}
-            value={sensor.soil_moisture}
-            unit={SENSOR_THRESHOLDS.soilMoisture.unit}
-            icon={Droplets}
-            threshold={SENSOR_THRESHOLDS.soilMoisture}
-            iconColor="#3B82F6"
-          />
-          <GaugeCard
-            label={t(SENSOR_THRESHOLDS.temperature.key)}
-            value={sensor.temperature}
-            unit={SENSOR_THRESHOLDS.temperature.unit}
-            icon={Thermometer}
-            threshold={SENSOR_THRESHOLDS.temperature}
-            iconColor="#EF4444"
-          />
-          <GaugeCard
-            label={t(SENSOR_THRESHOLDS.humidity.key)}
-            value={sensor.humidity}
-            unit={SENSOR_THRESHOLDS.humidity.unit}
-            icon={Wind}
-            threshold={SENSOR_THRESHOLDS.humidity}
-            iconColor="#10B981"
-          />
-          <GaugeCard
-            label={t(SENSOR_THRESHOLDS.ph.key)}
-            value={sensor.ph}
-            unit=""
-            icon={Beaker}
-            threshold={SENSOR_THRESHOLDS.ph}
-            iconColor="#F59E0B"
-          />
+      {isLoading ? (
+        <div className="flex items-center justify-center p-12">
+          <div className="w-10 h-10 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
         </div>
-      </div>
+      ) : zones.length === 0 ? (
+        <div className="glass p-10 text-center text-gray-500">
+          Belum ada zona lahan yang terdaftar.
+        </div>
+      ) : (
+        <>
+          {/* Sensor Gauges */}
+          {sensorData && (
+            <div className="glass p-5 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--surface-text-muted)' }}>
+                📡 {t('monitoring_current')} — {activeZone?.name}
+              </h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <GaugeCard
+                  label={t(SENSOR_THRESHOLDS.soilMoisture.key)}
+                  value={sensorData.soil_moisture || 0}
+                  unit={SENSOR_THRESHOLDS.soilMoisture.unit}
+                  icon={Droplets}
+                  threshold={SENSOR_THRESHOLDS.soilMoisture}
+                  iconColor="#3B82F6"
+                />
+                <GaugeCard
+                  label={t(SENSOR_THRESHOLDS.temperature.key)}
+                  value={sensorData.temperature || 0}
+                  unit={SENSOR_THRESHOLDS.temperature.unit}
+                  icon={Thermometer}
+                  threshold={SENSOR_THRESHOLDS.temperature}
+                  iconColor="#EF4444"
+                />
+                <GaugeCard
+                  label={t(SENSOR_THRESHOLDS.humidity.key)}
+                  value={sensorData.humidity || 0}
+                  unit={SENSOR_THRESHOLDS.humidity.unit}
+                  icon={Wind}
+                  threshold={SENSOR_THRESHOLDS.humidity}
+                  iconColor="#10B981"
+                />
+                <GaugeCard
+                  label={t(SENSOR_THRESHOLDS.ph.key)}
+                  value={sensorData.ph || 0}
+                  unit=""
+                  icon={Beaker}
+                  threshold={SENSOR_THRESHOLDS.ph}
+                  iconColor="#F59E0B"
+                />
+              </div>
+            </div>
+          )}
 
-      {/* History Chart */}
-      <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-          <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>
-            📊 {t('monitoring_chart')}
-          </h3>
-          <div className="flex gap-1 bg-white/50 rounded-lg p-1" style={{ border: '1px solid var(--surface-border)' }}>
-            {['24h', '7d', '30d'].map(range => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition-all',
-                  timeRange === range ? 'bg-primary-500 text-white' : ''
-                )}
-                style={timeRange !== range ? { color: 'var(--surface-text-muted)' } : undefined}
-              >
-                {range}
-              </button>
-            ))}
+          {/* History Chart */}
+          <div className="glass p-5 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+              <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>
+                📊 {t('monitoring_chart')}
+              </h3>
+              <div className="flex gap-1 bg-white/50 rounded-lg p-1" style={{ border: '1px solid var(--surface-border)' }}>
+                {['24h', '7d', '30d'].map(range => (
+                  <button
+                    key={range}
+                    onClick={() => setTimeRange(range)}
+                    className={cn(
+                      'px-3 py-1 text-xs font-medium rounded-md transition-all',
+                      timeRange === range ? 'bg-primary-500 text-white' : ''
+                    )}
+                    style={timeRange !== range ? { color: 'var(--surface-text-muted)' } : undefined}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} interval={5} />
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--glass-bg)', backdropFilter: 'blur(12px)',
+                      border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
+                    }}
+                  />
+                  <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
+                  <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
+                  <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
+                  <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name="pH" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-
-        <div className="h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockSensorHistory} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-              <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} interval={5} />
-              <YAxis tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{
-                  background: 'var(--glass-bg)', backdropFilter: 'blur(12px)',
-                  border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
-                }}
-              />
-              <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
-              <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
-              <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
-              <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name="pH" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
