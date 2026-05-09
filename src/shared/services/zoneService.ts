@@ -10,6 +10,7 @@ export type ZonePayload = {
   status: ZoneStatus;
   planting_date?: string;
   plant_count?: number;
+  recipe_id?: string | null;
 };
 
 export const zoneService = {
@@ -23,8 +24,8 @@ export const zoneService = {
         .single();
 
       // If columns don't exist yet (migration pending), retry without them
-      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('schema'))) {
-        const { planting_date, plant_count, ...safePayload } = payload;
+      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('recipe_id') || error.message.includes('schema'))) {
+        const { planting_date, plant_count, recipe_id, ...safePayload } = payload;
         const { data: d2, error: e2 } = await supabase
           .from('zones')
           .insert([safePayload])
@@ -50,8 +51,8 @@ export const zoneService = {
         .eq('id', id);
 
       // If columns don't exist yet (migration pending), retry without them
-      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('schema'))) {
-        const { planting_date, plant_count, ...safePayload } = payload as any;
+      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('recipe_id') || error.message.includes('schema'))) {
+        const { planting_date, plant_count, recipe_id, ...safePayload } = payload as any;
         const { error: e2 } = await supabase
           .from('zones')
           .update(safePayload)
