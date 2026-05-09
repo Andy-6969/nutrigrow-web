@@ -161,6 +161,18 @@ export default function AgriTwinPage() {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      setIsDarkMode(theme !== 'light');
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   const handleFullscreen = () => {
     if (!mapRef.current) return;
@@ -258,16 +270,23 @@ export default function AgriTwinPage() {
                 style={{ minHeight: 500 }}
                 onClick={() => setSelectedZone(null)}
               >
-                {/* Farm aerial background */}
+                {/* Farm aerial background — adapts to theme */}
                 <div className="absolute inset-0 z-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/agritwin-bg.png"
+                    src={isDarkMode ? '/agritwin-bg.png' : '/agritwin-bg-light.png'}
                     alt=""
-                    className="w-full h-full object-cover"
-                    style={{ opacity: 0.35, filter: 'saturate(0.7) brightness(0.5)' }}
+                    className="w-full h-full object-cover transition-opacity duration-500"
+                    style={isDarkMode
+                      ? { opacity: 0.35, filter: 'saturate(0.7) brightness(0.5)' }
+                      : { opacity: 0.45, filter: 'saturate(1.1) brightness(0.9)' }
+                    }
                   />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(6,15,12,0.6) 0%, rgba(6,15,12,0.3) 50%, rgba(6,15,12,0.7) 100%)' }} />
+                  <div className="absolute inset-0" style={{
+                    background: isDarkMode
+                      ? 'linear-gradient(180deg, rgba(6,15,12,0.6) 0%, rgba(6,15,12,0.3) 50%, rgba(6,15,12,0.7) 100%)'
+                      : 'linear-gradient(180deg, rgba(240,253,244,0.7) 0%, rgba(240,253,244,0.3) 50%, rgba(240,253,244,0.6) 100%)'
+                  }} />
                 </div>
                 <div className="absolute top-3 left-3 z-30 flex flex-wrap gap-1.5">
                   {Object.entries(ZONE_STATUS).map(([key, val]) => (
