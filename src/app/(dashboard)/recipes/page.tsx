@@ -11,21 +11,21 @@ import { PLANT_PROFILES } from '@/shared/services/growthStageService';
 
 export default function RecipesPage() {
   const t = useT();
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [recipes, setRecipes] = useState<NutrientRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     async function loadRecipes() {
-      if (!user?.farm_id) return;
+      if (!profile?.farm_id) return;
       setIsLoading(true);
-      const { data } = await recipeService.getRecipesByFarmId(user.farm_id);
+      const { data } = await recipeService.getRecipesByFarmId(profile.farm_id);
       if (data) setRecipes(data);
       setIsLoading(false);
     }
     loadRecipes();
-  }, [user?.farm_id]);
+  }, [profile?.farm_id]);
 
   const filteredRecipes = recipes.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
