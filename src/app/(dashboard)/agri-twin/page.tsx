@@ -254,10 +254,21 @@ export default function AgriTwinPage() {
               </div>
             ) : (
               <div
-                className="relative bg-black/5 rounded-2xl border-2 border-dashed border-primary-200/50 overflow-hidden h-full"
+                className="relative rounded-2xl border-2 border-dashed border-primary-200/50 overflow-hidden h-full"
                 style={{ minHeight: 500 }}
                 onClick={() => setSelectedZone(null)}
               >
+                {/* Farm aerial background */}
+                <div className="absolute inset-0 z-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/agritwin-bg.png"
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ opacity: 0.35, filter: 'saturate(0.7) brightness(0.5)' }}
+                  />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(6,15,12,0.6) 0%, rgba(6,15,12,0.3) 50%, rgba(6,15,12,0.7) 100%)' }} />
+                </div>
                 <div className="absolute top-3 left-3 z-30 flex flex-wrap gap-1.5">
                   {Object.entries(ZONE_STATUS).map(([key, val]) => (
                     <span key={key} className="text-[9px] font-semibold px-2 py-0.5 rounded-full glass-sm flex items-center gap-1">
