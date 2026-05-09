@@ -51,6 +51,23 @@ export default function SchedulesPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
 
+  const handleZoneSelect = (zoneId: string) => {
+    setGrowthZoneId(zoneId);
+    const selectedZone = zones.find(z => z.id === zoneId);
+    if (selectedZone) {
+      if (selectedZone.planting_date) setPlantingDate(selectedZone.planting_date);
+      if (selectedZone.plant_count) setPlantCount(selectedZone.plant_count);
+      
+      const cType = selectedZone.crop_type?.toLowerCase() || '';
+      if (cType.includes('caba') || cType.includes('cabe') || cType.includes('chili')) setPlantType('cabai');
+      else if (cType.includes('tomat')) setPlantType('tomato');
+      else if (cType.includes('selada') || cType.includes('lett')) setPlantType('lettuce');
+      else setPlantType('custom');
+    }
+  };
+
+  const selectedZoneObj = useMemo(() => zones.find(z => z.id === growthZoneId), [zones, growthZoneId]);
+
   const currentDay  = plantingDate ? getDaysSincePlanting(plantingDate) : 0;
   const activePhase = plantingDate ? getActivePhase(currentDay, plantType) : null;
 
@@ -226,10 +243,17 @@ export default function SchedulesPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>📍 Zona Target</label>
+            <label className="text-xs font-medium mb-1.5 flex flex-wrap items-center gap-2" style={{ color: 'var(--surface-text-muted)' }}>
+              📍 Zona Target
+              {selectedZoneObj?.planting_date && (
+                 <span className="text-[10px] bg-primary-500/20 text-primary-500 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
+                   <Zap className="w-3 h-3"/> Autopilot Aktif
+                 </span>
+              )}
+            </label>
             <select
               value={growthZoneId}
-              onChange={e => setGrowthZoneId(e.target.value)}
+              onChange={e => handleZoneSelect(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
               style={{ color: 'var(--surface-text)' }}
             >
