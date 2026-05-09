@@ -5,9 +5,10 @@ import { FlaskConical, Plus, Search, MoreVertical, Droplet, Sprout } from 'lucid
 import { useAuth } from '@/shared/context/AuthContext';
 import { useT } from '@/shared/context/LanguageContext';
 import { recipeService } from '@/shared/services/recipeService';
-import type { NutrientRecipe } from '@/shared/types/global.types';
+import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
 import { cn } from '@/shared/lib/utils';
 import { PLANT_PROFILES } from '@/shared/services/growthStageService';
+import RecipeFormModal from './RecipeFormModal';
 
 export default function RecipesPage() {
   const t = useT();
@@ -15,6 +16,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<NutrientRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadRecipes() {
@@ -32,6 +34,17 @@ export default function RecipesPage() {
     r.plant_type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleSaveRecipe = async (
+    recipePayload: Omit<NutrientRecipe, 'id' | 'created_at' | 'updated_at' | 'phases'>,
+    phasesPayload: Omit<RecipePhase, 'id' | 'recipe_id'>[]
+  ) => {
+    const { data, error } = await recipeService.createRecipe(recipePayload, phasesPayload);
+    if (error) throw new Error(error);
+    if (data) {
+      setRecipes([data, ...recipes]);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto animate-fade-in">
       {/* Header */}
@@ -47,7 +60,7 @@ export default function RecipesPage() {
         </div>
         
         <button 
-          onClick={() => alert('Fitur form tambah resep sedang dibangun!')}
+          onClick={() => setIsModalOpen(true)}
           className="btn-premium px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2 shadow-lg shadow-primary-500/20 bg-primary-600 hover:bg-primary-500"
         >
           <Plus className="w-5 h-5" />
@@ -93,7 +106,7 @@ export default function RecipesPage() {
             Anda belum memiliki profil resep nutrisi. Klik "Buat Resep Baru" untuk mengatur target EC dan pH secara spesifik per fase pertumbuhan.
           </p>
           <button 
-            onClick={() => alert('Fitur form tambah resep sedang dibangun!')}
+            onClick={() => setIsModalOpen(true)}
             className="px-6 py-2 rounded-xl bg-primary-500/20 text-primary-600 font-semibold hover:bg-primary-500/30 transition-colors"
           >
             Buat Resep Pertama
@@ -167,6 +180,16 @@ export default function RecipesPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Form Modal */}
+      {profile?.farm_id && (
+        <RecipeFormModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveRecipe}
+          farmId={profile.farm_id}
+        />
       )}
     </div>
   );
