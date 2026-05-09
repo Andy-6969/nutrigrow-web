@@ -421,7 +421,6 @@ body {
 
 .gradient-mesh {
   position: relative;
-  overflow: hidden;
 }
 
 .gradient-mesh::before {
@@ -450,7 +449,7 @@ body {
   animation: auroraDrift2 15s ease-in-out infinite;
 }
 
-.gradient-mesh > * {
+.gradient-mesh > *:not(.floating-orb) {
   position: relative;
   z-index: 1;
 }
