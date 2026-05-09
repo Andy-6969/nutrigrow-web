@@ -21,6 +21,19 @@ export const zoneService = {
         .insert([payload])
         .select()
         .single();
+
+      // If columns don't exist yet (migration pending), retry without them
+      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('schema'))) {
+        const { planting_date, plant_count, ...safePayload } = payload;
+        const { data: d2, error: e2 } = await supabase
+          .from('zones')
+          .insert([safePayload])
+          .select()
+          .single();
+        if (e2) return { data: null, error: e2.message };
+        return { data: d2 as Zone, error: null };
+      }
+
       if (error) return { data: null, error: error.message };
       return { data: data as Zone, error: null };
     } catch (err) {
@@ -35,6 +48,18 @@ export const zoneService = {
         .from('zones')
         .update(payload)
         .eq('id', id);
+
+      // If columns don't exist yet (migration pending), retry without them
+      if (error && (error.message.includes('plant_count') || error.message.includes('planting_date') || error.message.includes('schema'))) {
+        const { planting_date, plant_count, ...safePayload } = payload as any;
+        const { error: e2 } = await supabase
+          .from('zones')
+          .update(safePayload)
+          .eq('id', id);
+        if (e2) return { error: e2.message };
+        return { error: null };
+      }
+
       if (error) return { error: error.message };
       return { error: null };
     } catch (err) {
