@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState } from 'react';
-import { Wrench, Zap, Clock, AlertTriangle, Play, Square } from 'lucide-react';
+import { Wrench, Zap, Clock, AlertTriangle, Play, Square, CheckCircle2, XCircle } from 'lucide-react';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import { useEffect, useCallback } from 'react';
@@ -25,6 +25,7 @@ export default function OverridePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isActivating, setIsActivating] = useState<ActuatorTarget | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const { canControlZone } = useRBAC();
   const t = useT();
 
@@ -94,12 +95,21 @@ export default function OverridePage() {
   };
 
   const handleActivate = async (target: ActuatorTarget) => {
-    if (!selectedZone) return;
+    if (!selectedZone) {
+      setStatusMsg({ type: 'error', text: 'Pilih zona terlebih dahulu!' });
+      return;
+    }
     setIsActivating(target);
+    setStatusMsg(null);
     try {
       await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard", 'water', target);
-    } catch (e) {
-      console.error(`Failed to start override (${target}):`, e);
+      const label = target === 'pump' ? 'Pompa Air' : 'Solenoid Valve';
+      setStatusMsg({ type: 'success', text: `✅ ${label} NYALA — durasi ${duration} menit` });
+      fetchData();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`Failed to start override (${target}):`, msg);
+      setStatusMsg({ type: 'error', text: `Gagal menyalakan ${target}: ${msg}` });
     } finally {
       setIsActivating(null);
     }
@@ -109,10 +119,16 @@ export default function OverridePage() {
     const override = getActiveOverrideByTarget(selectedZone, target);
     if (!override) return;
     setIsActivating(target);
+    setStatusMsg(null);
     try {
       await overrideService.stopOverride(override.id, target);
-    } catch (e) {
-      console.error(`Failed to stop override (${target}):`, e);
+      const label = target === 'pump' ? 'Pompa Air' : 'Solenoid Valve';
+      setStatusMsg({ type: 'success', text: `✅ ${label} MATI` });
+      fetchData();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`Failed to stop override (${target}):`, msg);
+      setStatusMsg({ type: 'error', text: `Gagal mematikan ${target}: ${msg}` });
     } finally {
       setIsActivating(null);
     }
@@ -145,6 +161,17 @@ export default function OverridePage() {
               </span>
             )}
           </div>
+
+          {/* Status Message */}
+          {statusMsg && (
+            <div className={cn(
+              'flex items-center gap-2 p-3 rounded-xl text-sm font-medium',
+              statusMsg.type === 'error' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
+            )}>
+              {statusMsg.type === 'error' ? <XCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+              {statusMsg.text}
+            </div>
+          )}
 
           {/* Zone Selection */}
           <div>
@@ -217,7 +244,7 @@ export default function OverridePage() {
               🎛️ {t('override_actuator_control')}
             </label>
 
-            {/* PUMP Control (Tuya) */}
+            {/* POMPA AIR Control (Relay Gateway D5) */}
             <div className={cn(
               'p-4 rounded-xl border-2 transition-all',
               isPumpActive ? 'border-primary-500 bg-primary-50/30' : 'border-transparent',
@@ -227,7 +254,7 @@ export default function OverridePage() {
                   <span className="text-xl">💧</span>
                   <div>
                     <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_pump')}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Relay Module (Gateway D5)</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → Relay Gateway (D5)</p>
                   </div>
                 </div>
                 {isPumpActive && (
@@ -266,7 +293,7 @@ export default function OverridePage() {
               )}
             </div>
 
-            {/* SOLENOID Control (MQTT) */}
+            {/* SOLENOID VALVE Control (ESP-NOW → ESP32) */}
             <div className={cn(
               'p-4 rounded-xl border-2 transition-all',
               isSolenoidActive ? 'border-purple-500 bg-purple-50/30' : 'border-transparent',
@@ -276,7 +303,7 @@ export default function OverridePage() {
                   <span className="text-xl">🔧</span>
                   <div>
                     <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_solenoid')}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Relay via ESP-NOW (GPIO25)</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → ESP-NOW → Relay (GPIO25)</p>
                   </div>
                 </div>
                 {isSolenoidActive && (
