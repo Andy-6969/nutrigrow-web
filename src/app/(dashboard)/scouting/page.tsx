@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info } from 'lucide-react';
+import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info, Upload, Image as ImageIcon } from 'lucide-react';
 import { useT } from '@/shared/context/LanguageContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { scoutingService, type ScoutingPayload } from '@/shared/services/scoutingService';
@@ -41,6 +41,9 @@ export default function ScoutingPage() {
   const [form, setForm] = useState<ScoutingPayload>({
     zone_id: '', issue_type: 'hama', severity: 'rendah', notes: '', photo_url: ''
   });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,7 +65,22 @@ export default function ScoutingPage() {
     if (!form.zone_id || !form.notes) return;
     
     setModalLoading(true);
-    const { error } = await scoutingService.createLog(form);
+
+    // Upload foto ke Supabase Storage jika ada
+    let finalPhotoUrl = form.photo_url || '';
+    if (photoFile) {
+      setIsUploading(true);
+      const { url, error: uploadErr } = await scoutingService.uploadPhoto(photoFile);
+      setIsUploading(false);
+      if (uploadErr) {
+        showError('Gagal upload foto', uploadErr);
+        setModalLoading(false);
+        return;
+      }
+      if (url) finalPhotoUrl = url;
+    }
+
+    const { error } = await scoutingService.createLog({ ...form, photo_url: finalPhotoUrl });
     setModalLoading(false);
     
     if (error) {
@@ -73,6 +91,8 @@ export default function ScoutingPage() {
     success('Laporan Terkirim', 'Terima kasih atas laporan lapangannya!');
     setShowModal(false);
     setForm({ zone_id: '', issue_type: 'hama', severity: 'rendah', notes: '', photo_url: '' });
+    setPhotoFile(null);
+    setPhotoPreview(null);
     fetchData();
   };
 
@@ -271,11 +291,52 @@ export default function ScoutingPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>Link Foto (Opsional)</label>
-                <input type="url" value={form.photo_url} onChange={e => setForm({...form, photo_url: e.target.value})}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-orange-500" style={{ color: 'var(--surface-text)' }} />
-                <p className="text-[10px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>Untuk saat ini masukkan URL gambar langsung.</p>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>📷 Foto Bukti (Opsional)</label>
+                
+                {/* Preview foto */}
+                {photoPreview && (
+                  <div className="relative mb-2 h-32 w-full rounded-xl overflow-hidden bg-black/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                      className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full hover:bg-black/80 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {!photoPreview && (
+                  <label className="flex flex-col items-center justify-center gap-2 w-full h-24 border-2 border-dashed rounded-xl cursor-pointer hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
+                    style={{ borderColor: 'var(--surface-border)' }}
+                  >
+                    <Upload className="w-5 h-5" style={{ color: 'var(--surface-text-muted)' }} />
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Klik untuk pilih foto atau ambil dari kamera</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setPhotoFile(file);
+                          setPhotoPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+
+                {isUploading && (
+                  <div className="flex items-center gap-2 mt-2 text-orange-500 text-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengupload foto...</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2">

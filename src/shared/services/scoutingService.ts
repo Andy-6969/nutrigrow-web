@@ -87,5 +87,34 @@ export const scoutingService = {
     } catch (err) {
       return { error: String(err) };
     }
+  },
+
+  /**
+   * Upload foto ke bucket scouting_images di Supabase Storage.
+   * @returns URL publik dari foto yang di-upload, atau null jika gagal.
+   */
+  async uploadPhoto(file: File): Promise<{ url: string | null; error: string | null }> {
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('scouting_images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) return { url: null, error: uploadError.message };
+
+      const { data } = supabase.storage
+        .from('scouting_images')
+        .getPublicUrl(filePath);
+
+      return { url: data.publicUrl, error: null };
+    } catch (err) {
+      return { url: null, error: String(err) };
+    }
   }
 };
