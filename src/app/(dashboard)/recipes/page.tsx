@@ -24,7 +24,7 @@ export default function RecipesPage() {
       
       setIsLoading(true);
       // If user has a farm_id, get their recipes. If super_admin, farm_id might be undefined, get all.
-      const { data } = await recipeService.getRecipes(profile.farm_id);
+      const { data } = await recipeService.getRecipes(profile.farm_id || undefined);
       if (data) setRecipes(data);
       setIsLoading(false);
     }
