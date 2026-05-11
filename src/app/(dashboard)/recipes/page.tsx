@@ -20,14 +20,16 @@ export default function RecipesPage() {
 
   useEffect(() => {
     async function loadRecipes() {
-      if (!profile?.farm_id) return;
+      if (!profile) return; // Wait for profile to load
+      
       setIsLoading(true);
-      const { data } = await recipeService.getRecipesByFarmId(profile.farm_id);
+      // If user has a farm_id, get their recipes. If super_admin, farm_id might be undefined, get all.
+      const { data } = await recipeService.getRecipes(profile.farm_id);
       if (data) setRecipes(data);
       setIsLoading(false);
     }
     loadRecipes();
-  }, [profile?.farm_id]);
+  }, [profile]);
 
   const filteredRecipes = recipes.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -183,12 +185,12 @@ export default function RecipesPage() {
       )}
 
       {/* Form Modal */}
-      {profile?.farm_id && (
+      {profile && (
         <RecipeFormModal 
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveRecipe}
-          farmId={profile.farm_id}
+          farmId={profile.farm_id || ''}
         />
       )}
     </div>
