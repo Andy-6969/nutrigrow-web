@@ -13,7 +13,7 @@ import { overrideService } from '@/shared/services/overrideService';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { useT } from '@/shared/context/LanguageContext';
 
-type ActuatorTarget = 'pump' | 'pump_pupuk';
+type ActuatorTarget = 'pump' | 'pump_pupuk' | 'solenoid';
 
 export default function OverridePage() {
   const [selectedZone, setSelectedZone] = useState('');
@@ -88,6 +88,7 @@ export default function OverridePage() {
 
   const isPumpActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump') : false;
   const isPupukActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump_pupuk') : false;
+  const isSolenoidActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'solenoid') : false;
   const isAnyOverrideActive = activeOverrides.length > 0;
 
   const getRemainingTime = (override: OverrideLog | undefined) => {
@@ -107,13 +108,14 @@ export default function OverridePage() {
     setStatusMsg(null);
     try {
       await overrideService.startOverride(selectedZone, duration, "Manual control via web dashboard", 'water', target);
-      const label = target === 'pump' ? 'Pompa Air' : 'Pompa Pupuk';
+      const label = target === 'pump' ? 'Pompa Air' : target === 'pump_pupuk' ? 'Pompa Pupuk' : 'Solenoid';
       setStatusMsg({ type: 'success', text: `✅ ${label} NYALA — durasi ${duration} menit` });
       fetchData();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null && 'message' in e) ? String((e as Record<string, unknown>).message) : JSON.stringify(e);
       console.error(`Failed to start override (${target}):`, e);
-      setStatusMsg({ type: 'error', text: `Gagal menyalakan ${target === 'pump' ? 'Pompa Air' : 'Pompa Pupuk'}: ${msg}` });
+      const tgtLabel = target === 'pump' ? 'Pompa Air' : target === 'pump_pupuk' ? 'Pompa Pupuk' : 'Solenoid';
+      setStatusMsg({ type: 'error', text: `Gagal menyalakan ${tgtLabel}: ${msg}` });
     } finally {
       setIsActivating(null);
     }
@@ -126,13 +128,14 @@ export default function OverridePage() {
     setStatusMsg(null);
     try {
       await overrideService.stopOverride(override.id, target);
-      const label = target === 'pump' ? 'Pompa Air' : 'Pompa Pupuk';
+      const label = target === 'pump' ? 'Pompa Air' : target === 'pump_pupuk' ? 'Pompa Pupuk' : 'Solenoid';
       setStatusMsg({ type: 'success', text: `✅ ${label} MATI` });
       fetchData();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null && 'message' in e) ? String((e as Record<string, unknown>).message) : JSON.stringify(e);
       console.error(`Failed to stop override (${target}):`, e);
-      setStatusMsg({ type: 'error', text: `Gagal mematikan ${target === 'pump' ? 'Pompa Air' : 'Pompa Pupuk'}: ${msg}` });
+      const tgtLabel = target === 'pump' ? 'Pompa Air' : target === 'pump_pupuk' ? 'Pompa Pupuk' : 'Solenoid';
+      setStatusMsg({ type: 'error', text: `Gagal mematikan ${tgtLabel}: ${msg}` });
     } finally {
       setIsActivating(null);
     }
@@ -155,7 +158,7 @@ export default function OverridePage() {
         {/* Control Panel */}
         <div className={cn(
           'glass p-6 space-y-5 opacity-0 animate-fade-in-up',
-          (isPumpActive || isPupukActive) && 'animate-pulse-glow'
+          (isPumpActive || isPupukActive || isSolenoidActive) && 'animate-pulse-glow'
         )} style={{ animationFillMode: 'forwards' }}>
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>🔧 {t('override_panel')}</h3>
@@ -232,7 +235,7 @@ export default function OverridePage() {
               max={120}
               value={duration}
               onChange={e => setDuration(Number(e.target.value))}
-              disabled={isPumpActive && isPupukActive}
+              disabled={isPumpActive && isPupukActive && isSolenoidActive}
               className="w-full h-2 bg-primary-200 rounded-lg cursor-pointer disabled:opacity-50"
             />
             <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
@@ -345,6 +348,55 @@ export default function OverridePage() {
                 </button>
               )}
             </div>
+
+            {/* SOLENOID Control (ESP-NOW → ESP32 Relay GPIO25) */}
+            <div className={cn(
+              'p-4 rounded-xl border-2 transition-all',
+              isSolenoidActive ? 'border-amber-500 bg-amber-50/30' : 'border-transparent',
+            )} style={{ borderColor: isSolenoidActive ? undefined : 'var(--surface-border)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🚿</span>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>Solenoid Valve</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → ESP-NOW → ESP32 (GPIO25)</p>
+                  </div>
+                </div>
+                {isSolenoidActive && (
+                  <div className="text-right">
+                    <p className="text-lg font-mono font-bold text-amber-500">
+                      {formatTimer(getRemainingTime(getActiveOverrideByTarget(selectedZone, 'solenoid')))}
+                    </p>
+                    <p className="text-[10px] text-amber-400">{t('override_remaining')}</p>
+                  </div>
+                )}
+              </div>
+              
+              {!isSolenoidActive ? (
+                <button
+                  onClick={() => handleActivate('solenoid')}
+                  disabled={!selectedZone || isActivating === 'solenoid' || isLoading}
+                  className={cn(
+                    'w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all duration-300 flex justify-center items-center gap-2',
+                    selectedZone && isActivating !== 'solenoid'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg glow-sm hover:glow-md active:scale-[0.98]'
+                      : 'bg-gray-300 cursor-not-allowed'
+                  )}
+                >
+                  <Play className="w-4 h-4" />
+                  {isActivating === 'solenoid' ? t('override_processing') : 'BUKA SOLENOID'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleDeactivate('solenoid')}
+                  disabled={isActivating === 'solenoid'}
+                  className="w-full py-2.5 rounded-xl font-bold text-white text-sm bg-danger-500 hover:bg-danger-600 shadow-lg transition-all active:scale-[0.98] glow-danger flex justify-center items-center gap-2"
+                >
+                  <Square className="w-4 h-4" />
+                  {isActivating === 'solenoid' ? t('override_processing') : 'TUTUP SOLENOID'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Warning */}
@@ -389,6 +441,7 @@ export default function OverridePage() {
                     )}>
                       {log.mode === 'pump' ? `💧 Pompa Air` : 
                        log.mode === 'pump_pupuk' ? `🧪 Pompa Pupuk` :
+                       log.mode === 'solenoid' ? `🚿 Solenoid` :
                        log.mode === 'fertigation' ? `🧪 Fertigation` : `💧 ${t('override_water_only')}`}
                     </span>
                   </div>

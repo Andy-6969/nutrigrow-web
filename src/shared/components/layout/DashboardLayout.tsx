@@ -25,6 +25,7 @@ const navItemDefs = [
   { id: 'scouting',        tKey: 'nav_scouting',         icon: Bug,             href: '/scouting' },
   { id: 'recipes',         tKey: 'nav_recipes',          icon: FlaskConical,    href: '/recipes' },
   { id: 'devices',         tKey: 'nav_devices',          icon: Cpu,             href: '/devices' },
+  { id: 'override',        tKey: 'nav_override',         icon: Wrench,          href: '/override' },
   { id: 'farms',           tKey: 'nav_farms',            icon: MapPin,          href: '/farms' },
   { id: 'notifications',   tKey: 'nav_notifications',    icon: Bell,            href: '/notifications' },
   { id: 'user_management', tKey: 'nav_user_management',  icon: Users,           href: '/user-management' },

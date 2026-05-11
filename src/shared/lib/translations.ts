@@ -16,6 +16,7 @@ export const translations = {
     nav_notifications:    'Notifikasi',
     nav_user_management:  'Kelola User',
     nav_settings:         'Pengaturan',
+    nav_override:         'Kontrol Manual',
     nav_logout:           'Keluar',
     nav_smart_fertigation:'Smart Fertigation',
 
@@ -378,6 +379,7 @@ export const translations = {
     nav_notifications:    'Notifications',
     nav_user_management:  'Manage Users',
     nav_settings:         'Settings',
+    nav_override:         'Manual Override',
     nav_logout:           'Logout',
     nav_smart_fertigation:'Smart Fertigation',
 
