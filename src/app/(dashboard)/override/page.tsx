@@ -79,7 +79,11 @@ export default function OverridePage() {
 
   // Check active overrides for pump/solenoid separately per zone
   const getActiveOverrideByTarget = (zoneId: string, target: ActuatorTarget) => {
-    return activeOverrides.find(o => o.zone_id === zoneId && o.mode === target);
+    try {
+      return activeOverrides.find(o => o.zone_id === zoneId && o.mode === target);
+    } catch {
+      return undefined;
+    }
   };
 
   const isPumpActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump') : false;
@@ -188,7 +192,7 @@ export default function OverridePage() {
                 return (
                   <button
                     key={zone.id}
-                    onClick={() => isAllowed && setSelectedZone(zone.id)}
+                    onClick={() => { if (isAllowed) { setSelectedZone(zone.id); setStatusMsg(null); } }}
                     disabled={!isAllowed}
                     className={cn(
                       'flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left relative',
