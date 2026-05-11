@@ -227,7 +227,7 @@ export default function OverridePage() {
                   <span className="text-xl">💧</span>
                   <div>
                     <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_pump')}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Tuya Smart Plug</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Relay Module (Gateway D5)</p>
                   </div>
                 </div>
                 {isPumpActive && (
@@ -276,7 +276,7 @@ export default function OverridePage() {
                   <span className="text-xl">🔧</span>
                   <div>
                     <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{t('override_solenoid')}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → ESP32</p>
+                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>Relay via ESP-NOW (GPIO25)</p>
                   </div>
                 </div>
                 {isSolenoidActive && (
