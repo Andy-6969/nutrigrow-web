@@ -27,7 +27,7 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, farmId }: Rec
   useEffect(() => {
     if (isOpen && !farmId) {
       farmService.getFarms().then(res => {
-        if (res.data) setFarms(res.data);
+        setFarms(res);
       });
     }
   }, [isOpen, farmId]);
