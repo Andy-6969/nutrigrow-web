@@ -244,7 +244,7 @@ export default function ScoutingPage() {
                 {log.photo_url && (
                   <div 
                     className="mt-2 h-32 w-full rounded-xl overflow-hidden bg-black/20 cursor-pointer relative group"
-                    onClick={() => setZoomedImage(log.photo_url)}
+                    onClick={() => setZoomedImage(log.photo_url || null)}
                   >
                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
                       <Search className="w-6 h-6 text-white" />
