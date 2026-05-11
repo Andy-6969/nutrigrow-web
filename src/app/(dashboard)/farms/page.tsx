@@ -31,7 +31,7 @@ function ZoneModal({ farmId, initial, onClose, onSaved }: {
   const set = (k: string, v: string|number|undefined) => setForm((p:any) => ({...p,[k]:v}));
 
   useEffect(() => {
-    recipeService.getRecipesByFarmId(farmId).then(res => {
+    recipeService.getRecipes(farmId).then(res => {
       if (res.data) setRecipes(res.data);
     });
   }, [farmId]);
