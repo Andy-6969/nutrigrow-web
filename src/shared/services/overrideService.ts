@@ -44,7 +44,7 @@ export class SupabaseOverrideService implements IOverrideService {
     return (data ?? []) as OverrideLog[];
   }
 
-  async startOverride(zoneId: string, durationMinutes: number, reason?: string, mode: 'water' | 'fertigation' = 'water', target?: 'pump' | 'solenoid'): Promise<void> {
+  async startOverride(zoneId: string, durationMinutes: number, reason?: string, mode: 'water' | 'fertigation' = 'water', target?: 'pump' | 'solenoid' | 'pump_pupuk'): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const userName = session?.user?.user_metadata?.full_name || session?.user?.email || 'System User';
 
@@ -74,7 +74,7 @@ export class SupabaseOverrideService implements IOverrideService {
     }
   }
 
-  async stopOverride(overrideId: string, target?: 'pump' | 'solenoid'): Promise<void> {
+  async stopOverride(overrideId: string, target?: 'pump' | 'solenoid' | 'pump_pupuk'): Promise<void> {
     const { data: log, error: fetchError } = await supabase
       .from('override_logs')
       .select('zone_id')

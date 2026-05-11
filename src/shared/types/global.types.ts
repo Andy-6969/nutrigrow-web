@@ -156,7 +156,7 @@ export interface OverrideLog {
   zone_id: string;
   zone_name: string;
   user_name: string;
-  mode: 'water' | 'fertigation' | 'pump' | 'solenoid';
+  mode: 'water' | 'fertigation' | 'pump' | 'solenoid' | 'pump_pupuk';
   duration_minutes: number;
   reason?: string;
   started_at: string;
