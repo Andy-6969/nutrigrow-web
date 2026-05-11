@@ -35,8 +35,10 @@ export default function ScoutingPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [showModal, setShowModal] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [form, setForm] = useState<ScoutingPayload>({
     zone_id: '', issue_type: 'hama', severity: 'rendah', notes: '', photo_url: ''
@@ -107,10 +109,19 @@ export default function ScoutingPage() {
   };
 
   const filteredLogs = logs.filter(l => {
-    if (filter === 'all') return true;
-    if (filter === 'open') return l.status === 'open' || l.status === 'in_progress';
-    if (filter === 'resolved') return l.status === 'resolved';
-    return true;
+    const matchesFilter = filter === 'all' 
+      ? true 
+      : filter === 'open' 
+        ? l.status === 'open' || l.status === 'in_progress' 
+        : l.status === 'resolved';
+        
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery 
+      || l.notes.toLowerCase().includes(searchLower)
+      || l.zone_name?.toLowerCase().includes(searchLower)
+      || l.issue_type.toLowerCase().includes(searchLower);
+
+    return matchesFilter && matchesSearch;
   });
 
   return (
@@ -134,23 +145,37 @@ export default function ScoutingPage() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b" style={{ borderColor: 'var(--surface-border)' }}>
-        {(['all', 'open', 'resolved'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            className={cn(
-              "px-4 py-3 text-sm font-medium border-b-2 transition-all",
-              filter === tab 
-                ? "border-orange-500 text-orange-500" 
-                : "border-transparent hover:text-orange-400"
-            )}
-            style={{ color: filter !== tab ? 'var(--surface-text-muted)' : undefined }}
-          >
-            {tab === 'all' ? 'Semua Laporan' : tab === 'open' ? 'Membutuhkan Tindakan' : 'Selesai'}
-          </button>
-        ))}
+      {/* Toolbar: Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+          {(['all', 'open', 'resolved'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={cn(
+                "px-4 py-2 text-sm font-medium rounded-xl transition-all whitespace-nowrap",
+                filter === tab 
+                  ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" 
+                  : "bg-black/5 hover:bg-black/10"
+              )}
+              style={filter !== tab ? { color: 'var(--surface-text)' } : {}}
+            >
+              {tab === 'all' ? 'Semua Laporan' : tab === 'open' ? 'Perlu Tindakan' : 'Selesai'}
+            </button>
+          ))}
+        </div>
+        
+        <div className="relative w-full sm:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--surface-text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Cari zona, tipe, atau catatan..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all focus:ring-2 focus:ring-orange-500 glass-sm"
+            style={{ color: 'var(--surface-text)' }}
+          />
+        </div>
       </div>
 
       {/* Logs Grid */}
@@ -217,9 +242,15 @@ export default function ScoutingPage() {
                 </div>
 
                 {log.photo_url && (
-                  <div className="mt-2 h-32 w-full rounded-xl overflow-hidden bg-black/20">
+                  <div 
+                    className="mt-2 h-32 w-full rounded-xl overflow-hidden bg-black/20 cursor-pointer relative group"
+                    onClick={() => setZoomedImage(log.photo_url || null)}
+                  >
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                      <Search className="w-6 h-6 text-white" />
+                    </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={log.photo_url} alt="Bukti" className="w-full h-full object-cover hover:scale-110 transition-transform" />
+                    <img src={log.photo_url} alt="Bukti" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   </div>
                 )}
 
@@ -348,6 +379,19 @@ export default function ScoutingPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setZoomedImage(null)}>
+          <button 
+            onClick={() => setZoomedImage(null)} 
+            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={zoomedImage} alt="Bukti Zoom" className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

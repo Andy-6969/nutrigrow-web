@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Sprout } from 'lucide-react';
 import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
 import { PLANT_PROFILES } from '@/shared/services/growthStageService';
+import { farmService } from '@/shared/services/farmService';
+import type { Farm } from '@/shared/types/global.types';
 
 interface RecipeFormModalProps {
   isOpen: boolean;
@@ -17,7 +19,18 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, farmId }: Rec
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [plantType, setPlantType] = useState('tomato');
+  const [selectedFarmId, setSelectedFarmId] = useState(farmId);
+  const [farms, setFarms] = useState<Farm[]>([]);
   const [phases, setPhases] = useState<Omit<RecipePhase, 'id' | 'recipe_id'>[]>([]);
+
+  // If no farmId is provided (e.g., super admin), fetch all farms so they can choose
+  useEffect(() => {
+    if (isOpen && !farmId) {
+      farmService.getFarms().then(res => {
+        setFarms(res);
+      });
+    }
+  }, [isOpen, farmId]);
 
   // Pre-fill phases when plantType changes
   useEffect(() => {
@@ -49,8 +62,9 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, farmId }: Rec
       setDescription('');
       setPlantType('tomato');
       setPhases([]);
+      setSelectedFarmId(farmId);
     }
-  }, [isOpen]);
+  }, [isOpen, farmId]);
 
   if (!isOpen) return null;
 
@@ -59,10 +73,12 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, farmId }: Rec
     if (!name) return alert('Nama resep wajib diisi!');
     if (phases.length === 0) return alert('Minimal harus ada 1 fase!');
 
+    if (!selectedFarmId) return alert('Silakan pilih Lahan (Farm) terlebih dahulu!');
+
     setIsSubmitting(true);
     try {
       await onSave({
-        farm_id: farmId,
+        farm_id: selectedFarmId,
         name,
         plant_type: plantType,
         description,
@@ -134,6 +150,18 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, farmId }: Rec
           {/* Info Utama */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
+              {!farmId && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Pilih Lahan (Farm) *</label>
+                  <select 
+                    value={selectedFarmId} onChange={e => setSelectedFarmId(e.target.value)} required
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-black/20 focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white transition-all"
+                  >
+                    <option value="">-- Pilih Lahan --</option>
+                    {farms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Nama Resep</label>
                 <input 

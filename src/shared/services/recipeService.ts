@@ -3,17 +3,22 @@ import { supabase } from '@/shared/lib/supabase';
 import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
 
 export const recipeService = {
-  /** Get all recipes for a farm, including their phases */
-  async getRecipesByFarmId(farmId: string): Promise<{ data: NutrientRecipe[] | null; error: string | null }> {
+  /** Get all recipes, optionally filtered by farm */
+  async getRecipes(farmId?: string): Promise<{ data: NutrientRecipe[] | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('nutrient_recipes')
         .select(`
           *,
           phases:recipe_phases(*)
         `)
-        .eq('farm_id', farmId)
         .order('created_at', { ascending: false });
+
+      if (farmId) {
+        query = query.eq('farm_id', farmId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -25,7 +30,7 @@ export const recipeService = {
 
       return { data: recipes as NutrientRecipe[], error: null };
     } catch (err: any) {
-      console.error('[recipeService] getRecipesByFarmId failed:', err);
+      console.error('[recipeService] getRecipes failed:', err);
       return { data: null, error: err.message || String(err) };
     }
   },

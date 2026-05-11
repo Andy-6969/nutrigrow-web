@@ -7,11 +7,13 @@ import { useT } from '@/shared/context/LanguageContext';
 import { recipeService } from '@/shared/services/recipeService';
 import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
 import { cn } from '@/shared/lib/utils';
+import { useRouter } from 'next/navigation';
 import { PLANT_PROFILES } from '@/shared/services/growthStageService';
 import RecipeFormModal from './RecipeFormModal';
 
 export default function RecipesPage() {
   const t = useT();
+  const router = useRouter();
   const { profile } = useAuth();
   const [recipes, setRecipes] = useState<NutrientRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,14 +22,16 @@ export default function RecipesPage() {
 
   useEffect(() => {
     async function loadRecipes() {
-      if (!profile?.farm_id) return;
+      if (!profile) return; // Wait for profile to load
+      
       setIsLoading(true);
-      const { data } = await recipeService.getRecipesByFarmId(profile.farm_id);
+      // If user has a farm_id, get their recipes. If super_admin, farm_id might be undefined, get all.
+      const { data } = await recipeService.getRecipes(profile.farm_id || undefined);
       if (data) setRecipes(data);
       setIsLoading(false);
     }
     loadRecipes();
-  }, [profile?.farm_id]);
+  }, [profile]);
 
   const filteredRecipes = recipes.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -169,10 +173,16 @@ export default function RecipesPage() {
                 </div>
                 
                 <div className="pt-4 border-t border-white/5 flex gap-2">
-                  <button className="flex-1 py-2 text-sm font-semibold rounded-xl bg-primary-500/10 text-primary-600 hover:bg-primary-500/20 transition-colors">
+                  <button 
+                    onClick={() => alert(`Fitur "Lihat Detail" untuk resep ${recipe.name} akan segera hadir!`)}
+                    className="flex-1 py-2 text-sm font-semibold rounded-xl bg-primary-500/10 text-primary-600 hover:bg-primary-500/20 transition-colors"
+                  >
                     Lihat Detail
                   </button>
-                  <button className="px-4 py-2 text-sm font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors" style={{ color: 'var(--surface-text)' }}>
+                  <button 
+                    onClick={() => router.push('/farms')}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors" style={{ color: 'var(--surface-text)' }}
+                  >
                     Gunakan
                   </button>
                 </div>
@@ -183,12 +193,12 @@ export default function RecipesPage() {
       )}
 
       {/* Form Modal */}
-      {profile?.farm_id && (
+      {profile && (
         <RecipeFormModal 
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveRecipe}
-          farmId={profile.farm_id}
+          farmId={profile.farm_id || ''}
         />
       )}
     </div>
