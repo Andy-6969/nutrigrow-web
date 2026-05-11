@@ -4,10 +4,10 @@
 export const translations = {
   id: {
     // ── Sidebar nav ──────────────────────────────────────────
-    nav_dashboard:        'Dashboard',
-    nav_agri_twin:        'Agri-Twin',
-    nav_monitoring:       'Monitoring',
-    nav_eco_savings:      'Eco-Savings',
+    nav_dashboard:        'Beranda',
+    nav_agri_twin:        'Peta Lahan',
+    nav_monitoring:       'Pantau Sensor',
+    nav_eco_savings:      'Hemat Daya',
     nav_schedules:        'Jadwal',
     nav_recipes:          'Resep Nutrisi',
     nav_devices:          'Perangkat',
