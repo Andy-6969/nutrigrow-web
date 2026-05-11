@@ -156,10 +156,16 @@ export default function OverridePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Control Panel */}
-        <div className={cn(
-          'glass p-6 space-y-5 opacity-0 animate-fade-in-up',
-          (isPumpActive || isPupukActive || isSolenoidActive) && 'animate-pulse-glow'
-        )} style={{ animationFillMode: 'forwards' }}>
+        <div
+          className="glass p-6 space-y-5 opacity-0 animate-fade-in-up"
+          style={{
+            animationFillMode: 'forwards',
+            transition: 'box-shadow 0.5s ease',
+            boxShadow: (isPumpActive || isPupukActive || isSolenoidActive)
+              ? '0 0 28px rgba(16, 185, 129, 0.6), 0 8px 32px rgba(0,0,0,0.45)'
+              : undefined,
+          }}
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>🔧 {t('override_panel')}</h3>
             {isAnyOverrideActive && (
