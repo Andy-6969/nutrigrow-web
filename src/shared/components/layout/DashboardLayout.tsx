@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Map, Activity, Leaf, Calendar, Wrench, Cpu,
   Bell, Settings, ChevronLeft, ChevronRight, Menu, X,
-  Sun, Moon, LogOut, Loader2, Users, MapPin, FlaskConical
+  Sun, Moon, LogOut, Loader2, Users, MapPin, FlaskConical, Bug
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { APP_NAME } from '@/shared/lib/constants';
@@ -22,6 +22,7 @@ const navItemDefs = [
   { id: 'monitoring',      tKey: 'nav_monitoring',       icon: Activity,        href: '/monitoring' },
   { id: 'eco-savings',     tKey: 'nav_eco_savings',      icon: Leaf,            href: '/eco-savings' },
   { id: 'schedules',       tKey: 'nav_schedules',        icon: Calendar,        href: '/schedules' },
+  { id: 'scouting',        tKey: 'nav_scouting',         icon: Bug,             href: '/scouting' },
   { id: 'recipes',         tKey: 'nav_recipes',          icon: FlaskConical,    href: '/recipes' },
   { id: 'devices',         tKey: 'nav_devices',          icon: Cpu,             href: '/devices' },
   { id: 'farms',           tKey: 'nav_farms',            icon: MapPin,          href: '/farms' },

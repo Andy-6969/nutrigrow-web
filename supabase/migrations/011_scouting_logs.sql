@@ -50,3 +50,28 @@ CREATE TRIGGER trg_scouting_logs_updated_at
     BEFORE UPDATE ON public.scouting_logs
     FOR EACH ROW
     EXECUTE PROCEDURE update_scouting_logs_updated_at();
+
+-- ── Setup Storage Bucket untuk Foto Scouting ─────────────────────────────────
+
+-- 1. Buat bucket baru bernama 'scouting_images' dan set public = true
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('scouting_images', 'scouting_images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 2. Beri izin baca (SELECT) untuk publik (karena kita set public = true di atas)
+DROP POLICY IF EXISTS "Public Access for scouting_images" ON storage.objects;
+CREATE POLICY "Public Access for scouting_images"
+    ON storage.objects FOR SELECT
+    USING ( bucket_id = 'scouting_images' );
+
+-- 3. Beri izin upload (INSERT) untuk user yang login (authenticated)
+DROP POLICY IF EXISTS "Authenticated users can upload scouting_images" ON storage.objects;
+CREATE POLICY "Authenticated users can upload scouting_images"
+    ON storage.objects FOR INSERT
+    WITH CHECK ( bucket_id = 'scouting_images' AND auth.role() = 'authenticated' );
+
+-- 4. Beri izin hapus (DELETE) untuk user yang login (authenticated)
+DROP POLICY IF EXISTS "Authenticated users can delete scouting_images" ON storage.objects;
+CREATE POLICY "Authenticated users can delete scouting_images"
+    ON storage.objects FOR DELETE
+    USING ( bucket_id = 'scouting_images' AND auth.role() = 'authenticated' );
