@@ -83,6 +83,45 @@ export const recipeService = {
     }
   },
 
+  /** Update recipe name/description and optionally upsert phases */
+  async updateRecipe(
+    id: string,
+    payload: Partial<Pick<NutrientRecipe, 'name' | 'description'>>,
+    phases?: RecipePhase[]
+  ): Promise<{ error: string | null }> {
+    try {
+      const { error: recipeError } = await supabase
+        .from('nutrient_recipes')
+        .update(payload)
+        .eq('id', id);
+
+      if (recipeError) throw recipeError;
+
+      if (phases && phases.length > 0) {
+        // Update each phase individually
+        for (const phase of phases) {
+          const { error: phaseError } = await supabase
+            .from('recipe_phases')
+            .update({
+              ec_target_min: phase.ec_target_min,
+              ec_target_max: phase.ec_target_max,
+              ph_target_min: phase.ph_target_min,
+              ph_target_max: phase.ph_target_max,
+              water_volume_liters: phase.water_volume_liters,
+            })
+            .eq('id', phase.id);
+
+          if (phaseError) throw phaseError;
+        }
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[recipeService] updateRecipe failed:', err);
+      return { error: err.message || String(err) };
+    }
+  },
+
   /** Delete a recipe (cascade will handle phases) */
   async deleteRecipe(id: string): Promise<{ error: string | null }> {
     try {

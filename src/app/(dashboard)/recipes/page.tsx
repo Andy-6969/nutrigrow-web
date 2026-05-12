@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FlaskConical, Plus, Search, MoreVertical, Droplet, Sprout } from 'lucide-react';
+import { FlaskConical, Plus, Search, MoreVertical, Droplet, Sprout, Download } from 'lucide-react';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useT } from '@/shared/context/LanguageContext';
 import { recipeService } from '@/shared/services/recipeService';
@@ -10,6 +10,8 @@ import { cn } from '@/shared/lib/utils';
 import { useRouter } from 'next/navigation';
 import { PLANT_PROFILES } from '@/shared/services/growthStageService';
 import RecipeFormModal from './RecipeFormModal';
+import RecipeDetailModal from './RecipeDetailModal';
+import { exportRecipesToCSV } from '@/shared/utils/exportUtils';
 
 export default function RecipesPage() {
   const t = useT();
@@ -19,6 +21,7 @@ export default function RecipesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<NutrientRecipe | null>(null);
 
   useEffect(() => {
     async function loadRecipes() {
@@ -44,9 +47,15 @@ export default function RecipesPage() {
   ) => {
     const { data, error } = await recipeService.createRecipe(recipePayload, phasesPayload);
     if (error) throw new Error(error);
-    if (data) {
-      setRecipes([data, ...recipes]);
-    }
+    if (data) setRecipes([data, ...recipes]);
+  };
+
+  const handleDeleteRecipe = (id: string) => {
+    setRecipes(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleUpdateRecipe = (updated: NutrientRecipe) => {
+    setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r));
   };
 
   return (
@@ -63,13 +72,25 @@ export default function RecipesPage() {
           </p>
         </div>
         
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="btn-premium px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2 shadow-lg shadow-primary-500/20 bg-primary-600 hover:bg-primary-500"
-        >
-          <Plus className="w-5 h-5" />
-          Buat Resep Baru
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="btn-premium px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2 shadow-lg shadow-primary-500/20 bg-primary-600 hover:bg-primary-500"
+          >
+            <Plus className="w-5 h-5" />
+            Buat Resep Baru
+          </button>
+          {recipes.length > 0 && (
+            <button
+              onClick={() => exportRecipesToCSV(filteredRecipes)}
+              className="px-4 py-2 rounded-xl font-semibold flex items-center gap-2 border transition-colors hover:bg-white/10 text-sm"
+              style={{ borderColor: 'var(--surface-border)', color: 'var(--surface-text-muted)' }}
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -174,7 +195,7 @@ export default function RecipesPage() {
                 
                 <div className="pt-4 border-t border-white/5 flex gap-2">
                   <button 
-                    onClick={() => alert(`Fitur "Lihat Detail" untuk resep ${recipe.name} akan segera hadir!`)}
+                    onClick={() => setSelectedRecipe(recipe)}
                     className="flex-1 py-2 text-sm font-semibold rounded-xl bg-primary-500/10 text-primary-600 hover:bg-primary-500/20 transition-colors"
                   >
                     Lihat Detail
@@ -192,13 +213,22 @@ export default function RecipesPage() {
         </div>
       )}
 
-      {/* Form Modal */}
       {profile && (
         <RecipeFormModal 
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveRecipe}
           farmId={profile.farm_id || ''}
+        />
+      )}
+
+      {selectedRecipe && (
+        <RecipeDetailModal
+          recipe={selectedRecipe}
+          isOpen={!!selectedRecipe}
+          onClose={() => setSelectedRecipe(null)}
+          onDelete={handleDeleteRecipe}
+          onUpdate={handleUpdateRecipe}
         />
       )}
     </div>

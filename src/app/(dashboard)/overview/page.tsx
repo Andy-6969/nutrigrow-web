@@ -58,6 +58,7 @@ export default function OverviewPage() {
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
   const [animKey, setAnimKey] = useState(0);
   const [isOverriding, setIsOverriding] = useState(false);
+  const [activeOverrides, setActiveOverrides] = useState<import('@/shared/types/global.types').OverrideLog[]>([]);
   const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'fertigation'>('water');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,17 +87,19 @@ export default function OverviewPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [weatherRes, zonesRes, sensorsRes, savingsRes] = await Promise.allSettled([
+        const [weatherRes, zonesRes, sensorsRes, savingsRes, activeRes] = await Promise.allSettled([
           fetchWeather(),
           sensorService.getZones(),
           sensorService.getAllSensorData(),
           sensorService.getEcoSavings(),
+          overrideService.getActiveOverrides(),
         ]);
 
         if (weatherRes.status === 'fulfilled') setWeather(weatherRes.value);
         if (zonesRes.status === 'fulfilled') setZones(zonesRes.value);
         if (sensorsRes.status === 'fulfilled') setSensorDataMap(sensorsRes.value);
         if (savingsRes.status === 'fulfilled') setEcoSavings(savingsRes.value);
+        if (activeRes.status === 'fulfilled') setActiveOverrides(activeRes.value);
       } catch (err) {
         console.error('Failed to load overview data:', err);
       }
@@ -110,9 +113,14 @@ export default function OverviewPage() {
       const updatedZone = payload.new as Zone;
       setZones(prev => prev.map(z => z.id === updatedZone.id ? updatedZone : z));
     });
+    overrideService.subscribeToOverrides(async () => {
+      const active = await overrideService.getActiveOverrides();
+      setActiveOverrides(active);
+    });
     return () => {
       sensorService.unsubscribeFromSensorUpdates();
       sensorService.unsubscribeFromZoneUpdates();
+      overrideService.unsubscribeFromOverrides();
     };
   }, []);
 
@@ -276,12 +284,26 @@ export default function OverviewPage() {
   const animCondition = toCondition(selectedZone?.status);
   const multiZone   = zones.length > 1;
 
+  const activeOverride = selectedZone ? activeOverrides.find(o => o.zone_id === selectedZone.id) : null;
+  const isRunning = !!activeOverride;
+
   const handleManualOverride = async () => {
     if (!selectedZone) return;
     setIsOverriding(true);
-    const svcMode: 'water' | 'fertigation' = irrigationMode === 'water' ? 'water' : 'fertigation';
+    
     try {
-      await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', svcMode);
+      if (isRunning && activeOverride) {
+        // Mode: STOP
+        await overrideService.stopOverride(activeOverride.id);
+      } else {
+        // Mode: START
+        const svcMode: 'water' | 'fertigation' = irrigationMode === 'water' ? 'water' : 'fertigation';
+        await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', svcMode);
+      }
+      
+      // Refresh active overrides
+      const active = await overrideService.getActiveOverrides();
+      setActiveOverrides(active);
     } catch (err) {
       console.error('[override] Failed:', err);
     } finally {
@@ -749,31 +771,45 @@ export default function OverviewPage() {
           </div>
 
           <button onClick={() => {
-              if (window.confirm(t('common_lang_code') === 'id' ? `Mulai penyiraman manual untuk ${selectedZone?.name}?` : 'Start manual watering?')) {
+              const confirmMsg = isRunning 
+                ? (t('common_lang_code') === 'id' ? `Hentikan penyiraman untuk ${selectedZone?.name}?` : 'Stop watering?')
+                : (t('common_lang_code') === 'id' ? `Mulai penyiraman manual untuk ${selectedZone?.name}?` : 'Start manual watering?');
+              
+              if (window.confirm(confirmMsg)) {
                 handleManualOverride();
               }
             }} disabled={isOverriding}
             className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
-              isOverriding ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl')}
-            style={!isOverriding ? { borderColor: selectedMode.borderColor } : { borderColor: 'var(--surface-border)' }}
+              isOverriding ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl',
+              isRunning && !isOverriding && 'border-red-500/50 hover:shadow-red-500/20')}
+            style={!isOverriding && !isRunning ? { borderColor: selectedMode.borderColor } : undefined}
           >
-            <div className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-500"
-              style={{ background: `linear-gradient(135deg, ${selectedMode.color}, ${selectedMode.color}88, ${selectedMode.color})` }} />
+            <div className={cn("absolute inset-0 transition-opacity duration-500", 
+              isRunning ? "opacity-30 bg-red-600" : "opacity-20 group-hover:opacity-100")}
+              style={!isRunning ? { background: `linear-gradient(135deg, ${selectedMode.color}, ${selectedMode.color}88, ${selectedMode.color})` } : undefined} />
+            
             <div className="absolute inset-[2px] rounded-[22px] flex flex-col items-center justify-center gap-3 z-10"
               style={{ background: 'var(--surface-bg)' }}>
-              <div className="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl text-3xl"
+              
+              <div className={cn("w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl text-3xl",
+                isRunning && "bg-red-500/20 shadow-red-500/40")}
                 style={isOverriding ? { backgroundColor: `${selectedMode.color}20`, boxShadow: `0 0 30px ${selectedMode.color}88` } : undefined}>
-                {isOverriding
-                  ? <Power className="w-8 h-8 animate-pulse" style={{ color: selectedMode.color }} />
-                  : <span className="group-hover:scale-110 transition-transform duration-200">{selectedMode.emoji}</span>
-                }
+                
+                {isOverriding ? (
+                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: isRunning ? '#ef4444' : selectedMode.color }} />
+                ) : isRunning ? (
+                  <Power className="w-8 h-8 text-red-500 animate-pulse" />
+                ) : (
+                  <span className="group-hover:scale-110 transition-transform duration-200">{selectedMode.emoji}</span>
+                )}
               </div>
+
               <div className="text-center">
-                <p className="font-mono font-bold tracking-widest text-lg" style={textMain}>
-                  {isOverriding ? t('overview_watering') : t('overview_manual_override')}
+                <p className={cn("font-mono font-bold tracking-widest text-lg", isRunning ? "text-red-500" : "text-[var(--surface-text)]")}>
+                  {isOverriding ? t('override_processing') : isRunning ? (t('common_lang_code') === 'id' ? 'MATIKAN POMPA' : 'STOP PUMP') : t('overview_manual_override')}
                 </p>
                 <p className="text-xs mt-1 uppercase tracking-widest" style={textMuted}>
-                  {isOverriding ? (t('common_lang_code') === 'id' ? 'Proses Berjalan' : 'Running Process') : (selectedZone?.name.split(' - ')[1] || t('overview_water_now'))}
+                  {isOverriding ? (t('common_lang_code') === 'id' ? 'Tunggu Sebentar...' : 'Processing...') : isRunning ? (t('common_lang_code') === 'id' ? 'Sedang Menyiram' : 'Currently Watering') : (selectedZone?.name.split(' - ')[1] || t('overview_water_now'))}
                 </p>
               </div>
             </div>

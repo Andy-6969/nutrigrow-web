@@ -13,11 +13,13 @@ export type ScoutingPayload = {
 export const scoutingService = {
   async getLogs(farmId?: string): Promise<ScoutingLog[]> {
     try {
+      // Use !inner to ensure it stays a LEFT JOIN even if we filter by zones.farm_id
+      // This prevents rows from being excluded if the zone record is missing or inaccessible
       let query = supabase
         .from('scouting_logs')
         .select(`
           *,
-          zones ( name, farm_id ),
+          zones!inner ( name, farm_id ),
           user_profiles ( full_name )
         `)
         .order('created_at', { ascending: false });
@@ -27,13 +29,30 @@ export const scoutingService = {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        // If !inner failed (maybe no zones at all), try a loose select
+        console.warn('[scoutingService] getLogs with !inner failed, retrying without filter:', error);
+        const { data: looseData, error: looseError } = await supabase
+          .from('scouting_logs')
+          .select('*, zones(name, farm_id), user_profiles(full_name)')
+          .order('created_at', { ascending: false });
+        
+        if (looseError) throw looseError;
+        return (looseData || []).map((row: any) => ({
+          ...row,
+          zone_name: row.zones?.name || 'Zona Tidak Diketahui',
+          user_name: row.user_profiles?.full_name || 'Operator Lapangan'
+        })) as ScoutingLog[];
+      }
 
-      return (data || []).map((row: any) => ({
+      const mappedLogs = (data || []).map((row: any) => ({
         ...row,
-        zone_name: row.zones?.name,
+        zone_name: row.zones?.name || 'Zona Tidak Diketahui',
         user_name: row.user_profiles?.full_name || 'Operator Lapangan'
       })) as ScoutingLog[];
+
+      console.log(`[scoutingService] Fetched ${mappedLogs.length} logs for farm: ${farmId || 'ALL'}`);
+      return mappedLogs;
     } catch (error) {
       console.error('Error fetching scouting logs:', error);
       return [];

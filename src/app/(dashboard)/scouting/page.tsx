@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info, Upload, Image as ImageIcon } from 'lucide-react';
+import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info, Upload, Image as ImageIcon, Download } from 'lucide-react';
 import { useT } from '@/shared/context/LanguageContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { scoutingService, type ScoutingPayload } from '@/shared/services/scoutingService';
@@ -10,6 +10,7 @@ import type { ScoutingLog, Zone, ScoutingIssueType, ScoutingSeverity, ScoutingSt
 import { cn } from '@/shared/lib/utils';
 import { useToast } from '@/shared/context/ToastContext';
 import { PageHeaderSkeleton } from '@/shared/components/Skeleton';
+import { exportScoutingToCSV } from '@/shared/utils/exportUtils';
 
 const TYPE_COLORS: Record<ScoutingIssueType, { bg: string, text: string, icon: any }> = {
   hama: { bg: 'bg-rose-500/20', text: 'text-rose-500', icon: Bug },
@@ -28,7 +29,7 @@ const SEVERITY_COLORS: Record<ScoutingSeverity, string> = {
 
 export default function ScoutingPage() {
   const t = useT();
-  const { canAccess } = useRBAC();
+  const { canAccess, user } = useRBAC();
   const { success, error: showError } = useToast();
 
   const [logs, setLogs] = useState<ScoutingLog[]>([]);
@@ -49,14 +50,24 @@ export default function ScoutingPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [fetchedLogs, fetchedZones] = await Promise.all([
-      scoutingService.getLogs(),
-      sensorService.getZones()
-    ]);
-    setLogs(fetchedLogs);
-    setZones(fetchedZones);
-    setLoading(false);
-  }, []);
+    try {
+      const userFarmId = (canAccess('farm_management') || !user?.farm_id) ? undefined : user.farm_id;
+      
+      console.log(`[ScoutingPage] Fetching logs for farm: ${userFarmId || 'ALL'}`);
+      
+      const [fetchedLogs, fetchedZones] = await Promise.all([
+        scoutingService.getLogs(userFarmId),
+        sensorService.getZones()
+      ]);
+      
+      setLogs(fetchedLogs);
+      setZones(fetchedZones);
+    } catch (err) {
+      console.error('[ScoutingPage] Error in fetchData:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.farm_id, canAccess]);
 
   useEffect(() => {
     fetchData();
@@ -118,7 +129,7 @@ export default function ScoutingPage() {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery 
       || l.notes.toLowerCase().includes(searchLower)
-      || l.zone_name?.toLowerCase().includes(searchLower)
+      || (l.zone_name?.toLowerCase().includes(searchLower) ?? false)
       || l.issue_type.toLowerCase().includes(searchLower);
 
     return matchesFilter && matchesSearch;
@@ -137,13 +148,24 @@ export default function ScoutingPage() {
             Laporkan temuan hama, penyakit, atau kerusakan alat di kebun secara real-time.
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all"
-        >
-          <Camera className="w-4 h-4" /> Laporan Baru
-        </button>
-      </div>
+        <div className="flex gap-2">
+          {logs.length > 0 && (
+            <button
+              onClick={() => exportScoutingToCSV(filteredLogs)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors hover:bg-white/10"
+              style={{ borderColor: 'var(--surface-border)', color: 'var(--surface-text-muted)' }}
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all"
+          >
+            <Camera className="w-4 h-4" /> Laporan Baru
+          </button>
+        </div>
 
       {/* Toolbar: Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
