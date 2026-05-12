@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useAuth } from '@/shared/context/AuthContext';
 import type { AppRole } from '@/shared/types/global.types';
 
@@ -11,10 +12,10 @@ export function useRBAC() {
   /**
    * Check if the current user has one of the allowed roles.
    */
-  const hasRole = (...allowedRoles: AppRole[]): boolean => {
+  const hasRole = useCallback((...allowedRoles: AppRole[]): boolean => {
     if (!role) return false;
     return allowedRoles.includes(role);
-  };
+  }, [role]);
 
   /**
    * Feature-gate map based on the NutriGrow privilege matrix:
@@ -29,7 +30,7 @@ export function useRBAC() {
    * | user_management   |      ✅     |      ❌       |  ❌   |
    * | settings          |      ✅     |      ❌       |  ❌   |
    */
-  const canAccess = (
+  const canAccess = useCallback((
     feature:
       | 'monitoring'
       | 'override'
@@ -72,7 +73,7 @@ export function useRBAC() {
       default:
         return false;
     }
-  };
+  }, [role, hasRole]);
 
   /**
    * Check if user can issue commands to a specific zone.
@@ -80,11 +81,11 @@ export function useRBAC() {
    * pemilik_kebun → only their assigned_zones
    * guest → none
    */
-  const canControlZone = (zoneId: string): boolean => {
+  const canControlZone = useCallback((zoneId: string): boolean => {
     if (!role || role === 'guest') return false;
     if (role === 'super_admin') return true;
     return profile?.assigned_zones?.includes(zoneId) ?? false;
-  };
+  }, [role, profile?.assigned_zones]);
 
   return {
     /** Full profile from user_profiles table */

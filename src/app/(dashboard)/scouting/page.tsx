@@ -29,7 +29,7 @@ const SEVERITY_COLORS: Record<ScoutingSeverity, string> = {
 
 export default function ScoutingPage() {
   const t = useT();
-  const { canAccess, user } = useRBAC();
+  const { canAccess, user, isLoading: isAuthLoading } = useRBAC();
   const { success, error: showError } = useToast();
 
   const [logs, setLogs] = useState<ScoutingLog[]>([]);
@@ -49,6 +49,7 @@ export default function ScoutingPage() {
   const [isUploading, setIsUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
+    if (isAuthLoading) return;
     setLoading(true);
     try {
       const userFarmId = (canAccess('farm_management') || !user?.farm_id) ? undefined : user.farm_id;
@@ -67,7 +68,7 @@ export default function ScoutingPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.farm_id, canAccess]);
+  }, [user?.farm_id, canAccess, isAuthLoading]);
 
   useEffect(() => {
     fetchData();
