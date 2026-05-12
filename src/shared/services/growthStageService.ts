@@ -180,18 +180,18 @@ export function generateScheduleNames(
   zoneName: string,
   zoneId: string,
   _plantCount: number
-): Array<{ name: string; cron_expression: string; duration_minutes: number; zone_id: string; is_active: boolean; include_fertigation: boolean }> {
+): Array<{ name: string; cron_expression: string; duration_minutes: number; zone_id: string; is_active: boolean; mode: 'water' | 'fertilizer' | 'solenoid' }> {
   return phase.irrigationTimes.map((time, i) => {
     const [hour, minute] = time.split(':').map(Number);
     const cron = `${minute} ${hour} * * *`;
-    const hasFertigation = phase.ecTargetMin > 0;
+    const isFertilizer = phase.ecTargetMin > 0;
     return {
       name: `[Auto] ${zoneName} — ${phase.name} Sesi ${i + 1} (${time})`,
       zone_id: zoneId,
       cron_expression: cron,
       duration_minutes: Math.round(phase.waterVolumeLiters * 5), // estimasi 5 mnt/0.2L
       is_active: true,
-      include_fertigation: hasFertigation,
+      mode: isFertilizer ? 'fertilizer' : 'water',
     };
   });
 }

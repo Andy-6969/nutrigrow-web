@@ -11,6 +11,7 @@ import { mqttClient } from './mqtt/client';
 import { actuatorRouter } from './routes/actuator';
 import { sensorRouter } from './routes/sensor';
 import { healthRouter } from './routes/health';
+import { startScheduler } from './cron/irrigationScheduler';
 
 const app  = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -46,6 +47,9 @@ app.listen(PORT, () => {
 
 // Sambungkan MQTT setelah server start
 mqttClient.connect();
+
+// Jalankan Scheduler
+startScheduler();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

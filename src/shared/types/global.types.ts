@@ -168,7 +168,7 @@ export interface IrrigationLog {
   id: string;
   zone_id: string;
   zone_name: string;
-  mode: 'water' | 'fertigation';
+  mode: 'water' | 'fertigation' | 'fertilizer' | 'solenoid';
   source: 'auto' | 'manual_override' | 'schedule';
   duration_minutes: number;
   water_volume_liters: number;
@@ -185,6 +185,7 @@ export interface Schedule {
   duration_minutes: number;
   is_active: boolean;
   include_fertigation: boolean;
+  mode: 'water' | 'fertilizer' | 'solenoid';
   created_at?: string;
   updated_at?: string;
   

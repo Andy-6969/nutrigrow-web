@@ -50,7 +50,7 @@ export async function runMidnightPhaseCheck() {
             name: `[Autopilot] ${activePhase.name} Sesi ${i + 1}`,
             cron_expression: `${minute} ${hour} * * *`,
             duration_minutes: durationMinutes,
-            include_fertigation: activePhase.ecTargetMin > 0,
+            mode: activePhase.ecTargetMin > 0 ? 'fertilizer' : 'water',
             is_active: true
           };
         });

@@ -37,7 +37,7 @@ export default function SchedulesPage() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
     name: '', zone_id: '', cron_expression: '0 6 * * *',
-    duration_minutes: 15, include_fertigation: false,
+    duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer' | 'solenoid',
   });
 
   const { canControlZone } = useRBAC();
@@ -123,13 +123,19 @@ export default function SchedulesPage() {
 
   const openCreate = () => {
     setEditingSchedule(null);
-    setFormData({ name: '', zone_id: '', cron_expression: '0 6 * * *', duration_minutes: 15, include_fertigation: false });
+    setFormData({ name: '', zone_id: '', cron_expression: '0 6 * * *', duration_minutes: 15, mode: 'water' });
     setShowForm(true);
   };
 
   const openEdit = (s: Schedule) => {
     setEditingSchedule(s);
-    setFormData({ name: s.name, zone_id: s.zone_id, cron_expression: s.cron_expression, duration_minutes: s.duration_minutes, include_fertigation: s.include_fertigation });
+    setFormData({ 
+      name: s.name, 
+      zone_id: s.zone_id, 
+      cron_expression: s.cron_expression, 
+      duration_minutes: s.duration_minutes, 
+      mode: (s.mode || (s.include_fertigation ? 'fertilizer' : 'water')) as any 
+    });
     setShowForm(true);
   };
 
@@ -361,6 +367,8 @@ export default function SchedulesPage() {
                         title={`${slot.name} — ${slot.duration_minutes}m`}
                       >
                         {slot.name.replace('Penyiraman ', '').replace('Fertigasi ', '🌿 ')}
+                        {slot.mode === 'fertilizer' && ' 🧪'}
+                        {slot.mode === 'solenoid' && ' 🚿'}
                       </button>
                     ))}
                   </div>
@@ -408,7 +416,9 @@ export default function SchedulesPage() {
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {cron.label}</span>
                     <span>📍 {schedule.zone_name}</span>
                     <span>⏱️ {schedule.duration_minutes} {t('override_minutes')}</span>
-                    {schedule.include_fertigation && <span className="text-primary-600 font-medium">🌿 {t('override_nutrition')}</span>}
+                    {schedule.mode === 'fertilizer' && <span className="text-purple-600 font-medium">🧪 {t('overview_fertilizer_liquid')}</span>}
+                    {schedule.mode === 'solenoid' && <span className="text-amber-600 font-medium">🚿 Solenoid Valve</span>}
+                    {schedule.mode === 'water' && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
                   </div>
                 </div>
 
@@ -490,14 +500,30 @@ export default function SchedulesPage() {
                 </p>
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox" checked={formData.include_fertigation}
-                  onChange={e => setFormData(p => ({ ...p, include_fertigation: e.target.checked }))}
-                  className="w-4 h-4 rounded text-primary-500 focus:ring-primary-500"
-                />
-                <span className="text-xs" style={{ color: 'var(--surface-text)' }}>🌿 {t('schedules_fertigation')}</span>
-              </label>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium" style={{ color: 'var(--surface-text)' }}>Mode Penyiraman</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'water',      label: 'Air Biasa',   icon: '💧', color: 'text-blue-500' },
+                    { id: 'fertilizer', label: 'Pupuk Cair',  icon: '🧪', color: 'text-purple-500' },
+                    { id: 'solenoid',   label: 'Solenoid',    icon: '🚿', color: 'text-amber-500' },
+                  ].map(m => (
+                    <button
+                      key={m.id} type="button"
+                      onClick={() => setFormData(p => ({ ...p, mode: m.id as any }))}
+                      className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-xl border transition-all",
+                        formData.mode === m.id 
+                          ? "bg-primary-500/10 border-primary-500 shadow-sm" 
+                          : "glass-sm border-transparent opacity-60 hover:opacity-100"
+                      )}
+                    >
+                      <span className="text-lg">{m.icon}</span>
+                      <span className={cn("text-[10px] font-bold", formData.mode === m.id ? "text-primary-500" : "text-gray-400")}>{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={isSaving} className="flex-1 flex justify-center items-center py-3 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-all glow-sm hover:glow-md active:scale-[0.98] disabled:opacity-70">
