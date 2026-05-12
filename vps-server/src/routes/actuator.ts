@@ -15,7 +15,7 @@ const ToggleSchema = z.object({
   action:   z.enum(['on', 'off']),
   mode:     z.enum(['water', 'fertigation']).optional().default('water'),
   duration: z.number().int().min(1).max(120).optional(), // menit, max 2 jam
-  target:   z.enum(['pump', 'solenoid']).optional(),
+  target:   z.enum(['pump', 'solenoid', 'pump_pupuk']).optional(),
 });
 
 // ─── POST /actuator/toggle ────────────────────────────────────
