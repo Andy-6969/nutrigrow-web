@@ -13,48 +13,39 @@ export type ScoutingPayload = {
 export const scoutingService = {
   async getLogs(farmId?: string): Promise<ScoutingLog[]> {
     try {
-      // Use !inner to ensure it stays a LEFT JOIN even if we filter by zones.farm_id
-      // This prevents rows from being excluded if the zone record is missing or inaccessible
-      let query = supabase
+      console.log(`[scoutingService] Fetching logs. Filter farmId: ${farmId || 'NONE'}`);
+      
+      // Fetch logs with basic joins
+      const { data, error } = await supabase
         .from('scouting_logs')
         .select(`
           *,
-          zones!inner ( name, farm_id ),
+          zones ( name, farm_id ),
           user_profiles ( full_name )
         `)
         .order('created_at', { ascending: false });
 
-      if (farmId) {
-        query = query.eq('zones.farm_id', farmId);
-      }
-
-      const { data, error } = await query;
       if (error) {
-        // If !inner failed (maybe no zones at all), try a loose select
-        console.warn('[scoutingService] getLogs with !inner failed, retrying without filter:', error);
-        const { data: looseData, error: looseError } = await supabase
-          .from('scouting_logs')
-          .select('*, zones(name, farm_id), user_profiles(full_name)')
-          .order('created_at', { ascending: false });
-        
-        if (looseError) throw looseError;
-        return (looseData || []).map((row: any) => ({
-          ...row,
-          zone_name: row.zones?.name || 'Zona Tidak Diketahui',
-          user_name: row.user_profiles?.full_name || 'Operator Lapangan'
-        })) as ScoutingLog[];
+        console.error('[scoutingService] Database error:', error);
+        throw error;
       }
 
-      const mappedLogs = (data || []).map((row: any) => ({
+      let logs = (data || []).map((row: any) => ({
         ...row,
         zone_name: row.zones?.name || 'Zona Tidak Diketahui',
         user_name: row.user_profiles?.full_name || 'Operator Lapangan'
       })) as ScoutingLog[];
 
-      console.log(`[scoutingService] Fetched ${mappedLogs.length} logs for farm: ${farmId || 'ALL'}`);
-      return mappedLogs;
+      // Filter by farmId if provided (Manual filter to be safer than complex joins)
+      if (farmId) {
+        const originalCount = logs.length;
+        logs = logs.filter(log => (log as any).zones?.farm_id === farmId);
+        console.log(`[scoutingService] Filtered by farmId ${farmId}: ${originalCount} -> ${logs.length}`);
+      }
+
+      return logs;
     } catch (error) {
-      console.error('Error fetching scouting logs:', error);
+      console.error('Error in getLogs:', error);
       return [];
     }
   },
