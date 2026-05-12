@@ -184,7 +184,7 @@ export interface Schedule {
   cron_expression: string;
   duration_minutes: number;
   is_active: boolean;
-  include_fertigation: boolean;
+  include_fertigation?: boolean;
   mode: 'water' | 'fertilizer' | 'solenoid';
   created_at?: string;
   updated_at?: string;
