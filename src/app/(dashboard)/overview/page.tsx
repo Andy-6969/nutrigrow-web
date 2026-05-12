@@ -59,7 +59,7 @@ export default function OverviewPage() {
   const [animKey, setAnimKey] = useState(0);
   const [isOverriding, setIsOverriding] = useState(false);
   const [activeOverrides, setActiveOverrides] = useState<import('@/shared/types/global.types').OverrideLog[]>([]);
-  const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'fertigation'>('water');
+  const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'solenoid'>('water');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; admin1: string; country: string; latitude: number; longitude: number }>>([]);
@@ -80,7 +80,7 @@ export default function OverviewPage() {
   const IRRIGATION_MODES = [
     { id: 'water' as const,       label: t('override_mode_water'), emoji: '💧', desc: t('overview_water_desc'),    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
     { id: 'fertilizer' as const,  label: t('overview_fertilizer_liquid'),emoji: '🧪', desc: t('overview_fertilizer_desc'), color: '#a78bfa', glowColor: 'rgba(167,139,250,0.35)', borderColor: 'rgba(167,139,250,0.5)', bgColor: 'rgba(167,139,250,0.08)' },
-    { id: 'fertigation' as const, label: t('override_mode_fertigation'),emoji: '⚗️',desc: t('overview_fertigation_desc'),   color: '#34d399', glowColor: 'rgba(52,211,153,0.35)',  borderColor: 'rgba(52,211,153,0.5)',  bgColor: 'rgba(52,211,153,0.08)'  },
+    { id: 'solenoid' as const,    label: t('override_solenoid'),   emoji: '🚿', desc: 'Buka katup area spesifik',     color: '#fbbf24', glowColor: 'rgba(251,191,36,0.35)',  borderColor: 'rgba(251,191,36,0.5)',  bgColor: 'rgba(251,191,36,0.08)'  },
   ];
   const selectedMode = IRRIGATION_MODES.find(m => m.id === irrigationMode)!;
 
@@ -294,11 +294,11 @@ export default function OverviewPage() {
     try {
       if (isRunning && activeOverride) {
         // Mode: STOP
-        await overrideService.stopOverride(activeOverride.id);
+        await overrideService.stopOverride(activeOverride.id, activeOverride.mode as any);
       } else {
         // Mode: START
-        const svcMode: 'water' | 'fertigation' = irrigationMode === 'water' ? 'water' : 'fertigation';
-        await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', svcMode);
+        const target = irrigationMode === 'water' ? 'pump' : irrigationMode === 'fertilizer' ? 'pump_pupuk' : 'solenoid';
+        await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', 'water', target);
       }
       
       // Refresh active overrides
