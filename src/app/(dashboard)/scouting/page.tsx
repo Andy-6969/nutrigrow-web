@@ -166,6 +166,7 @@ export default function ScoutingPage() {
             <Camera className="w-4 h-4" /> Laporan Baru
           </button>
         </div>
+      </div>
 
       {/* Toolbar: Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
