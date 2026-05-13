@@ -80,7 +80,7 @@ export default function OverviewPage() {
   const IRRIGATION_MODES = [
     { id: 'water' as const,       label: t('override_mode_water'), emoji: '💧', desc: t('overview_water_desc'),    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
     { id: 'fertilizer' as const,  label: t('overview_fertilizer_liquid'),emoji: '🧪', desc: t('overview_fertilizer_desc'), color: '#a78bfa', glowColor: 'rgba(167,139,250,0.35)', borderColor: 'rgba(167,139,250,0.5)', bgColor: 'rgba(167,139,250,0.08)' },
-    { id: 'solenoid' as const,    label: t('override_solenoid'),   emoji: '🚿', desc: 'Buka katup area spesifik',     color: '#fbbf24', glowColor: 'rgba(251,191,36,0.35)',  borderColor: 'rgba(251,191,36,0.5)',  bgColor: 'rgba(251,191,36,0.08)'  },
+    { id: 'solenoid' as const,    label: t('override_solenoid'),   emoji: '🚿', desc: t('overview_solenoid_desc'),     color: '#fbbf24', glowColor: 'rgba(251,191,36,0.35)',  borderColor: 'rgba(251,191,36,0.5)',  bgColor: 'rgba(251,191,36,0.08)'  },
   ];
   const selectedMode = IRRIGATION_MODES.find(m => m.id === irrigationMode)!;
 
@@ -317,7 +317,7 @@ export default function OverviewPage() {
       } else {
         // Mode: START
         const target = irrigationMode === 'water' ? 'pump' : irrigationMode === 'fertilizer' ? 'pump_pupuk' : 'solenoid';
-        await overrideService.startOverride(selectedZone.id, 5, 'Manual dari HUD', 'water', target);
+        await overrideService.startOverride(selectedZone.id, 5, t('overview_manual_hud'), 'water', target);
       }
       
       // Refresh active overrides
@@ -651,12 +651,12 @@ export default function OverviewPage() {
 
           <div className="absolute top-0 text-center w-full z-20 px-12" style={slideInStyle} key={`header-${animKey}`}>
             <h2 className="text-3xl font-extrabold tracking-[0.2em] uppercase" style={textMain}>
-              {selectedZone ? (selectedZone.name.split(' - ')[1] || selectedZone.name) : 'Main Greenhouse'}
+              {selectedZone ? (selectedZone.name.split(' - ')[1] || selectedZone.name) : t('overview_main_greenhouse')}
             </h2>
             <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
               <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: zoneStatus?.color ?? '#10b981' }} />
               <span className="text-xs font-mono tracking-widest" style={{ color: '#10b981' }}>
-                SYSTEM ONLINE // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
+                {t('overview_system_online')} // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
               </span>
               {selectedZone && zoneStatus && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -669,7 +669,7 @@ export default function OverviewPage() {
               <p className="text-[11px] font-mono mt-1" style={textSubtle}>
                 {selectedZone.crop_type} · {selectedZone.area_ha} ha
                 {selectedZone.plant_count ? ` · Pop: ${selectedZone.plant_count}` : ''}
-                {selectedZone.planting_date ? ` · HST: ${Math.max(0, Math.floor((new Date().getTime() - new Date(selectedZone.planting_date).getTime()) / (1000 * 60 * 60 * 24)))} Hari` : ''}
+                {selectedZone.planting_date ? ` · ${t('overview_days_after_planting')}: ${Math.max(0, Math.floor((new Date().getTime() - new Date(selectedZone.planting_date).getTime()) / (1000 * 60 * 60 * 24)))} ${t('overview_days')}` : ''}
               </p>
             )}
           </div>
@@ -691,25 +691,25 @@ export default function OverviewPage() {
             </div>
 
             {[
-              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: 'Soil' },
-              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: 'Temp' },
+              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: t('overview_soil_moisture') },
+              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: t('overview_air_temp') },
               { 
                 pos: 'bottom-[25%] left-[0%] sm:left-[4%]',  
                 icon: <span className="w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center text-purple-400 font-bold text-[8px] sm:text-[10px]">pH</span>, 
                 val: liveSensor?.ph ? `${liveSensor.ph}` : '--', 
-                label: 'Solu pH',
+                label: t('overview_nutrient_ph'),
                 extra: liveSensor?.ph != null
                   ? liveSensor.ph < 5.5 ? { label: t('common_lang_code') === 'id' ? 'ASAM' : 'ACID', color: '#f87171' }
                   : liveSensor.ph > 6.5 ? { label: t('common_lang_code') === 'id' ? 'BASA' : 'BASE', color: '#fbbf24' }
                   : { label: 'OPTIMAL', color: '#4ade80' }
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
-              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: 'Humid' },
-              { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: 'Solu EC',
+              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: t('overview_air_humidity') },
+              { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: t('overview_nutrient_ec'),
                 extra: liveSensor?.tds != null
-                  ? liveSensor.tds < 1.2 ? { label: 'LOW', color: '#60a5fa' }
-                  : liveSensor.tds > 2.8 ? { label: 'HIGH', color: '#f87171' }
-                  : { label: 'IDEAL', color: '#4ade80' }
+                  ? liveSensor.tds < 1.2 ? { label: t('overview_ec_low'), color: '#60a5fa' }
+                  : liveSensor.tds > 2.8 ? { label: t('overview_ec_high'), color: '#f87171' }
+                  : { label: t('overview_ec_ideal'), color: '#4ade80' }
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
             ].map((b, i) => (
