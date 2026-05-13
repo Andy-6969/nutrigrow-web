@@ -118,10 +118,11 @@ export const translations = {
     monitoring_title:         'Monitoring Sensor Real-Time',
     monitoring_current:       'Pembacaan Saat Ini',
     monitoring_chart:         'Grafik Historis Sensor',
-    monitoring_soil_moisture: 'Kelembaban Tanah',
+    monitoring_soil_moisture: 'Kelembaban Nutrisi',
     monitoring_temperature:   'Suhu Udara',
     monitoring_humidity:      'Kelembaban Udara',
-    monitoring_ph:            'pH Tanah',
+    monitoring_ph:            'pH Nutrisi',
+    monitoring_tds:           'EC Nutrisi',
 
     // ── Override ──────────────────────────────────────────────
     override_title:           'Manual Override',
@@ -495,10 +496,11 @@ export const translations = {
     monitoring_title:         'Real-Time Sensor Monitoring',
     monitoring_current:       'Current Reading',
     monitoring_chart:         'Sensor History Chart',
-    monitoring_soil_moisture: 'Soil Moisture',
+    monitoring_soil_moisture: 'Nutrient Moisture',
     monitoring_temperature:   'Air Temperature',
     monitoring_humidity:      'Air Humidity',
-    monitoring_ph:            'Soil pH',
+    monitoring_ph:            'Nutrient pH',
+    monitoring_tds:           'Nutrient EC',
 
     // ── Override ──────────────────────────────────────────────
     override_title:           'Manual Override',

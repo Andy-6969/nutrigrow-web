@@ -162,7 +162,7 @@ export default function MonitoringPage() {
               <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--surface-text-muted)' }}>
                 📡 {t('monitoring_current')} — {activeZone?.name}
               </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.soilMoisture.key)}
                   value={sensorData.soil_moisture || 0}
@@ -194,6 +194,14 @@ export default function MonitoringPage() {
                   icon={Beaker}
                   threshold={SENSOR_THRESHOLDS.ph}
                   iconColor="#F59E0B"
+                />
+                <GaugeCard
+                  label={t(SENSOR_THRESHOLDS.tds.key)}
+                  value={sensorData.tds || 0}
+                  unit={SENSOR_THRESHOLDS.tds.unit}
+                  icon={Activity}
+                  threshold={SENSOR_THRESHOLDS.tds}
+                  iconColor="#8B5CF6"
                 />
               </div>
             </div>
@@ -237,7 +245,8 @@ export default function MonitoringPage() {
                   <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
                   <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
                   <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
-                  <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name="pH" />
+                  <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.ph.key)} />
+                  <Line type="monotone" dataKey="tds" stroke="#8B5CF6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.tds.key)} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

@@ -21,7 +21,8 @@ export const SENSOR_THRESHOLDS = {
   soilMoisture: { low: 30, high: 75, unit: '%', key: 'monitoring_soil_moisture' },
   temperature:  { low: 20, high: 35, unit: '°C', key: 'monitoring_temperature' },
   humidity:     { low: 40, high: 80, unit: '%', key: 'monitoring_humidity' },
-  ph:           { low: 5.5, high: 7.5, unit: '', key: 'monitoring_ph' },
+  ph:           { low: 5.5, high: 6.5, unit: '', key: 'monitoring_ph' },
+  tds:          { low: 1.2, high: 2.8, unit: 'mS/cm', key: 'monitoring_tds' },
 } as const;
 
 // Navigation items
