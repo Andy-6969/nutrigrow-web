@@ -175,6 +175,17 @@ export default function OverviewPage() {
     autoFetch();
   }, [weather, weeklyOverride, t]);
 
+  const translateWindDir = (dir?: string) => {
+    if (!dir) return '--';
+    const map: Record<string, string> = {
+      'N': 'Utara', 'S': 'Selatan', 'E': 'Timur', 'W': 'Barat',
+      'NE': 'T. Laut', 'SE': 'Tenggara', 'NW': 'B. Laut', 'SW': 'B. Daya',
+      'NNE': 'U. T. Laut', 'ENE': 'T. T. Laut', 'ESE': 'T. Tenggara', 'SSE': 'S. Tenggara',
+      'SSW': 'S. B. Daya', 'WSW': 'B. B. Daya', 'WNW': 'B. B. Laut', 'NNW': 'U. B. Laut'
+    };
+    return map[dir] || dir;
+  };
+
   useEffect(() => {
     const onScroll = () => {
       const scrollTop = window.scrollY;
@@ -457,8 +468,9 @@ export default function OverviewPage() {
                 <p className="font-mono text-sm font-semibold" style={textMain}>{weather?.wind_speed ?? '--'} <span className="text-[9px] font-normal" style={textSubtle}>km/j</span></p>
               </div>
               <div style={subCard} className="p-2.5 flex flex-col items-center text-center">
-                <Compass className="w-4 h-4 text-amber-400 mb-1.5" />
-                <p className="text-[11px] font-semibold leading-tight" style={textMain}>{weather?.wind_direction ?? '--'}</p>
+                <Compass className="w-4 h-4 text-amber-400 mb-1" />
+                <p className="text-[11px] font-bold leading-tight" style={textMain}>{translateWindDir(weather?.wind_direction)}</p>
+                <p className="text-[8px] uppercase tracking-tighter mt-0.5" style={textSubtle}>Arah Angin</p>
               </div>
             </div>
 
