@@ -677,8 +677,8 @@ export default function OverviewPage() {
                 val: liveSensor?.ph ? `${liveSensor.ph}` : '--', 
                 label: 'Solu pH',
                 extra: liveSensor?.ph != null
-                  ? liveSensor.ph < 5.5 ? { label: 'ACID', color: '#f87171' }
-                  : liveSensor.ph > 6.5 ? { label: 'BASE', color: '#fbbf24' }
+                  ? liveSensor.ph < 5.5 ? { label: 'ASAM', color: '#f87171' }
+                  : liveSensor.ph > 6.5 ? { label: 'BASA', color: '#fbbf24' }
                   : { label: 'OPTIMAL', color: '#4ade80' }
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
