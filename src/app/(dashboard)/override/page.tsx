@@ -467,14 +467,24 @@ export default function OverridePage() {
             )}
             
             {!isLoading && [...activeOverrides, ...overrideHistory].length > 5 && (
-              <button
-                onClick={() => setVisibleCount(prev => prev >= [...activeOverrides, ...overrideHistory].length ? 5 : prev + 5)}
-                className="w-full py-2.5 mt-2 rounded-xl text-sm font-bold transition-colors bg-primary-500/10 text-primary-600 hover:bg-primary-500/20"
-              >
-                {visibleCount >= [...activeOverrides, ...overrideHistory].length 
-                  ? t('override_show_less') 
-                  : t('override_show_more')}
-              </button>
+              <div className="flex gap-3 mt-2">
+                {visibleCount < [...activeOverrides, ...overrideHistory].length && (
+                  <button
+                    onClick={() => setVisibleCount(prev => prev + 5)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors bg-primary-500/10 text-primary-600 hover:bg-primary-500/20"
+                  >
+                    {t('override_show_more')}
+                  </button>
+                )}
+                {visibleCount > 5 && (
+                  <button
+                    onClick={() => setVisibleCount(5)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors bg-gray-500/10 text-gray-600 hover:bg-gray-500/20"
+                  >
+                    {t('override_show_less')}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
