@@ -415,14 +415,15 @@ export default function OverridePage() {
         </div>
 
         {/* Override Log */}
-        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-base font-semibold mb-4 flex items-center gap-2 shrink-0" style={{ color: 'var(--surface-text)' }}>
-            📋 {t('override_history')}
-          </h3>
-          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
-            {isLoading ? (
-               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_history')}</div>
-            ) : [...activeOverrides, ...overrideHistory].map(log => (
+        <div className="relative h-full w-full min-h-[600px] lg:min-h-0">
+          <div className="lg:absolute lg:inset-0 glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+            <h3 className="text-base font-semibold mb-4 flex items-center gap-2 shrink-0" style={{ color: 'var(--surface-text)' }}>
+              📋 {t('override_history')}
+            </h3>
+            <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
+              {isLoading ? (
+                 <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_history')}</div>
+              ) : [...activeOverrides, ...overrideHistory].slice(0, 10).map(log => (
               <div key={log.id} className="glass-sm p-4 flex items-start gap-3 hover:scale-[1.01] transition-transform shrink-0">
                 <div className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shrink-0',
@@ -468,5 +469,6 @@ export default function OverridePage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
