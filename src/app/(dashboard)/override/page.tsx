@@ -466,12 +466,14 @@ export default function OverridePage() {
               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_no_history')}</div>
             )}
             
-            {!isLoading && [...activeOverrides, ...overrideHistory].length > visibleCount && (
+            {!isLoading && [...activeOverrides, ...overrideHistory].length > 5 && (
               <button
-                onClick={() => setVisibleCount(prev => prev + 5)}
+                onClick={() => setVisibleCount(prev => prev >= [...activeOverrides, ...overrideHistory].length ? 5 : prev + 5)}
                 className="w-full py-2.5 mt-2 rounded-xl text-sm font-bold transition-colors bg-primary-500/10 text-primary-600 hover:bg-primary-500/20"
               >
-                Tampilkan Lebih Banyak
+                {visibleCount >= [...activeOverrides, ...overrideHistory].length 
+                  ? t('override_show_less') 
+                  : t('override_show_more')}
               </button>
             )}
           </div>

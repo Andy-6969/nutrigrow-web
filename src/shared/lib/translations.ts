@@ -155,6 +155,8 @@ export const translations = {
     override_solenoid:        'Solenoid Valve',
     override_solenoid_on:     'BUKA SOLENOID',
     override_solenoid_off:    'TUTUP SOLENOID',
+    override_show_more:       'Tampilkan Lebih Banyak',
+    override_show_less:       'Tampilkan Lebih Sedikit',
 
     // ── Schedules ─────────────────────────────────────────────
     schedules_title:          'Jadwal Fertigasi',
@@ -533,6 +535,8 @@ export const translations = {
     override_solenoid:        'Solenoid Valve',
     override_solenoid_on:     'OPEN SOLENOID',
     override_solenoid_off:    'CLOSE SOLENOID',
+    override_show_more:       'Show More',
+    override_show_less:       'Show Less',
 
     // ── Schedules ─────────────────────────────────────────────
     schedules_title:          'Fertigation Schedules',
