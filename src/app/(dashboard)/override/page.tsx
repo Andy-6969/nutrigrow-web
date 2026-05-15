@@ -26,6 +26,7 @@ export default function OverridePage() {
   const [isActivating, setIsActivating] = useState<ActuatorTarget | null>(null);
   const [now, setNow] = useState(Date.now());
   const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(5);
   const { canControlZone } = useRBAC();
   const t = useT();
 
@@ -415,14 +416,14 @@ export default function OverridePage() {
         </div>
 
         {/* Override Log */}
-        <div className="glass p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
           <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
             📋 {t('override_history')}
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-3 flex-1">
             {isLoading ? (
                <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_history')}</div>
-            ) : [...activeOverrides, ...overrideHistory].map(log => (
+            ) : [...activeOverrides, ...overrideHistory].slice(0, visibleCount).map(log => (
               <div key={log.id} className="glass-sm p-4 flex items-start gap-3 hover:scale-[1.01] transition-transform">
                 <div className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shrink-0',
@@ -432,7 +433,7 @@ export default function OverridePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--surface-text)' }}>{log.zone_name}</p>
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--surface-text)' }}>{zones.find(z => z.id === log.zone_id)?.name || log.zone_name}</p>
                     <span className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
                       log.status === 'active' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
@@ -463,6 +464,15 @@ export default function OverridePage() {
             ))}
             {activeOverrides.length === 0 && overrideHistory.length === 0 && !isLoading && (
               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_no_history')}</div>
+            )}
+            
+            {!isLoading && [...activeOverrides, ...overrideHistory].length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount(prev => prev + 5)}
+                className="w-full py-2.5 mt-2 rounded-xl text-sm font-bold transition-colors bg-primary-500/10 text-primary-600 hover:bg-primary-500/20"
+              >
+                Tampilkan Lebih Banyak
+              </button>
             )}
           </div>
         </div>
