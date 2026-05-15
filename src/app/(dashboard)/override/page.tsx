@@ -415,7 +415,7 @@ export default function OverridePage() {
         </div>
 
         {/* Override Log */}
-        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full max-h-[500px]" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
           <h3 className="text-base font-semibold mb-4 flex items-center gap-2 shrink-0" style={{ color: 'var(--surface-text)' }}>
             📋 {t('override_history')}
           </h3>
