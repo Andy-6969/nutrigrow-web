@@ -26,7 +26,6 @@ export default function OverridePage() {
   const [isActivating, setIsActivating] = useState<ActuatorTarget | null>(null);
   const [now, setNow] = useState(Date.now());
   const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
-  const [visibleCount, setVisibleCount] = useState(5);
   const { canControlZone } = useRBAC();
   const t = useT();
 
@@ -416,15 +415,15 @@ export default function OverridePage() {
         </div>
 
         {/* Override Log */}
-        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
-          <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
+        <div className="glass p-6 opacity-0 animate-fade-in-up flex flex-col h-full max-h-[500px]" style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}>
+          <h3 className="text-base font-semibold mb-4 flex items-center gap-2 shrink-0" style={{ color: 'var(--surface-text)' }}>
             📋 {t('override_history')}
           </h3>
-          <div className="space-y-3 flex-1">
+          <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
             {isLoading ? (
                <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_loading_history')}</div>
-            ) : [...activeOverrides, ...overrideHistory].slice(0, visibleCount).map(log => (
-              <div key={log.id} className="glass-sm p-4 flex items-start gap-3 hover:scale-[1.01] transition-transform">
+            ) : [...activeOverrides, ...overrideHistory].map(log => (
+              <div key={log.id} className="glass-sm p-4 flex items-start gap-3 hover:scale-[1.01] transition-transform shrink-0">
                 <div className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm shrink-0',
                   log.status === 'active' ? 'bg-primary-500 animate-pulse' : 'bg-gray-400'
@@ -464,27 +463,6 @@ export default function OverridePage() {
             ))}
             {activeOverrides.length === 0 && overrideHistory.length === 0 && !isLoading && (
               <div className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>{t('override_no_history')}</div>
-            )}
-            
-            {!isLoading && [...activeOverrides, ...overrideHistory].length > 5 && (
-              <div className="flex gap-3 mt-2">
-                {visibleCount < [...activeOverrides, ...overrideHistory].length && (
-                  <button
-                    onClick={() => setVisibleCount(prev => prev + 5)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors bg-primary-500/10 text-primary-600 hover:bg-primary-500/20"
-                  >
-                    {t('override_show_more')}
-                  </button>
-                )}
-                {visibleCount > 5 && (
-                  <button
-                    onClick={() => setVisibleCount(5)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors bg-gray-500/10 text-gray-600 hover:bg-gray-500/20"
-                  >
-                    {t('override_show_less')}
-                  </button>
-                )}
-              </div>
             )}
           </div>
         </div>
