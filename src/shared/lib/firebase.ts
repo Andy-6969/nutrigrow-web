@@ -10,14 +10,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const isFirebaseConfigured = 
+  firebaseConfig.apiKey && 
+  firebaseConfig.projectId && 
+  firebaseConfig.appId;
 
-// Initialize Messaging (hanya di sisi client)
+// Initialize Firebase only if config is provided
+let app;
 let messaging: Messaging | undefined;
 
-if (typeof window !== 'undefined') {
-  messaging = getMessaging(app);
+if (isFirebaseConfigured) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    if (typeof window !== 'undefined') {
+      messaging = getMessaging(app);
+    }
+  } catch (error) {
+    console.error('[Firebase] Initialization failed:', error);
+  }
+} else {
+  console.warn('[Firebase] Configuration missing. Push notifications will be disabled.');
 }
 
 export { app, messaging };
