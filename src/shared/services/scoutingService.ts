@@ -27,8 +27,21 @@ export const scoutingService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('[scoutingService] getLogs DB error:', error.code, error.message, error.details);
-        return [];
+        console.error('[scoutingService] getLogs DB error:', JSON.stringify(error));
+        // Coba lagi tanpa join jika ada error relasi
+        const { data: simple, error: err2 } = await supabase
+          .from('scouting_logs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (err2) {
+          console.error('[scoutingService] getLogs fallback error:', JSON.stringify(err2));
+          return [];
+        }
+        return (simple || []).map((row: any) => ({
+          ...row,
+          zone_name: row.zone_id,
+          user_name: 'Operator',
+        })) as ScoutingLog[];
       }
 
       console.log(`[scoutingService] Raw rows fetched: ${data?.length ?? 0}`);
@@ -60,16 +73,29 @@ export const scoutingService = {
         if (user) payload.user_id = user.id;
       }
 
-      console.log('[scoutingService] Creating log:', { zone_id: payload.zone_id, issue_type: payload.issue_type, has_photo: !!payload.photo_url });
+      // Sanitasi payload: hapus field string kosong agar tidak konflik dgn DB constraint
+      const cleanPayload: Record<string, any> = {
+        zone_id:    payload.zone_id,
+        issue_type: payload.issue_type,
+        severity:   payload.severity,
+        notes:      payload.notes,
+        status:     'open',
+        user_id:    payload.user_id,
+      };
+      if (payload.photo_url && payload.photo_url.trim() !== '') {
+        cleanPayload.photo_url = payload.photo_url;
+      }
+
+      console.log('[scoutingService] Creating log:', cleanPayload);
 
       const { data, error } = await supabase
         .from('scouting_logs')
-        .insert([{ ...payload, status: 'open' }])
+        .insert([cleanPayload])
         .select('id')
         .single();
 
       if (error) {
-        console.error('[scoutingService] createLog error:', error.code, error.message, error.details);
+        console.error('[scoutingService] createLog error:', JSON.stringify(error));
         return { error: `${error.message} (code: ${error.code})` };
       }
 
