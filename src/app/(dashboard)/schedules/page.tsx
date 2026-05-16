@@ -60,17 +60,31 @@ export default function SchedulesPage() {
     usesFertilizer: false,
   });
 
-  // ── Custom Phase State ──
-  const [customPhases, setCustomPhases] = useState<any[]>([
+  // ── Custom Phase State — persist ke localStorage ──
+  const STORAGE_KEY = 'nutrigrow_custom_phases';
+  const defaultPhases = [
     { id: 1, name: 'Fase A', dayStart: 0, dayEnd: 14, emoji: '🌱', color: '#4ade80', frequencyPerDay: 2, irrigationTimes: ['07:00', '17:00'], waterVolumeLiters: 0.3, ecTargetMin: 0, ecTargetMax: 0 },
     { id: 2, name: 'Fase B', dayStart: 15, dayEnd: 30, emoji: '🌿', color: '#22c55e', frequencyPerDay: 2, irrigationTimes: ['07:00', '17:00'], waterVolumeLiters: 0.5, ecTargetMin: 1.0, ecTargetMax: 1.5 },
-  ]);
+  ];
+  const [customPhases, setCustomPhasesRaw] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : defaultPhases;
+    } catch { return defaultPhases; }
+  });
+  const setCustomPhases = (phases: any[]) => {
+    setCustomPhasesRaw(phases);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(phases)); } catch {}
+  };
+
+  // ── Replace old toggle ──
+  const [replaceOld, setReplaceOld] = useState(false);
 
   const addPhase = () => {
     const lastPhase = customPhases[customPhases.length - 1];
     const newStart = lastPhase ? lastPhase.dayEnd + 1 : 0;
     setCustomPhases([...customPhases, {
-      id: customPhases.length + 1,
+      id: Date.now(),
       name: `Fase ${String.fromCharCode(65 + customPhases.length)}`,
       dayStart: newStart,
       dayEnd: newStart + 14,
@@ -193,23 +207,47 @@ export default function SchedulesPage() {
 
     // ── MODE MANUAL / CUSTOM ──────────────────────────────────────────
     if (scheduleMode === 'manual' || plantType === 'custom') {
-      const times = manualParams.irrigationTimes.filter(t => t && t.length >= 4);
+      // Tentukan fase aktif dari customPhases berdasarkan hari sekarang
+      const activeCustomPhase = plantType === 'custom' && plantingDate
+        ? customPhases.find(p => currentDay >= p.dayStart && currentDay <= p.dayEnd) ?? customPhases[0]
+        : null;
+
+      // Ambil waktu penyiraman — prioritaskan dari fase kustom jika ada
+      const times = (activeCustomPhase?.irrigationTimes ?? manualParams.irrigationTimes)
+        .filter((t: string) => t && t.length >= 4);
+
       if (times.length === 0) { alert('Pilih minimal 1 waktu penyiraman.'); return; }
-      if (!confirm(`Terapkan ${times.length} jadwal kustom untuk zona ini?`)) return;
+
+      const duration = activeCustomPhase
+        ? Math.max(10, Math.round(activeCustomPhase.waterVolumeLiters * 5))
+        : manualParams.duration_minutes;
+      const isFertilizer = activeCustomPhase
+        ? activeCustomPhase.ecTargetMin > 0
+        : manualParams.usesFertilizer;
+
+      if (!confirm(`Terapkan ${times.length} jadwal untuk zona ini${replaceOld ? ' (jadwal lama akan dihapus)' : ''}?`)) return;
 
       setIsGenerating(true);
       try {
         const zone = zones.find(z => z.id === growthZoneId);
-        const mode = manualParams.usesFertilizer ? 'fertilizer' : 'water';
+        const mode = isFertilizer ? 'fertilizer' : 'water';
+
+        // Hapus jadwal lama zona jika replaceOld aktif
+        if (replaceOld) {
+          const oldSchedules = schedules.filter(s => s.zone_id === growthZoneId);
+          for (const old of oldSchedules) {
+            await scheduleService.deleteSchedule(old.id);
+          }
+        }
 
         for (const timeStr of times) {
           const [h, m] = timeStr.split(':').map(Number);
           const cron = `${m} ${h} * * *`;
           await scheduleService.createSchedule({
-            name: `[Custom] ${zone?.name ?? 'Zona'} — ${timeStr}`,
+            name: `[Custom] ${zone?.name ?? 'Zona'} — ${activeCustomPhase?.name ?? ''} ${timeStr}`.trim(),
             zone_id: growthZoneId,
             cron_expression: cron,
-            duration_minutes: manualParams.duration_minutes,
+            duration_minutes: duration,
             mode,
             is_active: true,
           });
@@ -228,10 +266,17 @@ export default function SchedulesPage() {
 
     // ── MODE OTOMATIS ─────────────────────────────────────────────────
     if (!plantingDate || !activePhase) return;
-    if (!confirm(`Ini akan membuat ${activePhase.irrigationTimes.length} jadwal baru untuk zona ini. Lanjutkan?`)) return;
+    if (!confirm(`Membuat ${activePhase.irrigationTimes.length} jadwal baru${replaceOld ? ' (jadwal lama akan dihapus)' : ''}. Lanjutkan?`)) return;
 
     setIsGenerating(true);
     try {
+      // Hapus jadwal lama zona jika replaceOld aktif
+      if (replaceOld) {
+        const oldSchedules = schedules.filter(s => s.zone_id === growthZoneId);
+        for (const old of oldSchedules) {
+          await scheduleService.deleteSchedule(old.id);
+        }
+      }
       const zone = zones.find(z => z.id === growthZoneId);
       const newSchedules = generateScheduleNames(activePhase, zone?.name ?? 'Zona', growthZoneId, plantCount);
       for (const s of newSchedules) {
@@ -531,33 +576,55 @@ export default function SchedulesPage() {
         )}
 
         {/* Action buttons */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <button
-            onClick={handleGenerateAutoSchedule}
-            disabled={!plantingDate || !growthZoneId || !activePhase || isGenerating}
-            className={cn(
-              'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all',
-              'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg',
-              'disabled:opacity-40 disabled:cursor-not-allowed'
+        <div className="space-y-3">
+          {/* Replace toggle */}
+          <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+            <div
+              onClick={() => setReplaceOld(r => !r)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${
+                replaceOld ? 'bg-red-500' : 'bg-white/10'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                replaceOld ? 'translate-x-4' : 'translate-x-0.5'
+              }`} />
+            </div>
+            <span className="text-[11px] font-medium" style={{ color: replaceOld ? '#f87171' : 'var(--surface-text-muted)' }}>
+              {replaceOld ? '🗑️ Hapus jadwal lama zona ini sebelum buat baru' : 'Tambahkan ke jadwal yang ada'}
+            </span>
+          </label>
+
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              onClick={handleGenerateAutoSchedule}
+              disabled={!growthZoneId || (scheduleMode === 'auto' && plantType !== 'custom' ? (!plantingDate || !activePhase) : false) || isGenerating}
+              className={cn(
+                'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all',
+                plantType === 'custom' || scheduleMode === 'manual'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 shadow-lg'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg',
+                'disabled:opacity-40 disabled:cursor-not-allowed'
+              )}
+            >
+              {isGenerating
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : generateSuccess
+                ? <CheckCircle2 className="w-4 h-4" />
+                : <Zap className="w-4 h-4" />}
+              {isGenerating ? 'Membuat Jadwal...' : generateSuccess ? 'Jadwal Dibuat!' :
+                plantType === 'custom' ? 'Terapkan Jadwal Kustom' : 'Terapkan Jadwal Otomatis'}
+            </button>
+            <button
+              onClick={() => { setPlantingDate(''); setGrowthZoneId(''); setPlantType('tomato'); setPlantCount(100); setScheduleMode('auto'); setReplaceOld(false); }}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all glass-sm hover:scale-105"
+              style={{ color: 'var(--surface-text-muted)' }}
+            >
+              🔄 Reset
+            </button>
+            {!plantingDate && scheduleMode === 'auto' && plantType !== 'custom' && (
+              <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>← Isi tanggal tanam untuk memulai</p>
             )}
-          >
-            {isGenerating
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : generateSuccess
-              ? <CheckCircle2 className="w-4 h-4" />
-              : <Zap className="w-4 h-4" />}
-            {isGenerating ? 'Membuat Jadwal...' : generateSuccess ? 'Jadwal Dibuat!' : 'Terapkan Jadwal Otomatis'}
-          </button>
-          <button
-            onClick={() => { setPlantingDate(''); setGrowthZoneId(''); setPlantType('tomato'); setPlantCount(100); }}
-            className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all glass-sm hover:scale-105"
-            style={{ color: 'var(--surface-text-muted)' }}
-          >
-            🔄 Reset ke Manual
-          </button>
-          {!plantingDate && (
-            <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>← Isi tanggal tanam untuk memulai</p>
-          )}
+          </div>
         </div>
       </div>
 
