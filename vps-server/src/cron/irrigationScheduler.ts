@@ -47,60 +47,44 @@ export async function runScheduleCheck() {
       if (isCronMatch(schedule.cron_expression)) {
         console.log(`[Scheduler] Triggering: ${schedule.name} for ${schedule.zones?.name || schedule.zone_id} at ${timeStr}`);
         
-        // 2. Tentukan target pompa berdasarkan mode (solenoid TIDAK lagi sebagai mode tersendiri)
-        const isFertilizer = schedule.mode === 'fertilizer';
-        const pumpTarget   = isFertilizer ? 'pump_pupuk' : 'pump';
-        const irrigMode    = isFertilizer ? 'fertigation' : 'water';
-        const zoneId       = schedule.zone_id;
-        const durationSec  = schedule.duration_minutes * 60;
+        // 2. Tentukan target berdasarkan mode
+        // Mode mapping: water -> pump, fertilizer -> pump_pupuk, solenoid -> solenoid
+        const target = schedule.mode === 'fertilizer' ? 'pump_pupuk' : schedule.mode === 'solenoid' ? 'solenoid' : 'pump';
+        const mode   = schedule.mode === 'fertilizer' ? 'fertigation' : 'water';
 
-        // 3a. Buka solenoid TERLEBIH DAHULU (solenoid menutup 5 detik setelah pompa berhenti)
-        const solenoidCommand = {
+        // 3. Kirim MQTT Command
+        const zoneId = schedule.zone_id;
+        const command = {
           action: 'on',
-          mode: irrigMode,
-          target: 'solenoid',
-          duration_seconds: durationSec + 5,
-          auto_stop: true,
-          timestamp: Date.now(),
-          source: 'schedule_auto_solenoid'
-        };
-        mqttClient.publish(zoneId, solenoidCommand);
-        console.log(`[Scheduler] Solenoid opened automatically for zone ${zoneId}`);
-
-        // 3b. Nyalakan pompa setelah jeda 1 detik (solenoid sudah terbuka)
-        await new Promise(res => setTimeout(res, 1000));
-
-        const pumpCommand = {
-          action: 'on',
-          mode: irrigMode,
-          target: pumpTarget,
-          duration_seconds: durationSec,
+          mode: mode,
+          target: target,
+          duration_seconds: schedule.duration_minutes * 60,
           auto_stop: true,
           timestamp: Date.now(),
           source: 'schedule'
         };
-        mqttClient.publish(zoneId, pumpCommand);
+
+        mqttClient.publish(zoneId, command);
 
         // 4. Update status zona ke database
-        const zoneStatus = irrigMode === 'fertigation' ? 'fertigating' : 'irrigating';
+        const zoneStatus = mode === 'fertigation' ? 'fertigating' : 'irrigating';
         await supabase.from('zones').update({ status: zoneStatus }).eq('id', zoneId);
 
         // 5. Catat ke irrigation_logs
         await supabase.from('irrigation_logs').insert({
           zone_id: zoneId,
           zone_name: schedule.zones?.name || `Zone ${zoneId}`,
-          mode: irrigMode,
+          mode: mode,
           source: 'schedule',
           duration_minutes: schedule.duration_minutes,
           status: 'running',
           started_at: new Date().toISOString(),
         });
 
-        // 6. Kirim notifikasi
-        const modeLabel = isFertilizer ? 'Pupuk Cair' : 'Air Biasa';
+        // 6. Kirim notifikasi (opsional)
         await supabase.from('notifications').insert({
           title: 'Penyiraman Terjadwal',
-          body: `Memulai ${schedule.name} (${modeLabel}) di ${schedule.zones?.name || 'Zona'} — Solenoid terbuka otomatis.`,
+          body: `Memulai ${schedule.name} di ${schedule.zones?.name || 'Zona'}.`,
           type: 'cycle_complete',
           zone_name: schedule.zones?.name,
           is_read: false

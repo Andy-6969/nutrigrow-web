@@ -37,7 +37,7 @@ export default function SchedulesPage() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
     name: '', zone_id: '', cron_expression: '0 6 * * *',
-    duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer',
+    duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer' | 'solenoid',
   });
 
   const { canControlZone } = useRBAC();
@@ -50,15 +50,6 @@ export default function SchedulesPage() {
   const [growthZoneId, setGrowthZoneId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
-
-  // ── Manual Override State ──
-  const [scheduleMode, setScheduleMode] = useState<'auto' | 'manual'>('auto');
-  const [manualParams, setManualParams] = useState({
-    irrigationTimes: ['07:00', '17:00'],
-    waterVolumeLiters: 0.3,
-    duration_minutes: 15,
-    usesFertilizer: false,
-  });
 
   const handleZoneSelect = (zoneId: string) => {
     setGrowthZoneId(zoneId);
@@ -169,45 +160,7 @@ export default function SchedulesPage() {
 
   // ── Generate jadwal otomatis dari fase pertumbuhan ──
   const handleGenerateAutoSchedule = async () => {
-    if (!growthZoneId) return;
-
-    // ── MODE MANUAL ──────────────────────────────────────────────────
-    if (scheduleMode === 'manual') {
-      const times = manualParams.irrigationTimes.filter(t => t && t.length >= 4);
-      if (times.length === 0) { alert('Pilih minimal 1 waktu penyiraman.'); return; }
-      if (!confirm(`Membuat ${times.length} jadwal manual untuk zona yang dipilih. Lanjutkan?`)) return;
-
-      setIsGenerating(true);
-      try {
-        const zone = zones.find(z => z.id === growthZoneId);
-        const mode = manualParams.usesFertilizer ? 'fertilizer' : 'water';
-
-        for (const timeStr of times) {
-          const [h, m] = timeStr.split(':').map(Number);
-          const cron = `${m} ${h} * * *`;
-          await scheduleService.createSchedule({
-            name: `${manualParams.usesFertilizer ? 'Pupuk Cair' : 'Penyiraman'} ${timeStr} — ${zone?.name ?? 'Zona'}`,
-            zone_id: growthZoneId,
-            cron_expression: cron,
-            duration_minutes: manualParams.duration_minutes,
-            mode,
-            is_active: true,
-          });
-        }
-        setGenerateSuccess(true);
-        fetchData();
-        setTimeout(() => setGenerateSuccess(false), 4000);
-      } catch (err) {
-        console.error('Failed to generate manual schedules', err);
-        alert('Gagal membuat jadwal. Coba lagi.');
-      } finally {
-        setIsGenerating(false);
-      }
-      return;
-    }
-
-    // ── MODE OTOMATIS ─────────────────────────────────────────────────
-    if (!plantingDate || !activePhase) return;
+    if (!plantingDate || !growthZoneId || !activePhase) return;
     if (!confirm(`Ini akan membuat ${activePhase.irrigationTimes.length} jadwal baru untuk zona yang dipilih. Lanjutkan?`)) return;
 
     setIsGenerating(true);
@@ -323,152 +276,30 @@ export default function SchedulesPage() {
           </div>
         )}
 
-        {/* Info fase aktif — bisa AUTO atau MANUAL */}
-        {(activePhase || scheduleMode === 'manual') && (
-          <div className="rounded-xl mb-4 overflow-hidden" style={{ border: `1px solid ${scheduleMode === 'manual' ? 'rgba(245,158,11,0.4)' : (activePhase?.color ?? '#10B981') + '30'}` }}>
-
-            {/* Toggle header */}
-            <div className="flex items-center justify-between px-4 py-2.5"
-              style={{ background: scheduleMode === 'manual' ? 'rgba(245,158,11,0.10)' : `${activePhase?.color ?? '#10B981'}0d` }}>
-              <p className="text-[11px] font-bold tracking-wide" style={{ color: scheduleMode === 'manual' ? '#F59E0B' : (activePhase?.color ?? '#10B981') }}>
-                {scheduleMode === 'auto' ? `🤖 Parameter Otomatis — ${activePhase?.name}` : '✏️ Parameter Manual'}
+        {/* Info fase aktif */}
+        {activePhase && (
+          <div className="rounded-xl p-3 mb-4 text-sm grid grid-cols-2 sm:grid-cols-4 gap-3"
+            style={{ background: `${activePhase.color}0d`, border: `1px solid ${activePhase.color}30` }}>
+            <div>
+              <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Waktu Penyiraman</p>
+              <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>
+                {activePhase.irrigationTimes.join(' · ')}
               </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setScheduleMode('auto')}
-                  disabled={!activePhase}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    scheduleMode === 'auto'
-                      ? 'bg-primary-500 text-white'
-                      : 'glass-sm opacity-60 hover:opacity-100'
-                  } disabled:opacity-30 disabled:cursor-not-allowed`}
-                  style={{ color: scheduleMode === 'auto' ? 'white' : 'var(--surface-text-muted)' }}
-                >
-                  🤖 Otomatis
-                </button>
-                <button
-                  onClick={() => {
-                    // Pre-fill manual params dari fase aktif jika tersedia
-                    if (activePhase && scheduleMode === 'auto') {
-                      setManualParams({
-                        irrigationTimes: [...activePhase.irrigationTimes],
-                        waterVolumeLiters: activePhase.waterVolumeLiters,
-                        duration_minutes: activePhase.irrigationTimes.length > 0 ? 15 : 15,
-                        usesFertilizer: activePhase.ecTargetMin > 0,
-                      });
-                    }
-                    setScheduleMode('manual');
-                  }}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    scheduleMode === 'manual'
-                      ? 'bg-amber-500 text-white'
-                      : 'glass-sm opacity-60 hover:opacity-100'
-                  }`}
-                  style={{ color: scheduleMode === 'manual' ? 'white' : 'var(--surface-text-muted)' }}
-                >
-                  ✏️ Manual
-                </button>
-              </div>
             </div>
-
-            {/* Content */}
-            {scheduleMode === 'auto' && activePhase ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4"
-                style={{ background: `${activePhase.color}0d` }}>
-                <div>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Waktu Penyiraman</p>
-                  <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>
-                    {activePhase.irrigationTimes.join(' · ')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Volume / Tanaman</p>
-                  <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>{activePhase.waterVolumeLiters} L</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Total Air (est.)</p>
-                  <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>{(activePhase.waterVolumeLiters * plantCount).toFixed(0)} L</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>EC Target</p>
-                  <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>
-                    {activePhase.ecTargetMin === 0 ? 'Tanpa Pupuk' : `${activePhase.ecTargetMin}–${activePhase.ecTargetMax} mS/cm`}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              // ── MANUAL FORM ────────────────────────────────────────────────
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ background: 'rgba(245,158,11,0.05)' }}>
-                <div>
-                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>⏰ Waktu Penyiraman 1</label>
-                  <input
-                    type="time"
-                    value={manualParams.irrigationTimes[0] || '07:00'}
-                    onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [e.target.value, p.irrigationTimes[1] || ''] }))}
-                    className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
-                    style={{ color: 'var(--surface-text)' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>⏰ Waktu Penyiraman 2 (opsional)</label>
-                  <input
-                    type="time"
-                    value={manualParams.irrigationTimes[1] || ''}
-                    onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0] || '', e.target.value] }))}
-                    className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
-                    style={{ color: 'var(--surface-text)' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>
-                    💧 Durasi Penyiraman: <strong className="text-amber-500">{manualParams.duration_minutes} menit</strong>
-                  </label>
-                  <input
-                    type="range" min={1} max={120} step={1}
-                    value={manualParams.duration_minutes}
-                    onChange={e => setManualParams(p => ({ ...p, duration_minutes: Number(e.target.value) }))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-[10px] mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>
-                    <span>1 mnt</span><span>60 mnt</span><span>120 mnt</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>
-                    🌿 Volume per Tanaman: <strong className="text-amber-500">{manualParams.waterVolumeLiters} L</strong>
-                    <span className="ml-2 font-normal">→ Total: <strong className="text-amber-500">{(manualParams.waterVolumeLiters * plantCount).toFixed(0)} L</strong></span>
-                  </label>
-                  <input
-                    type="range" min={0.1} max={5} step={0.1}
-                    value={manualParams.waterVolumeLiters}
-                    onChange={e => setManualParams(p => ({ ...p, waterVolumeLiters: Number(e.target.value) }))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-[10px] mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>
-                    <span>0.1 L</span><span>2.5 L</span><span>5 L</span>
-                  </div>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold mb-2" style={{ color: 'var(--surface-text-muted)' }}>🧪 Mode Pupuk</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setManualParams(p => ({ ...p, usesFertilizer: false }))}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                        !manualParams.usesFertilizer ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'glass-sm border-transparent opacity-60'
-                      }`}
-                    >💧 Air Biasa</button>
-                    <button
-                      type="button"
-                      onClick={() => setManualParams(p => ({ ...p, usesFertilizer: true }))}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                        manualParams.usesFertilizer ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'glass-sm border-transparent opacity-60'
-                      }`}
-                    >🧪 Pupuk Cair</button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div>
+              <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Volume / Tanaman</p>
+              <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>{activePhase.waterVolumeLiters} L</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>Total Air (est.)</p>
+              <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>{(activePhase.waterVolumeLiters * plantCount).toFixed(0)} L</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-medium" style={{ color: 'var(--surface-text-muted)' }}>EC Target</p>
+              <p className="font-bold text-xs mt-0.5" style={{ color: activePhase.color }}>
+                {activePhase.ecTargetMin === 0 ? 'Tanpa Pupuk' : `${activePhase.ecTargetMin}–${activePhase.ecTargetMax} mS/cm`}
+              </p>
+            </div>
           </div>
         )}
 
@@ -476,12 +307,10 @@ export default function SchedulesPage() {
         <div className="flex flex-wrap gap-3 items-center">
           <button
             onClick={handleGenerateAutoSchedule}
-            disabled={!growthZoneId || (scheduleMode === 'auto' ? (!plantingDate || !activePhase) : false) || isGenerating}
+            disabled={!plantingDate || !growthZoneId || !activePhase || isGenerating}
             className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all',
-              scheduleMode === 'manual'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 shadow-lg'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg',
+              'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg',
               'disabled:opacity-40 disabled:cursor-not-allowed'
             )}
           >
@@ -490,17 +319,16 @@ export default function SchedulesPage() {
               : generateSuccess
               ? <CheckCircle2 className="w-4 h-4" />
               : <Zap className="w-4 h-4" />}
-            {isGenerating ? 'Membuat Jadwal...' : generateSuccess ? 'Jadwal Dibuat!' :
-              scheduleMode === 'manual' ? 'Terapkan Parameter Manual' : 'Terapkan Jadwal Otomatis'}
+            {isGenerating ? 'Membuat Jadwal...' : generateSuccess ? 'Jadwal Dibuat!' : 'Terapkan Jadwal Otomatis'}
           </button>
           <button
-            onClick={() => { setPlantingDate(''); setGrowthZoneId(''); setPlantType('tomato'); setPlantCount(100); setScheduleMode('auto'); }}
+            onClick={() => { setPlantingDate(''); setGrowthZoneId(''); setPlantType('tomato'); setPlantCount(100); }}
             className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all glass-sm hover:scale-105"
             style={{ color: 'var(--surface-text-muted)' }}
           >
-            🔄 Reset
+            🔄 Reset ke Manual
           </button>
-          {!plantingDate && scheduleMode === 'auto' && (
+          {!plantingDate && (
             <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>← Isi tanggal tanam untuk memulai</p>
           )}
         </div>
@@ -540,6 +368,7 @@ export default function SchedulesPage() {
                       >
                         {slot.name.replace('Penyiraman ', '').replace('Fertigasi ', '🌿 ')}
                         {slot.mode === 'fertilizer' && ' 🧪'}
+                        {slot.mode === 'solenoid' && ' 🚿'}
                       </button>
                     ))}
                   </div>
@@ -588,8 +417,8 @@ export default function SchedulesPage() {
                     <span>📍 {schedule.zone_name}</span>
                     <span>⏱️ {schedule.duration_minutes} {t('override_minutes')}</span>
                     {schedule.mode === 'fertilizer' && <span className="text-purple-600 font-medium">🧪 {t('overview_fertilizer_liquid')}</span>}
-                    {(!schedule.mode || schedule.mode === 'water') && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
-                    <span className="text-emerald-600 font-medium text-[10px]">⚡ Solenoid Otomatis</span>
+                    {schedule.mode === 'solenoid' && <span className="text-amber-600 font-medium">🚿 Solenoid Valve</span>}
+                    {schedule.mode === 'water' && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
                   </div>
                 </div>
 
@@ -673,29 +502,27 @@ export default function SchedulesPage() {
 
               <div className="space-y-2">
                 <label className="block text-xs font-medium" style={{ color: 'var(--surface-text)' }}>Mode Penyiraman</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'water',      label: 'Air Biasa',   icon: '💧' },
-                    { id: 'fertilizer', label: 'Pupuk Cair',  icon: '🧪' },
+                    { id: 'water',      label: 'Air Biasa',   icon: '💧', color: 'text-blue-500' },
+                    { id: 'fertilizer', label: 'Pupuk Cair',  icon: '🧪', color: 'text-purple-500' },
+                    { id: 'solenoid',   label: 'Solenoid',    icon: '🚿', color: 'text-amber-500' },
                   ].map(m => (
                     <button
                       key={m.id} type="button"
                       onClick={() => setFormData(p => ({ ...p, mode: m.id as any }))}
                       className={cn(
-                        "flex flex-col items-center gap-1 p-3 rounded-xl border transition-all",
+                        "flex flex-col items-center gap-1 p-2 rounded-xl border transition-all",
                         formData.mode === m.id 
                           ? "bg-primary-500/10 border-primary-500 shadow-sm" 
                           : "glass-sm border-transparent opacity-60 hover:opacity-100"
                       )}
                     >
-                      <span className="text-xl">{m.icon}</span>
+                      <span className="text-lg">{m.icon}</span>
                       <span className={cn("text-[10px] font-bold", formData.mode === m.id ? "text-primary-500" : "text-gray-400")}>{m.label}</span>
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--surface-text-muted)' }}>
-                  ⚡ Solenoid valve terbuka otomatis saat jadwal berjalan
-                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
