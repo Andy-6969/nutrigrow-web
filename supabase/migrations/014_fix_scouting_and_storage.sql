@@ -50,13 +50,19 @@ CREATE POLICY "scouting_logs_update"
     ON public.scouting_logs FOR UPDATE
     USING (auth.uid() IS NOT NULL);
 
--- DELETE: hanya creator atau admin
+-- DELETE: hanya creator atau admin (via tabel roles)
 CREATE POLICY "scouting_logs_delete"
     ON public.scouting_logs FOR DELETE
-    USING (auth.uid() = user_id OR EXISTS (
-        SELECT 1 FROM public.user_profiles up
-        WHERE up.id = auth.uid() AND up.role IN ('super_admin', 'pemilik_kebun')
-    ));
+    USING (
+        auth.uid() = user_id
+        OR EXISTS (
+            SELECT 1
+            FROM public.user_profiles up
+            JOIN public.roles r ON r.id = up.role_id
+            WHERE up.id = auth.uid()
+              AND r.name IN ('super_admin', 'pemilik_kebun')
+        )
+    );
 
 -- ── BAGIAN 3: Trigger updated_at ─────────────────────────────
 
