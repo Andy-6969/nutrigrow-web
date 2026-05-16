@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info, Upload, Image as ImageIcon, Download } from 'lucide-react';
+import { Bug, Camera, Plus, MapPin, Clock, AlertTriangle, CheckCircle2, Search, Filter, Wrench, X, Save, Loader2, Info, Upload, Image as ImageIcon, Download, Trash2 } from 'lucide-react';
 import { useT } from '@/shared/context/LanguageContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { scoutingService, type ScoutingPayload } from '@/shared/services/scoutingService';
@@ -117,6 +117,18 @@ export default function ScoutingPage() {
       success('Status Diperbarui', `Laporan ditandai sebagai ${newStatus}`);
     } else {
       showError('Gagal memperbarui', error);
+    }
+  };
+
+  const handleDeleteLog = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    
+    const { error } = await scoutingService.deleteLog(id);
+    if (!error) {
+      setLogs(prev => prev.filter(l => l.id !== id));
+      success('Laporan Dihapus', 'Data laporan telah dihapus dari sistem.');
+    } else {
+      showError('Gagal menghapus', error);
     }
   };
 
@@ -279,14 +291,28 @@ export default function ScoutingPage() {
                 )}
 
                 {/* Actions */}
-                {!isResolved && canAccess('farm_management') && (
-                  <button
-                    onClick={() => handleUpdateStatus(log.id, 'resolved')}
-                    className="mt-auto w-full py-2 bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Tandai Selesai
-                  </button>
-                )}
+                <div className="mt-auto flex gap-2">
+                  {!isResolved && canAccess('farm_management') && (
+                    <button
+                      onClick={() => handleUpdateStatus(log.id, 'resolved')}
+                      className="flex-1 py-2 bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Selesai
+                    </button>
+                  )}
+                  {canAccess('farm_management') && (
+                    <button
+                      onClick={() => handleDeleteLog(log.id)}
+                      className={cn(
+                        "py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2",
+                        isResolved ? "w-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white" : "px-4 bg-black/5 text-gray-500 hover:bg-red-500/10 hover:text-red-500"
+                      )}
+                      title="Hapus Laporan"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
