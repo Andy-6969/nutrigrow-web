@@ -22,7 +22,7 @@ export const scoutingService = {
         .select(`
           *,
           zones ( name, farm_id ),
-          user_profiles ( full_name )
+          user_profiles ( nama )
         `)
         .order('created_at', { ascending: false });
 
@@ -49,7 +49,7 @@ export const scoutingService = {
       let logs = (data || []).map((row: any) => ({
         ...row,
         zone_name: row.zones?.name ?? 'Zona Tidak Diketahui',
-        user_name: row.user_profiles?.full_name ?? 'Operator Lapangan',
+        user_name: row.user_profiles?.nama ?? 'Operator Lapangan',
       })) as ScoutingLog[];
 
       if (farmId) {
