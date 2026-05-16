@@ -11,6 +11,8 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/shared/lib/supabase';
 import type { UserProfile, AppRole } from '@/shared/types/global.types';
+import { fcmService } from '@/shared/services/fcmService';
+import { useToast } from './ToastContext';
 
 // ─── Context Shape ────────────────────────────────────────────
 interface AuthContextValue {
@@ -140,6 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setProfile(userProfile);
+
+        // Register FCM Token for notifications
+        if (userProfile && typeof window !== 'undefined') {
+          fcmService.requestPermissionAndGetToken(newSession.user.id);
+        }
       } else {
         setSession(null);
         setProfile(null);
