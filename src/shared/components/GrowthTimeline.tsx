@@ -14,17 +14,23 @@ import {
 interface GrowthTimelineProps {
   plantingDate: string;
   plantType: PlantType;
+  customPhases?: GrowthPhase[]; // New prop for custom user phases
   className?: string;
 }
 
-export default function GrowthTimeline({ plantingDate, plantType, className }: GrowthTimelineProps) {
+export default function GrowthTimeline({ plantingDate, plantType, customPhases, className }: GrowthTimelineProps) {
   const currentDay = getDaysSincePlanting(plantingDate);
-  const activePhase = getActivePhase(currentDay, plantType);
-  const profile = PLANT_PROFILES[plantType];
+  
+  // Gunakan customPhases jika ada, jika tidak gunakan profil statis
+  const activePhase = customPhases 
+    ? (customPhases.find(p => currentDay >= p.dayStart && currentDay <= p.dayEnd) ?? null)
+    : getActivePhase(currentDay, plantType);
 
-  // Fasi yang bisa ditampilkan (exclude "Panen" tak terbatas di kalkulasi lebar)
-  const displayPhases = profile.phases.filter(p => p.dayEnd < 900);
-  const totalDays = displayPhases.at(-1)?.dayEnd ?? 90;
+  const displayPhases = customPhases 
+    ? customPhases.filter(p => p.dayEnd < 900)
+    : PLANT_PROFILES[plantType].phases.filter(p => p.dayEnd < 900);
+
+  const totalDays = displayPhases.length > 0 ? (displayPhases.at(-1)?.dayEnd ?? 90) : 90;
 
   return (
     <div className={cn('space-y-3', className)}>

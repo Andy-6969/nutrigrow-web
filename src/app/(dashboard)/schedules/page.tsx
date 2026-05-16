@@ -60,6 +60,26 @@ export default function SchedulesPage() {
     usesFertilizer: false,
   });
 
+  // ── Custom Phase State ──
+  const [customPhases, setCustomPhases] = useState<any[]>([
+    { id: 1, name: 'Fase A', dayStart: 0, dayEnd: 14, emoji: '🌱', color: '#4ade80', frequencyPerDay: 2, irrigationTimes: ['07:00', '17:00'], waterVolumeLiters: 0.3, ecTargetMin: 0, ecTargetMax: 0 },
+    { id: 2, name: 'Fase B', dayStart: 15, dayEnd: 30, emoji: '🌿', color: '#22c55e', frequencyPerDay: 2, irrigationTimes: ['07:00', '17:00'], waterVolumeLiters: 0.5, ecTargetMin: 1.0, ecTargetMax: 1.5 },
+  ]);
+
+  const addPhase = () => {
+    const lastPhase = customPhases[customPhases.length - 1];
+    const newStart = lastPhase ? lastPhase.dayEnd + 1 : 0;
+    setCustomPhases([...customPhases, {
+      id: customPhases.length + 1,
+      name: `Fase ${String.fromCharCode(65 + customPhases.length)}`,
+      dayStart: newStart,
+      dayEnd: newStart + 14,
+      emoji: '🌿', color: '#22c55e',
+      frequencyPerDay: 2, irrigationTimes: ['07:00', '17:00'],
+      waterVolumeLiters: 0.5, ecTargetMin: 1.0, ecTargetMax: 1.5
+    }]);
+  };
+
   const handleZoneSelect = (zoneId: string) => {
     setGrowthZoneId(zoneId);
     const selectedZone = zones.find(z => z.id === zoneId);
@@ -325,7 +345,82 @@ export default function SchedulesPage() {
         {/* Timeline visual */}
         {plantingDate && (
           <div className="rounded-2xl p-4 mb-4" style={{ background: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
-            <GrowthTimeline plantingDate={plantingDate} plantType={plantType} />
+            <GrowthTimeline 
+              plantingDate={plantingDate} 
+              plantType={plantType} 
+              customPhases={plantType === 'custom' ? customPhases : undefined} 
+            />
+          </div>
+        )}
+
+        {/* EDITOR FASE KUSTOM (Hanya untuk tipe 'custom') */}
+        {plantType === 'custom' && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider">⚙️ Pengaturan Fase Kustom</h4>
+              <button
+                onClick={addPhase}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-bold hover:bg-amber-600 transition-all shadow-md"
+              >
+                <Plus className="w-3 h-3" /> Tambah Fase
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {customPhases.map((phase, idx) => (
+                <div key={phase.id} className="grid grid-cols-12 gap-3 items-end glass-sm p-3 rounded-xl border-amber-500/10">
+                  <div className="col-span-4">
+                    <label className="block text-[9px] font-bold mb-1 text-amber-500/60 uppercase">Nama Fase</label>
+                    <input
+                      type="text"
+                      value={phase.name}
+                      onChange={e => {
+                        const newPhases = [...customPhases];
+                        newPhases[idx].name = e.target.value;
+                        setCustomPhases(newPhases);
+                      }}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10 focus:border-amber-500/40"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-[9px] font-bold mb-1 text-amber-500/60 uppercase">Hari Mulai</label>
+                    <input
+                      type="number"
+                      value={phase.dayStart}
+                      onChange={e => {
+                        const newPhases = [...customPhases];
+                        newPhases[idx].dayStart = Number(e.target.value);
+                        setCustomPhases(newPhases);
+                      }}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-[9px] font-bold mb-1 text-amber-500/60 uppercase">Hari Akhir</label>
+                    <input
+                      type="number"
+                      value={phase.dayEnd}
+                      onChange={e => {
+                        const newPhases = [...customPhases];
+                        newPhases[idx].dayEnd = Number(e.target.value);
+                        setCustomPhases(newPhases);
+                      }}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10"
+                    />
+                  </div>
+                  <div className="col-span-2 flex justify-end">
+                    <button
+                      onClick={() => setCustomPhases(customPhases.filter(p => p.id !== phase.id))}
+                      disabled={customPhases.length <= 1}
+                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-30"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] mt-3 text-amber-500/60 italic">* Perubahan fase di sini akan langsung memperbarui timeline di atas.</p>
           </div>
         )}
 
