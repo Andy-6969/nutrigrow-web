@@ -520,14 +520,34 @@ export default function SchedulesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>⏰ Waktu Penyiraman 2 (opsional)</label>
-                  <input
-                    type="time"
-                    value={manualParams.irrigationTimes[1]}
-                    onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], e.target.value] }))}
-                    className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
-                    style={{ color: 'var(--surface-text)' }}
-                  />
+                  <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>⏰ Waktu Penyiraman 2</label>
+                  {manualParams.irrigationTimes[1] ? (
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="time"
+                        value={manualParams.irrigationTimes[1]}
+                        onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], e.target.value] }))}
+                        className="flex-1 px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                        style={{ color: 'var(--surface-text)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], ''] }))}
+                        className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Hapus sesi 2"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], '17:00'] }))}
+                      className="w-full py-2 rounded-xl glass-sm text-[11px] font-medium border border-dashed border-amber-500/30 text-amber-500/60 hover:border-amber-500 hover:text-amber-500 transition-all"
+                    >
+                      + Tambah sesi ke-2
+                    </button>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--surface-text-muted)' }}>
