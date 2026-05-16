@@ -54,8 +54,8 @@ CREATE POLICY "scouting_logs_update"
 CREATE POLICY "scouting_logs_delete"
     ON public.scouting_logs FOR DELETE
     USING (auth.uid() = user_id OR EXISTS (
-        SELECT 1 FROM public.user_profiles
-        WHERE id = auth.uid() AND role IN ('super_admin', 'pemilik_kebun')
+        SELECT 1 FROM public.user_profiles up
+        WHERE up.id = auth.uid() AND up.role IN ('super_admin', 'pemilik_kebun')
     ));
 
 -- ── BAGIAN 3: Trigger updated_at ─────────────────────────────
