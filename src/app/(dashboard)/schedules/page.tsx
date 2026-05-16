@@ -37,7 +37,7 @@ export default function SchedulesPage() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
     name: '', zone_id: '', cron_expression: '0 6 * * *',
-    duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer' | 'solenoid',
+    duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer',
   });
 
   const { canControlZone } = useRBAC();
@@ -368,7 +368,6 @@ export default function SchedulesPage() {
                       >
                         {slot.name.replace('Penyiraman ', '').replace('Fertigasi ', '🌿 ')}
                         {slot.mode === 'fertilizer' && ' 🧪'}
-                        {slot.mode === 'solenoid' && ' 🚿'}
                       </button>
                     ))}
                   </div>
@@ -417,8 +416,8 @@ export default function SchedulesPage() {
                     <span>📍 {schedule.zone_name}</span>
                     <span>⏱️ {schedule.duration_minutes} {t('override_minutes')}</span>
                     {schedule.mode === 'fertilizer' && <span className="text-purple-600 font-medium">🧪 {t('overview_fertilizer_liquid')}</span>}
-                    {schedule.mode === 'solenoid' && <span className="text-amber-600 font-medium">🚿 Solenoid Valve</span>}
-                    {schedule.mode === 'water' && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
+                    {(!schedule.mode || schedule.mode === 'water') && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
+                    <span className="text-emerald-600 font-medium text-[10px]">⚡ Solenoid Otomatis</span>
                   </div>
                 </div>
 
@@ -502,27 +501,29 @@ export default function SchedulesPage() {
 
               <div className="space-y-2">
                 <label className="block text-xs font-medium" style={{ color: 'var(--surface-text)' }}>Mode Penyiraman</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'water',      label: 'Air Biasa',   icon: '💧', color: 'text-blue-500' },
-                    { id: 'fertilizer', label: 'Pupuk Cair',  icon: '🧪', color: 'text-purple-500' },
-                    { id: 'solenoid',   label: 'Solenoid',    icon: '🚿', color: 'text-amber-500' },
+                    { id: 'water',      label: 'Air Biasa',   icon: '💧' },
+                    { id: 'fertilizer', label: 'Pupuk Cair',  icon: '🧪' },
                   ].map(m => (
                     <button
                       key={m.id} type="button"
                       onClick={() => setFormData(p => ({ ...p, mode: m.id as any }))}
                       className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-xl border transition-all",
+                        "flex flex-col items-center gap-1 p-3 rounded-xl border transition-all",
                         formData.mode === m.id 
                           ? "bg-primary-500/10 border-primary-500 shadow-sm" 
                           : "glass-sm border-transparent opacity-60 hover:opacity-100"
                       )}
                     >
-                      <span className="text-lg">{m.icon}</span>
+                      <span className="text-xl">{m.icon}</span>
                       <span className={cn("text-[10px] font-bold", formData.mode === m.id ? "text-primary-500" : "text-gray-400")}>{m.label}</span>
                     </button>
                   ))}
                 </div>
+                <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--surface-text-muted)' }}>
+                  ⚡ Solenoid valve terbuka otomatis saat jadwal berjalan
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
