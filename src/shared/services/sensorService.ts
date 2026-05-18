@@ -1,6 +1,6 @@
 import { supabase } from '@/shared/lib/supabase';
-import type { Zone, SensorData, Device, EcoSavingsData } from '@/shared/types/global.types';
-import { mockZones, mockSensorData, mockDevices, mockSensorHistory, mockEcoSavings } from '@/shared/lib/mockData';
+import type { Zone, SensorData, Device } from '@/shared/types/global.types';
+import { mockZones, mockSensorData, mockDevices, mockSensorHistory } from '@/shared/lib/mockData';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export type SensorHistoryPoint = {
@@ -19,7 +19,6 @@ export interface ISensorService {
   getSensorData(zoneId: string): Promise<SensorData>;
   getAllSensorData(): Promise<Record<string, SensorData>>;
   getSensorHistory(zoneId: string): Promise<SensorHistoryPoint[]>;
-  getEcoSavings(): Promise<EcoSavingsData>;
   getDevices(): Promise<Device[]>;
   subscribeToSensorUpdates(callback: (payload: SupabasePayload) => void): void;
   unsubscribeFromSensorUpdates(): void;
@@ -98,34 +97,6 @@ export class SupabaseSensorService implements ISensorService {
     } catch {
       console.warn('[sensorService] getSensorHistory failed, using mock data');
       return mockSensorHistory;
-    }
-  }
-
-  /** Ambil kalkulasi eco-savings dari RPC Supabase — fallback ke mock */
-  async getEcoSavings(): Promise<EcoSavingsData> {
-    try {
-      // Ambil farm_id user dari session
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-
-      let farmId: string | null = null;
-      if (userId) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('farm_id')
-          .eq('id', userId)
-          .single();
-        farmId = profile?.farm_id ?? null;
-      }
-
-      const { data, error } = await supabase.rpc('get_eco_savings', {
-        p_farm_id: farmId ?? undefined,
-      });
-      if (error || !data) throw error ?? new Error('empty');
-      return data as EcoSavingsData;
-    } catch {
-      console.warn('[sensorService] getEcoSavings failed, using mock data');
-      return mockEcoSavings;
     }
   }
 

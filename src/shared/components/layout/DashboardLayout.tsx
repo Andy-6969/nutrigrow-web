@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Map, Activity, Leaf, Calendar, Wrench, Cpu,
+  LayoutDashboard, Map, Activity, Calendar, Wrench, Cpu,
   Bell, Settings, ChevronLeft, ChevronRight, Menu, X,
   Sun, Moon, LogOut, Loader2, Users, MapPin, FlaskConical, Bug
 } from 'lucide-react';
@@ -20,7 +20,7 @@ const navItemDefs = [
   { id: 'overview',        tKey: 'nav_dashboard',        icon: LayoutDashboard, href: '/overview' },
   { id: 'agri-twin',       tKey: 'nav_agri_twin',        icon: Map,             href: '/agri-twin' },
   { id: 'monitoring',      tKey: 'nav_monitoring',       icon: Activity,        href: '/monitoring' },
-  { id: 'eco-savings',     tKey: 'nav_eco_savings',      icon: Leaf,            href: '/eco-savings' },
+
   { id: 'schedules',       tKey: 'nav_schedules',        icon: Calendar,        href: '/schedules' },
   { id: 'scouting',        tKey: 'nav_scouting',         icon: Bug,             href: '/scouting' },
   { id: 'recipes',         tKey: 'nav_recipes',          icon: FlaskConical,    href: '/recipes' },

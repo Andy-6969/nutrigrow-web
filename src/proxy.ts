@@ -11,7 +11,7 @@ const protectedPrefixes = [
   '/irrigation',
   '/schedules',
   '/devices',
-  '/eco-savings',
+
   '/agri-twin',
 ];
 

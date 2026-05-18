@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
-import type { WeatherData, SensorData, Zone, EcoSavingsData } from '@/shared/types/global.types';
+import type { WeatherData, SensorData, Zone } from '@/shared/types/global.types';
 import { sensorService } from '@/shared/services/sensorService';
 import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/components/GreenhouseAnimation';
 import { fetchWeather } from '@/shared/services/weatherService';
@@ -53,7 +53,7 @@ export default function OverviewPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
 
-  const [ecoSavings, setEcoSavings] = useState<EcoSavingsData | null>(null);
+
   const [zoneIndex, setZoneIndex] = useState(0);
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -87,18 +87,16 @@ export default function OverviewPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [weatherRes, zonesRes, sensorsRes, savingsRes, activeRes] = await Promise.allSettled([
+        const [weatherRes, zonesRes, sensorsRes, activeRes] = await Promise.allSettled([
           fetchWeather(),
           sensorService.getZones(),
           sensorService.getAllSensorData(),
-          sensorService.getEcoSavings(),
           overrideService.getActiveOverrides(),
         ]);
 
         if (weatherRes.status === 'fulfilled') setWeather(weatherRes.value);
         if (zonesRes.status === 'fulfilled') setZones(zonesRes.value);
         if (sensorsRes.status === 'fulfilled') setSensorDataMap(sensorsRes.value);
-        if (savingsRes.status === 'fulfilled') setEcoSavings(savingsRes.value);
         if (activeRes.status === 'fulfilled') setActiveOverrides(activeRes.value);
       } catch (err) {
         console.error('Failed to load overview data:', err);
@@ -905,39 +903,6 @@ export default function OverviewPage() {
             })()}
           </div>
 
-          <div style={card} className="p-6 flex-1 flex flex-col justify-between animate-card-entrance animate-delay-7">
-            <h3 className="text-sm font-semibold mb-6 tracking-wider flex items-center gap-2" style={textMuted}>
-              <Leaf className="w-4 h-4 text-emerald-500" />
-              {t('overview_ecosavings').toUpperCase()} IMPACT
-            </h3>
-            <div className="space-y-5">
-              {[
-                { icon: <Droplets className="w-5 h-5 text-blue-400"/>,   bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.25)',  label: t('eco_water_saved'),    val: formatNumber(ecoSavings?.water_saved_liters ?? 0),   unit: 'L'   },
-                { icon: <Leaf className="w-5 h-5 text-emerald-400"/>,    bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.25)',  label: t('eco_fertilizer_saved'),  val: formatNumber(ecoSavings?.fertilizer_saved_kg ?? 0),  unit: 'kg'  },
-                { icon: <Zap className="w-5 h-5 text-purple-400"/>,      bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.25)',  label: t('eco_energy_saved'), val: formatNumber(ecoSavings?.energy_saved_kwh ?? 0),     unit: 'kWh' },
-              ].map((item, i) => (
-                <div key={i}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                      style={{ background: item.bg, border: `1px solid ${item.border}` }}>
-                      {item.icon}
-                    </div>
-                    <div>
-                      <p className="text-xs mb-1" style={textMuted}>{item.label}</p>
-                      <p className="font-mono text-xl font-bold" style={textMain}>
-                        {item.val}<span className="text-sm ml-1" style={textMuted}>{item.unit}</span>
-                      </p>
-                    </div>
-                  </div>
-                  {i < 2 && <div className="h-px w-full mt-5" style={{ background: 'var(--surface-border)' }} />}
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 pt-4 flex items-center justify-between text-xs" style={{ borderTop: '1px solid var(--surface-border)' }}>
-              <span style={textMuted}>{t('eco_cost_saved')}</span>
-              <span className="font-mono text-emerald-500 font-semibold">Rp {formatNumber(ecoSavings?.cost_saved_rupiah ?? 0)}</span>
-            </div>
-          </div>
 
         </div>
       </div>

@@ -30,7 +30,7 @@ export const NAV_ITEMS = [
   { id: 'overview',      key: 'nav_dashboard',        icon: 'LayoutDashboard', href: '/overview' },
   { id: 'agri-twin',     key: 'nav_agri_twin',        icon: 'Map',             href: '/agri-twin' },
   { id: 'monitoring',    key: 'nav_monitoring',        icon: 'Activity',        href: '/monitoring' },
-  { id: 'eco-savings',   key: 'nav_eco_savings',       icon: 'Leaf',            href: '/eco-savings' },
+
   { id: 'schedules',     key: 'nav_schedules',         icon: 'Calendar',        href: '/schedules' },
   { id: 'scouting',      key: 'nav_scouting',          icon: 'Bug',             href: '/scouting' },
   { id: 'recipes',       key: 'nav_recipes',           icon: 'FlaskConical',    href: '/recipes' },

@@ -18,7 +18,7 @@ const navItems = [
   { id: 'overview',      label: 'Dashboard',      href: '/overview' },
   { id: 'agri-twin',     label: 'Agri-Twin',      href: '/agri-twin' },
   { id: 'monitoring',    label: 'Monitoring',      href: '/monitoring' },
-  { id: 'eco-savings',   label: 'Eco-Savings',     href: '/eco-savings' },
+
   { id: 'schedules',     label: 'Jadwal',          href: '/schedules' },
   { id: 'override',      label: 'Manual Override', href: '/override' },
   { id: 'devices',       label: 'Perangkat',       href: '/devices' },
@@ -32,7 +32,7 @@ const navItems = [
 describe('Dashboard Layout - Navigation Items', () => {
   describe('Positive Cases', () => {
     it('should have 9 navigation items', () => {
-      expect(navItems).toHaveLength(9);
+      expect(navItems).toHaveLength(8);
     });
 
     it('each item should have id, label, and href', () => {
