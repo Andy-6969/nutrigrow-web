@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Map, Activity, Calendar, Wrench, Cpu,
   Bell, Settings, ChevronLeft, ChevronRight, Menu, X,
-  Sun, Moon, LogOut, Loader2, Users, MapPin, FlaskConical, Bug
+  Sun, Moon, LogOut, Loader2, Users, MapPin, FlaskConical, Bug, Brain
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { APP_NAME } from '@/shared/lib/constants';
@@ -17,19 +17,20 @@ import { useT } from '@/shared/context/LanguageContext';
 import PendingApprovalPage from '@/app/(dashboard)/pending-approval/page';
 
 const navItemDefs = [
-  { id: 'overview',        tKey: 'nav_dashboard',        icon: LayoutDashboard, href: '/overview' },
-  { id: 'agri-twin',       tKey: 'nav_agri_twin',        icon: Map,             href: '/agri-twin' },
-  { id: 'monitoring',      tKey: 'nav_monitoring',       icon: Activity,        href: '/monitoring' },
+  { id: 'overview',             tKey: 'nav_dashboard',             icon: LayoutDashboard, href: '/overview' },
+  { id: 'agri-twin',            tKey: 'nav_agri_twin',             icon: Map,             href: '/agri-twin' },
+  { id: 'monitoring',           tKey: 'nav_monitoring',            icon: Activity,        href: '/monitoring' },
+  { id: 'fuzzy_recommendations',tKey: 'nav_fuzzy_recommendations', icon: Brain,           href: '/fuzzy-recommendations' },
 
-  { id: 'schedules',       tKey: 'nav_schedules',        icon: Calendar,        href: '/schedules' },
-  { id: 'scouting',        tKey: 'nav_scouting',         icon: Bug,             href: '/scouting' },
-  { id: 'recipes',         tKey: 'nav_recipes',          icon: FlaskConical,    href: '/recipes' },
-  { id: 'devices',         tKey: 'nav_devices',          icon: Cpu,             href: '/devices' },
-  { id: 'override',        tKey: 'nav_override',         icon: Wrench,          href: '/override' },
-  { id: 'farms',           tKey: 'nav_farms',            icon: MapPin,          href: '/farms' },
-  { id: 'notifications',   tKey: 'nav_notifications',    icon: Bell,            href: '/notifications' },
-  { id: 'user_management', tKey: 'nav_user_management',  icon: Users,           href: '/user-management' },
-  { id: 'settings',        tKey: 'nav_settings',         icon: Settings,        href: '/settings' },
+  { id: 'schedules',            tKey: 'nav_schedules',             icon: Calendar,        href: '/schedules' },
+  { id: 'scouting',             tKey: 'nav_scouting',              icon: Bug,             href: '/scouting' },
+  { id: 'recipes',              tKey: 'nav_recipes',               icon: FlaskConical,    href: '/recipes' },
+  { id: 'devices',              tKey: 'nav_devices',               icon: Cpu,             href: '/devices' },
+  { id: 'override',             tKey: 'nav_override',              icon: Wrench,          href: '/override' },
+  { id: 'farms',                tKey: 'nav_farms',                 icon: MapPin,          href: '/farms' },
+  { id: 'notifications',        tKey: 'nav_notifications',         icon: Bell,            href: '/notifications' },
+  { id: 'user_management',      tKey: 'nav_user_management',       icon: Users,           href: '/user-management' },
+  { id: 'settings',             tKey: 'nav_settings',              icon: Settings,        href: '/settings' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

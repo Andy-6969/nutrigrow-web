@@ -17,6 +17,7 @@ export const translations = {
     nav_user_management: 'Kelola User',
     nav_settings: 'Pengaturan',
     nav_override: 'Kontrol Manual',
+    nav_fuzzy_recommendations: 'Rekomendasi Fuzzy',
     nav_logout: 'Keluar',
     nav_smart_fertigation: 'Smart Fertigation',
 
@@ -397,6 +398,7 @@ export const translations = {
     nav_user_management: 'Manage Users',
     nav_settings: 'Settings',
     nav_override: 'Manual Override',
+    nav_fuzzy_recommendations: 'Fuzzy Recommendations',
     nav_logout: 'Logout',
     nav_smart_fertigation: 'Smart Fertigation',
 
