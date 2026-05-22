@@ -52,6 +52,12 @@ export default function OverviewPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
 
   const [zoneIndex, setZoneIndex] = useState(0);
@@ -298,7 +304,15 @@ export default function OverviewPage() {
   const selectedZone = zones[zoneIndex] ?? null;
   const liveSensor  = selectedZone ? (sensorDataMap[selectedZone.id] ?? null) : null;
   const zoneStatus  = selectedZone ? (ZONE_STATUS[selectedZone.status as keyof typeof ZONE_STATUS] ?? ZONE_STATUS.idle) : null;
-  const animCondition = toCondition(selectedZone?.status);
+  
+  // Check if sensor is online (data received in last 10 minutes)
+  const isSensorOnline = !!(
+    liveSensor &&
+    liveSensor.recorded_at &&
+    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 10 * 60 * 1000)
+  );
+
+  const animCondition = isSensorOnline ? toCondition(selectedZone?.status) : 'offline';
   const multiZone   = zones.length > 1;
 
   const activeOverride = selectedZone ? activeOverrides.find(o => o.zone_id === selectedZone.id) : null;
@@ -652,14 +666,24 @@ export default function OverviewPage() {
               {selectedZone ? (selectedZone.name.split(' - ')[1] || selectedZone.name) : t('overview_main_greenhouse')}
             </h2>
             <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
-              <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: zoneStatus?.color ?? '#10b981' }} />
-              <span className="text-xs font-mono tracking-widest" style={{ color: '#10b981' }}>
-                {t('overview_system_online')} // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
+              <span 
+                className={cn("w-2 h-2 rounded-full", isSensorOnline ? "animate-pulse" : "")} 
+                style={{ backgroundColor: isSensorOnline ? (zoneStatus?.color ?? '#10b981') : '#ef4444' }} 
+              />
+              <span className="text-xs font-mono tracking-widest" style={{ color: isSensorOnline ? '#10b981' : '#f87171' }}>
+                {isSensorOnline ? t('overview_system_online') : t('overview_system_offline')} // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
               </span>
-              {selectedZone && zoneStatus && (
+              {selectedZone && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: `${zoneStatus.color}20`, color: zoneStatus.color }}>
-                  {zoneStatus.icon} {t(zoneStatus.key)}
+                  style={{
+                    backgroundColor: isSensorOnline ? `${zoneStatus?.color ?? '#9ca3af'}20` : 'rgba(239, 68, 68, 0.15)',
+                    color: isSensorOnline ? (zoneStatus?.color ?? '#9ca3af') : '#f87171'
+                  }}>
+                  {isSensorOnline ? (
+                    `${zoneStatus?.icon ?? '💤'} ${t(zoneStatus?.key ?? 'status_idle')}`
+                  ) : (
+                    `🔌 ${t('common_offline')}`
+                  )}
                 </span>
               )}
             </div>
@@ -689,22 +713,22 @@ export default function OverviewPage() {
             </div>
 
             {[
-              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: liveSensor?.soil_moisture ? `${liveSensor.soil_moisture}%` : '--', label: t('overview_soil_moisture') },
-              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: liveSensor?.temperature ? `${liveSensor.temperature}°C` : '--',  label: t('overview_air_temp') },
+              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: (isSensorOnline && liveSensor?.soil_moisture) ? `${liveSensor.soil_moisture}%` : '--', label: t('overview_soil_moisture') },
+              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: (isSensorOnline && liveSensor?.temperature) ? `${liveSensor.temperature}°C` : '--',  label: t('overview_air_temp') },
               { 
                 pos: 'bottom-[25%] left-[0%] sm:left-[4%]',  
                 icon: <span className="w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center text-purple-400 font-bold text-[8px] sm:text-[10px]">pH</span>, 
-                val: liveSensor?.ph ? `${liveSensor.ph}` : '--', 
+                val: (isSensorOnline && liveSensor?.ph) ? `${liveSensor.ph}` : '--', 
                 label: t('overview_nutrient_ph'),
-                extra: liveSensor?.ph != null
+                extra: (isSensorOnline && liveSensor?.ph != null)
                   ? liveSensor.ph < 5.5 ? { label: t('common_lang_code') === 'id' ? 'ASAM' : 'ACID', color: '#f87171' }
                   : liveSensor.ph > 6.5 ? { label: t('common_lang_code') === 'id' ? 'BASA' : 'BASE', color: '#fbbf24' }
                   : { label: 'OPTIMAL', color: '#4ade80' }
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
-              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: liveSensor?.humidity ? `${liveSensor.humidity}%` : '--',      label: t('overview_air_humidity') },
-              { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: liveSensor?.tds != null ? `${liveSensor.tds.toFixed(1)}` : '--', label: t('overview_nutrient_ec'),
-                extra: liveSensor?.tds != null
+              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: (isSensorOnline && liveSensor?.humidity) ? `${liveSensor.humidity}%` : '--',      label: t('overview_air_humidity') },
+              { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: (isSensorOnline && liveSensor?.tds != null) ? `${liveSensor.tds.toFixed(1)}` : '--', label: t('overview_nutrient_ec'),
+                extra: (isSensorOnline && liveSensor?.tds != null)
                   ? liveSensor.tds < 1.2 ? { label: t('overview_ec_low'), color: '#60a5fa' }
                   : liveSensor.tds > 2.8 ? { label: t('overview_ec_high'), color: '#f87171' }
                   : { label: t('overview_ec_ideal'), color: '#4ade80' }
@@ -852,7 +876,7 @@ export default function OverviewPage() {
               TDS / EC Nutrisi
             </h3>
             {(() => {
-              const tds = liveSensor?.tds;
+              const tds = isSensorOnline ? liveSensor?.tds : null;
               const TDS_MIN = 1.5, TDS_MAX = 2.5;
               const isNoSignal = tds == null;
               const status = isNoSignal ? null
