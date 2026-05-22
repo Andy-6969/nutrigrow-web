@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Cpu, Wifi, WifiOff, Battery, Signal, Clock, Search, Download, FileSpreadsheet, CheckCircle, X, AlertCircle } from 'lucide-react';
-import { mockDevices, mockSensorData, mockSensorHistory, mockIrrigationLogs, mockOverrideLogs, mockZones } from '@/shared/lib/mockData';
+import { mockSensorHistory, mockIrrigationLogs, mockOverrideLogs } from '@/shared/lib/mockData';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
+import { sensorService } from '@/shared/services/sensorService';
+import type { Zone, SensorData, Device } from '@/shared/types/global.types';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { DeviceCardSkeleton, PageHeaderSkeleton } from '@/shared/components/Skeleton';
 import { useT } from '@/shared/context/LanguageContext';
@@ -22,7 +24,7 @@ function getSignalBars(rssi: number) {
   return 0;
 }
 
-function DeviceCard({ device, t }: { device: typeof mockDevices[0]; t: (k: string) => string }) {
+function DeviceCard({ device, t }: { device: Device; t: (k: string) => string }) {
   const batteryColor = getBatteryColor(device.battery_level);
   const signalBars = getSignalBars(device.rssi);
   const devLabel = device.device_type === 'sensor'
@@ -96,6 +98,10 @@ export default function DevicesPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [showExportModal, setShowExportModal] = useState(false);
 
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
+
   // Daftar kolom yang bisa dipilih user saat export
   // Kolom sinyal mentah (rssi) dikecualikan by default sesuai spec
   const ALL_EXPORT_COLUMNS = [
@@ -114,18 +120,102 @@ export default function DevicesPage() {
   const t = useT();
 
   useEffect(() => {
-    const tm = setTimeout(() => setPageLoading(false), 900);
-    return () => clearTimeout(tm);
+    const loadData = async () => {
+      try {
+        const [zonesRes, sensorsRes] = await Promise.all([
+          sensorService.getZones(),
+          sensorService.getAllSensorData()
+        ]);
+        setZones(zonesRes);
+        setSensorDataMap(sensorsRes);
+        
+        const newDevices: Device[] = [];
+        
+        newDevices.push({
+          id: 'gateway-main',
+          zone_id: '',
+          zone_name: 'Main Controller',
+          device_type: 'gateway',
+          firmware_version: '2.1.0',
+          battery_level: 100,
+          rssi: -45,
+          last_heartbeat: new Date().toISOString(),
+          is_online: true
+        });
+
+        zonesRes.forEach(z => {
+          const s = sensorsRes[z.id];
+          const isOnline = !!(s?.recorded_at && (new Date().getTime() - new Date(s.recorded_at).getTime() < 10 * 60 * 1000));
+          const lastHb = s?.recorded_at ?? new Date().toISOString();
+          const bat = s?.battery ?? 100;
+          const sig = s?.rssi ?? -60;
+
+          newDevices.push({
+            id: `node-sns-${z.id.substring(0,4)}`,
+            zone_id: z.id,
+            zone_name: z.name,
+            device_type: 'sensor',
+            firmware_version: '1.2.4',
+            battery_level: bat,
+            rssi: sig,
+            last_heartbeat: lastHb,
+            is_online: isOnline
+          });
+          
+          newDevices.push({
+            id: `node-act-${z.id.substring(0,4)}`,
+            zone_id: z.id,
+            zone_name: z.name,
+            device_type: 'actuator',
+            firmware_version: '1.1.0',
+            battery_level: bat,
+            rssi: sig,
+            last_heartbeat: lastHb,
+            is_online: isOnline
+          });
+        });
+        
+        setDevices(newDevices);
+      } catch (err) {
+        console.error('Failed to load devices:', err);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    loadData();
+
+    sensorService.subscribeToSensorUpdates((payload) => {
+      const newData = payload.new as SensorData;
+      if (newData.zone_id) {
+        setSensorDataMap(prev => ({ ...prev, [newData.zone_id as string]: newData }));
+        setDevices(prev => prev.map(d => {
+          if (d.zone_id === newData.zone_id) {
+            return {
+              ...d,
+              last_heartbeat: newData.recorded_at,
+              is_online: true,
+              battery_level: newData.battery ?? d.battery_level,
+              rssi: newData.rssi ?? d.rssi
+            };
+          }
+          return d;
+        }));
+      }
+    });
+
+    return () => {
+      sensorService.unsubscribeFromSensorUpdates();
+    };
   }, []);
 
-  const filtered = mockDevices.filter(d => {
+  const filtered = devices.filter(d => {
     if (filter !== 'all' && d.device_type !== filter) return false;
     if (search && !d.id.toLowerCase().includes(search.toLowerCase()) && !d.zone_name?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const onlineCount  = mockDevices.filter(d => d.is_online).length;
-  const offlineCount = mockDevices.filter(d => !d.is_online).length;
+  const onlineCount  = devices.filter(d => d.is_online).length;
+  const offlineCount = devices.filter(d => !d.is_online).length;
 
   const handleExport = async () => {
     setExporting(true);
@@ -137,7 +227,7 @@ export default function DevicesPage() {
     const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     // ── Sheet 1: Perangkat (dengan filter kolom sesuai pilihan user) ──
-    const deviceRows = mockDevices.map(d => {
+    const deviceRows = devices.map(d => {
       const row: Record<string, string | number> = {};
       if (selectedCols['id'])             row['ID Perangkat']    = d.id.toUpperCase();
       if (selectedCols['type'])           row['Tipe']            = d.device_type === 'sensor' ? 'Sensor' : d.device_type === 'actuator' ? 'Aktuator' : 'Gateway';
@@ -151,8 +241,8 @@ export default function DevicesPage() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(deviceRows), 'Perangkat');
 
     // ── Sheet 2: Data Sensor (tanpa kolom sinyal mentah/debug) ──
-    const sensorRows = Object.entries(mockSensorData).map(([zoneId, s]) => {
-      const zone = mockZones.find(z => z.id === zoneId);
+    const sensorRows = Object.entries(sensorDataMap).map(([zoneId, s]) => {
+      const zone = zones.find(z => z.id === zoneId);
       return {
         'Zona':                 zone?.name ?? zoneId,
         'Tanaman':              zone?.crop_type ?? '-',
