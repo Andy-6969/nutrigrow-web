@@ -10,7 +10,8 @@ import { cn } from '@/shared/lib/utils';
 import { ecoService } from '@/shared/services/ecoService';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useT } from '@/shared/context/LanguageContext';
-import type { EcoStatus, EcoSavingsLog, EcoDailySummary } from '@/shared/types/global.types';
+import { supabase } from '@/shared/lib/supabase';
+import type { EcoStatus, EcoSavingsLog, EcoDailySummary, Zone } from '@/shared/types/global.types';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
@@ -21,18 +22,26 @@ export default function EcoSavingsPage() {
   const canToggle = ['super_admin', 'pemilik_kebun'].includes(role || '');
 
   const [ecoStatus, setEcoStatus] = useState<EcoStatus | null>(null);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [dailyData, setDailyData] = useState<EcoDailySummary[]>([]);
   const [logs, setLogs] = useState<EcoSavingsLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isToggling, setIsToggling] = useState(false);
+  const [isTogglingZone, setIsTogglingZone] = useState<Record<string, boolean>>({});
   const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
+      const { data: zonesData } = await supabase
+        .from('zones')
+        .select('*')
+        .order('name');
+
       const [status, history] = await Promise.all([
         ecoService.getEcoStatus(),
         ecoService.getEcoHistory(),
       ]);
+
+      setZones((zonesData || []) as Zone[]);
       setEcoStatus(status);
       setDailyData(history.daily);
       setLogs(history.logs);
@@ -49,22 +58,29 @@ export default function EcoSavingsPage() {
     return () => ecoService.unsubscribeFromEcoSavings();
   }, [fetchData]);
 
-  const handleToggle = async () => {
-    if (!canToggle || !ecoStatus) return;
-    setIsToggling(true);
+  const handleZoneToggle = async (zoneId: string, currentStatus: boolean, zoneName: string) => {
+    if (!canToggle) return;
+    setIsTogglingZone(prev => ({ ...prev, [zoneId]: true }));
     setStatusMsg(null);
     try {
-      const newState = await ecoService.toggleEcoMode(!ecoStatus.eco_mode);
-      setEcoStatus(prev => prev ? { ...prev, eco_mode: newState } : prev);
+      await ecoService.toggleZoneEcoMode(zoneId, !currentStatus);
+      
+      // Update local state immediately
+      setZones(prev => prev.map(z => z.id === zoneId ? { ...z, eco_mode: !currentStatus } : z));
+      
+      // Fetch updated status summary
+      const status = await ecoService.getEcoStatus();
+      setEcoStatus(status);
+
       setStatusMsg({
         type: 'success',
-        text: `Eco Mode berhasil ${newState ? 'diaktifkan' : 'dinonaktifkan'}`
+        text: t('eco_zone_toggle_success').replace('{name}', zoneName)
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Gagal toggle eco mode';
       setStatusMsg({ type: 'error', text: message });
     } finally {
-      setIsToggling(false);
+      setIsTogglingZone(prev => ({ ...prev, [zoneId]: false }));
     }
   };
 
@@ -103,7 +119,7 @@ export default function EcoSavingsPage() {
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
-      {/* ── Header + Toggle ──────────────────────────────────── */}
+      {/* ── Header + Status Badge ──────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
@@ -116,28 +132,20 @@ export default function EcoSavingsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Eco Mode Toggle */}
-          <button
-            onClick={handleToggle}
-            disabled={!canToggle || isToggling}
+          {/* Active Eco-Mode Zones Count Badge */}
+          <div
             className={cn(
-              'flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.97] border',
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-colors',
               ecoStatus?.eco_mode
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
-                : 'bg-white/5 border-white/10 hover:bg-white/10',
-              (!canToggle || isToggling) && 'opacity-50 cursor-not-allowed'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
+                : 'bg-white/5 border-white/10 text-slate-400'
             )}
-            style={!ecoStatus?.eco_mode ? { color: 'var(--surface-text-muted)' } : undefined}
           >
-            {isToggling ? (
-              <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-            ) : ecoStatus?.eco_mode ? (
-              <ToggleRight className="w-5 h-5" />
-            ) : (
-              <ToggleLeft className="w-5 h-5" />
-            )}
-            {t('eco_mode_label')}: {ecoStatus?.eco_mode ? t('eco_mode_on') : t('eco_mode_off')}
-          </button>
+            <Leaf className="w-4 h-4" />
+            <span>
+              Eco Mode: {ecoStatus?.active_zones_count ?? 0} / {ecoStatus?.total_zones_count ?? 0} {t('eco_col_zone')} Aktif
+            </span>
+          </div>
 
           <button
             onClick={() => { setIsLoading(true); fetchData(); }}
@@ -170,6 +178,7 @@ export default function EcoSavingsPage() {
       )}
 
       {isLoading ? (
+
         <div className="glass p-16 text-center flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
           <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>Memuat data eco-savings...</p>
@@ -222,6 +231,73 @@ export default function EcoSavingsPage() {
             ))}
           </div>
 
+          {/* ── Zone Eco-Mode Configuration ────────────────────── */}
+          <div className="glass rounded-2xl p-6 border space-y-4" style={{ borderColor: 'var(--surface-border)' }}>
+            <div>
+              <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--surface-text)' }}>
+                <Leaf className="w-5 h-5 text-emerald-500" />
+                {t('eco_zone_list_title')}
+              </h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--surface-text-muted)' }}>
+                {t('eco_mode_desc')}
+              </p>
+            </div>
+
+            {zones.length === 0 ? (
+              <p className="text-sm py-4 text-center" style={{ color: 'var(--surface-text-muted)' }}>
+                Tidak ada zona ditemukan.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {zones.map((zone) => {
+                  const isZoneActive = !!zone.eco_mode;
+                  const toggling = !!isTogglingZone[zone.id];
+                  return (
+                    <div
+                      key={zone.id}
+                      className={cn(
+                        'p-4 rounded-xl border transition-all duration-300 flex items-center justify-between hover:scale-[1.01]',
+                        isZoneActive
+                          ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                          : 'bg-white/5 border-white/10'
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>{zone.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--surface-text-muted)' }}>{zone.crop_type}</p>
+                        <span className={cn(
+                          'inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1',
+                          isZoneActive
+                            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                            : 'bg-slate-500/10 border-slate-500/25 text-slate-400'
+                        )}>
+                          {isZoneActive ? t('eco_zone_active_badge') : t('eco_zone_inactive_badge')}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleZoneToggle(zone.id, isZoneActive, zone.name)}
+                        disabled={!canToggle || toggling}
+                        className={cn(
+                          'transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed',
+                          isZoneActive ? 'text-emerald-400' : 'text-slate-500'
+                        )}
+                      >
+                        {toggling ? (
+                          <div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                        ) : isZoneActive ? (
+                          <ToggleRight className="w-8 h-8" />
+                        ) : (
+                          <ToggleLeft className="w-8 h-8" />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* ── Weekly Chart ──────────────────────────────────── */}
           <div className="glass rounded-2xl p-6 border" style={{ borderColor: 'var(--surface-border)' }}>
             <div className="flex items-center justify-between mb-4">
@@ -265,8 +341,12 @@ export default function EcoSavingsPage() {
                         color: '#fff',
                         fontSize: '12px',
                       }}
-                      formatter={(value: any) => [`${Number(value || 0).toFixed(1)} Liter`, t('eco_water_saved')]}
+                      formatter={(value: any) => [
+                        typeof value === 'number' ? `${value.toFixed(1)} Liter` : `${value} Liter`,
+                        t('eco_water_saved')
+                      ]}
                       labelFormatter={(label: any) => {
+                        if (typeof label !== 'string') return '';
                         const date = new Date(label + 'T00:00:00');
                         return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
                       }}

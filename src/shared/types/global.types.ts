@@ -42,6 +42,7 @@ export interface Zone {
   planting_date?: string;
   plant_count?: number;
   recipe_id?: string | null;
+  eco_mode?: boolean;
 }
 
 export interface SensorData {
@@ -130,6 +131,8 @@ export interface EcoSavingsLog {
 
 export interface EcoStatus {
   eco_mode: boolean;
+  active_zones_count?: number;
+  total_zones_count?: number;
   savings: {
     water_saved_liters: number;
     cost_saved_rupiah: number;

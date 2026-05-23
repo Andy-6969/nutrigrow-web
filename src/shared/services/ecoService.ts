@@ -45,11 +45,28 @@ export class SupabaseEcoService {
    * Fallback: ambil eco status langsung dari Supabase
    */
   private async getEcoStatusFromDB(): Promise<EcoStatus> {
-    const { data: settingData } = await supabase
+    const { data: zones } = await supabase
+      .from('zones')
+      .select('eco_mode');
+
+    const totalZones = zones || [];
+    const activeZonesCount = totalZones.filter(z => z.eco_mode === true).length;
+
+    const { data: tariffData } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'eco_mode')
-      .single();
+      .eq('key', 'eco_tariff')
+      .maybeSingle();
+
+    const tariff = (tariffData?.value as { water_per_m3?: number; energy_per_kwh?: number; pump_watt?: number }) || {
+      water_per_m3: 5000,
+      energy_per_kwh: 1500,
+      pump_watt: 75,
+    };
+
+    const waterPerLiter = (tariff.water_per_m3 ?? 5000) / 1000;
+    const energyPerKwh = tariff.energy_per_kwh ?? 1500;
+    const pumpKw = (tariff.pump_watt ?? 75) / 1000;
 
     const { data: logs } = await supabase
       .from('eco_savings_log')
@@ -58,14 +75,19 @@ export class SupabaseEcoService {
     const totalWater = (logs || []).reduce((s, r) => s + (r.water_saved_liters || 0), 0);
     const totalNormalDur = (logs || []).reduce((s, r) => s + (r.normal_duration || 0), 0);
     const totalEcoDur = (logs || []).reduce((s, r) => s + (r.eco_duration || 0), 0);
-    const timeSaved = totalNormalDur - totalEcoDur;
+    const timeSaved = Math.max(0, totalNormalDur - totalEcoDur);
+
+    const energySavedKwh = (timeSaved / 60) * pumpKw;
+    const costSaved = Math.round((totalWater * waterPerLiter) + (energySavedKwh * energyPerKwh));
 
     return {
-      eco_mode: settingData?.value?.enabled === true,
+      eco_mode: activeZonesCount > 0,
+      active_zones_count: activeZonesCount,
+      total_zones_count: totalZones.length,
       savings: {
         water_saved_liters: Math.round(totalWater * 10) / 10,
-        cost_saved_rupiah: Math.round((totalWater / 1000) * 5000),
-        energy_saved_kwh: Math.round((timeSaved / 60) * 0.075 * 100) / 100,
+        cost_saved_rupiah: costSaved,
+        energy_saved_kwh: Math.round(energySavedKwh * 100) / 100,
         time_saved_minutes: timeSaved,
         total_evaluations: (logs || []).length,
       },
@@ -73,12 +95,21 @@ export class SupabaseEcoService {
   }
 
   /**
-   * Toggle eco mode on/off via VPS API
+   * Toggle eco mode untuk zona tertentu
    */
-  async toggleEcoMode(enabled: boolean): Promise<boolean> {
-    const res = await vpsApi.post<EcoToggleResponse>('/eco/toggle', { enabled });
-    return res.eco_mode;
+  async toggleZoneEcoMode(zoneId: string, enabled: boolean): Promise<boolean> {
+    const { error } = await supabase
+      .from('zones')
+      .update({ eco_mode: enabled })
+      .eq('id', zoneId);
+    
+    if (error) {
+      console.error('[ecoService] Failed to update zone eco_mode:', error.message);
+      throw new Error(error.message);
+    }
+    return enabled;
   }
+
 
   /**
    * Ambil riwayat penghematan 7 hari terakhir
