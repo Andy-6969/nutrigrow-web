@@ -145,7 +145,7 @@ export default function DevicesPage() {
 
         zonesRes.forEach(z => {
           const s = sensorsRes[z.id];
-          const isOnline = !!(s?.recorded_at && (new Date().getTime() - new Date(s.recorded_at).getTime() < 10 * 60 * 1000));
+          const isOnline = !!(s?.recorded_at && (new Date().getTime() - new Date(s.recorded_at).getTime() < 1 * 60 * 1000));
           const lastHb = s?.recorded_at ?? new Date().toISOString();
           const bat = s?.battery ?? 100;
           const sig = s?.rssi ?? -60;

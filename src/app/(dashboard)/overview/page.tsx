@@ -309,7 +309,7 @@ export default function OverviewPage() {
   const isSensorOnline = !!(
     liveSensor &&
     liveSensor.recorded_at &&
-    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 10 * 60 * 1000)
+    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 1 * 60 * 1000)
   );
 
   const animCondition = isSensorOnline ? toCondition(selectedZone?.status) : 'offline';
