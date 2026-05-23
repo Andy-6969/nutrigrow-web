@@ -113,6 +113,39 @@ export interface EcoSavingsData {
   energy_trend: number;
 }
 
+export interface EcoSavingsLog {
+  id: number;
+  zone_id: string;
+  zone_name: string;
+  normal_duration: number;
+  eco_duration: number;
+  water_saved_liters: number;
+  reason: 'humidity_reduction' | 'rain_block' | 'eco_mode' | 'combined';
+  eco_mode_active: boolean;
+  humidity_at_time: number;
+  will_rain_at_time: boolean;
+  recommendation_id: number | null;
+  created_at: string;
+}
+
+export interface EcoStatus {
+  eco_mode: boolean;
+  savings: {
+    water_saved_liters: number;
+    cost_saved_rupiah: number;
+    energy_saved_kwh: number;
+    time_saved_minutes: number;
+    total_evaluations: number;
+  };
+}
+
+export interface EcoDailySummary {
+  date: string;
+  water_saved: number;
+  count: number;
+  reasons: Record<string, number>;
+}
+
 export interface WeatherData {
   temperature: number;
   humidity: number;
