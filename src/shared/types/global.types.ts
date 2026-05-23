@@ -61,6 +61,7 @@ export interface Device {
   id: string;
   zone_id: string;
   zone_name?: string;
+  device_name?: string;
   device_type: 'sensor' | 'actuator' | 'gateway';
   firmware_version: string;
   battery_level: number;

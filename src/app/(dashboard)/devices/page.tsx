@@ -24,14 +24,40 @@ function getSignalBars(rssi: number) {
   return 0;
 }
 
+// Emoji & gradient mapping for specific device names
+const DEVICE_STYLE: Record<string, { emoji: string; gradient: string }> = {
+  'Soil Moisture': { emoji: '💧', gradient: 'from-cyan-400 to-cyan-600' },
+  'DHT22':         { emoji: '🌡️', gradient: 'from-orange-400 to-orange-600' },
+  'TDS':           { emoji: '🧪', gradient: 'from-teal-400 to-teal-600' },
+  'pH':            { emoji: '⚗️', gradient: 'from-indigo-400 to-indigo-600' },
+  'Relay':         { emoji: '🔌', gradient: 'from-amber-400 to-amber-600' },
+  'Solenoid Valve':{ emoji: '🚰', gradient: 'from-blue-400 to-blue-600' },
+  'Pompa Air':     { emoji: '💦', gradient: 'from-sky-400 to-sky-600' },
+  'Pompa Pupuk':   { emoji: '🧴', gradient: 'from-lime-500 to-green-600' },
+};
+
 function DeviceCard({ device, t }: { device: Device; t: (k: string) => string }) {
   const batteryColor = getBatteryColor(device.battery_level);
-  const signalBars = getSignalBars(device.rssi);
-  const devLabel = device.device_type === 'sensor'
+  const style = device.device_name ? DEVICE_STYLE[device.device_name] : undefined;
+
+  const devLabel = device.device_name
+    ? `${style?.emoji ?? '📡'} ${device.device_name}`
+    : device.device_type === 'sensor'
     ? `📡 ${t('devices_sensor')}`
     : device.device_type === 'actuator'
     ? `⚙️ ${t('devices_actuator')}`
     : `📻 ${t('devices_gateway')}`;
+
+  const typeLabel = device.device_type === 'sensor'
+    ? t('devices_sensor')
+    : device.device_type === 'actuator'
+    ? t('devices_actuator')
+    : t('devices_gateway');
+
+  const gradientClass = style?.gradient
+    ?? (device.device_type === 'sensor'   ? 'from-secondary-400 to-secondary-600'
+    :  device.device_type === 'actuator' ? 'from-primary-400 to-primary-600'
+    :  'from-purple-400 to-purple-600');
 
   return (
     <div className={cn(
@@ -41,10 +67,8 @@ function DeviceCard({ device, t }: { device: Device; t: (k: string) => string })
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center text-white',
-            device.device_type === 'sensor'   && 'bg-gradient-to-br from-secondary-400 to-secondary-600',
-            device.device_type === 'actuator' && 'bg-gradient-to-br from-primary-400 to-primary-600',
-            device.device_type === 'gateway'  && 'bg-gradient-to-br from-purple-400 to-purple-600',
+            'w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br',
+            gradientClass,
           )}>
             <Cpu className="w-5 h-5" />
           </div>
@@ -52,8 +76,8 @@ function DeviceCard({ device, t }: { device: Device; t: (k: string) => string })
             <p className="text-sm font-semibold" style={{ color: 'var(--surface-text)' }}>
               {devLabel}
             </p>
-            <p className="text-[10px] font-mono" style={{ color: 'var(--surface-text-muted)' }}>
-              ID: {device.id.toUpperCase()}
+            <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>
+              {typeLabel} · <span className="font-mono">ID: {device.id.toUpperCase()}</span>
             </p>
           </div>
         </div>
@@ -143,7 +167,22 @@ export default function DevicesPage() {
         const newDevices: Device[] = [];
         const now = new Date().getTime();
 
-        // Build sensor & actuator nodes first
+        // Individual sensor definitions (per zone)
+        const SENSOR_DEFS = [
+          { suffix: 'sm',  name: 'Soil Moisture', fw: '1.2.4' },
+          { suffix: 'dht', name: 'DHT22',         fw: '1.2.4' },
+          { suffix: 'tds', name: 'TDS',           fw: '1.2.4' },
+          { suffix: 'ph',  name: 'pH',            fw: '1.2.4' },
+        ];
+        // Individual actuator definitions (per zone)
+        const ACTUATOR_DEFS = [
+          { suffix: 'rly', name: 'Relay',          fw: '1.1.0' },
+          { suffix: 'sol', name: 'Solenoid Valve', fw: '1.1.0' },
+          { suffix: 'pa',  name: 'Pompa Air',      fw: '1.1.0' },
+          { suffix: 'pp',  name: 'Pompa Pupuk',    fw: '1.1.0' },
+        ];
+
+        // Build individual sensor & actuator nodes per zone
         const sensorNodes: Device[] = [];
         zonesRes.forEach(z => {
           const s = sensorsRes[z.id];
@@ -151,29 +190,38 @@ export default function DevicesPage() {
           const lastHb = s?.recorded_at ?? new Date(0).toISOString();
           const bat = s?.battery ?? 100;
           const sig = s?.rssi ?? -60;
+          const zShort = z.id.substring(0, 4);
 
-          sensorNodes.push({
-            id: `node-sns-${z.id.substring(0,4)}`,
-            zone_id: z.id,
-            zone_name: z.name,
-            device_type: 'sensor',
-            firmware_version: '1.2.4',
-            battery_level: bat,
-            rssi: sig,
-            last_heartbeat: lastHb,
-            is_online: isOnline
+          // Create individual sensor devices
+          SENSOR_DEFS.forEach(def => {
+            sensorNodes.push({
+              id: `sns-${def.suffix}-${zShort}`,
+              zone_id: z.id,
+              zone_name: z.name,
+              device_name: def.name,
+              device_type: 'sensor',
+              firmware_version: def.fw,
+              battery_level: bat,
+              rssi: sig,
+              last_heartbeat: lastHb,
+              is_online: isOnline
+            });
           });
-          
-          newDevices.push({
-            id: `node-act-${z.id.substring(0,4)}`,
-            zone_id: z.id,
-            zone_name: z.name,
-            device_type: 'actuator',
-            firmware_version: '1.1.0',
-            battery_level: bat,
-            rssi: sig,
-            last_heartbeat: lastHb,
-            is_online: isOnline
+
+          // Create individual actuator devices
+          ACTUATOR_DEFS.forEach(def => {
+            newDevices.push({
+              id: `act-${def.suffix}-${zShort}`,
+              zone_id: z.id,
+              zone_name: z.name,
+              device_name: def.name,
+              device_type: 'actuator',
+              firmware_version: def.fw,
+              battery_level: bat,
+              rssi: sig,
+              last_heartbeat: lastHb,
+              is_online: isOnline
+            });
           });
         });
 
@@ -181,7 +229,6 @@ export default function DevicesPage() {
         const gatewayOnline = sensorNodes.some(d =>
           d.last_heartbeat && (now - new Date(d.last_heartbeat).getTime() < 1 * 60 * 1000)
         );
-        // Most recent heartbeat among all online sensors
         const latestHb = sensorNodes
           .filter(d => d.is_online)
           .map(d => new Date(d.last_heartbeat).getTime())
@@ -191,6 +238,7 @@ export default function DevicesPage() {
           id: 'gateway-main',
           zone_id: '',
           zone_name: 'Main Controller',
+          device_name: 'ESP8266 Gateway',
           device_type: 'gateway',
           firmware_version: '2.1.0',
           battery_level: 100,
@@ -286,6 +334,7 @@ export default function DevicesPage() {
       const row: Record<string, string | number> = {};
       if (selectedCols['id'])             row['ID Perangkat']    = d.id.toUpperCase();
       if (selectedCols['type'])           row['Tipe']            = d.device_type === 'sensor' ? 'Sensor' : d.device_type === 'actuator' ? 'Aktuator' : 'Gateway';
+      if (selectedCols['type'] && d.device_name) row['Nama Perangkat'] = d.device_name;
       if (selectedCols['zone'])           row['Zona']            = d.zone_name || '-';
       if (selectedCols['status'])         row['Status']          = d.is_online ? 'Online' : 'Offline';
       if (selectedCols['battery'])        row['Baterai (%)']     = d.battery_level;
