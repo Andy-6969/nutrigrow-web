@@ -58,7 +58,9 @@ export default function MonitoringPage() {
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
   const [history, setHistory] = useState<SensorHistoryPoint[]>([]);
   const [timeRange, setTimeRange] = useState('24h');
+  const [activeMetric, setActiveMetric] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isChartLoading, setIsChartLoading] = useState(false);
 
   // Fetch zones on mount
   useEffect(() => {
@@ -74,31 +76,25 @@ export default function MonitoringPage() {
     loadZones();
   }, []);
 
-  // Fetch sensor data and history when selected zone changes
+  // Fetch current sensor data when selected zone changes (and subscribe to updates)
   useEffect(() => {
     if (!selectedZone) return;
 
     let isMounted = true;
-    async function loadSensorData() {
-      setIsLoading(true);
+    async function loadCurrentData() {
       try {
-        const [currentData, historyData] = await Promise.all([
-          sensorService.getSensorData(selectedZone),
-          sensorService.getSensorHistory(selectedZone)
-        ]);
-        
+        const currentData = await sensorService.getSensorData(selectedZone);
         if (isMounted) {
           setSensorData(currentData);
-          setHistory(historyData);
         }
       } catch (err) {
-        console.error('Failed to load sensor data', err);
+        console.error('Failed to load current sensor data', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
     }
 
-    loadSensorData();
+    loadCurrentData();
 
     // Subscribe to realtime updates for the current zone
     sensorService.subscribeToSensorUpdates((payload) => {
@@ -114,7 +110,42 @@ export default function MonitoringPage() {
     };
   }, [selectedZone]);
 
+  // Fetch history when selected zone or timeRange changes
+  useEffect(() => {
+    if (!selectedZone) return;
+
+    let isMounted = true;
+    async function loadHistory() {
+      setIsChartLoading(true);
+      try {
+        const historyData = await sensorService.getSensorHistory(selectedZone, timeRange);
+        if (isMounted) {
+          setHistory(historyData);
+        }
+      } catch (err) {
+        console.error('Failed to load sensor history', err);
+      } finally {
+        if (isMounted) setIsChartLoading(false);
+      }
+    }
+
+    loadHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedZone, timeRange]);
+
   const activeZone = zones.find(z => z.id === selectedZone);
+
+  const metrics = [
+    { id: 'all', label: t('monitoring_all_sensors') || 'Semua Sensor', color: '#10B981', icon: Activity },
+    { id: 'soil_moisture', label: t(SENSOR_THRESHOLDS.soilMoisture.key), color: '#3B82F6', icon: Droplets },
+    { id: 'temperature', label: t(SENSOR_THRESHOLDS.temperature.key), color: '#EF4444', icon: Thermometer },
+    { id: 'humidity', label: t(SENSOR_THRESHOLDS.humidity.key), color: '#10B981', icon: Wind },
+    { id: 'ph', label: t(SENSOR_THRESHOLDS.ph.key), color: '#F59E0B', icon: Beaker },
+    { id: 'tds', label: t(SENSOR_THRESHOLDS.tds.key), color: '#8B5CF6', icon: Activity },
+  ];
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -213,14 +244,14 @@ export default function MonitoringPage() {
               <h3 className="text-base font-semibold" style={{ color: 'var(--surface-text)' }}>
                 📊 {t('monitoring_chart')}
               </h3>
-              <div className="flex gap-1 bg-white/50 rounded-lg p-1" style={{ border: '1px solid var(--surface-border)' }}>
+              <div className="flex gap-1 bg-black/10 border border-white/5 rounded-lg p-1">
                 {['24h', '7d', '30d'].map(range => (
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
                     className={cn(
-                      'px-3 py-1 text-xs font-medium rounded-md transition-all',
-                      timeRange === range ? 'bg-primary-500 text-white' : ''
+                      'px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer',
+                      timeRange === range ? 'bg-primary-500 text-white shadow-sm' : ''
                     )}
                     style={timeRange !== range ? { color: 'var(--surface-text-muted)' } : undefined}
                   >
@@ -230,25 +261,121 @@ export default function MonitoringPage() {
               </div>
             </div>
 
-            <div className="h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} interval={5} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--glass-bg)', backdropFilter: 'blur(12px)',
-                      border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
+            {/* Metric Selector Tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-5 p-1 rounded-xl bg-black/10 border border-white/5">
+              {metrics.map(m => {
+                const Icon = m.icon;
+                const isSelected = activeMetric === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setActiveMetric(m.id)}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all duration-250 cursor-pointer",
+                      isSelected
+                        ? "shadow-sm"
+                        : "opacity-75 hover:opacity-100 hover:bg-white/5"
+                    )}
+                    style={{
+                      backgroundColor: isSelected ? `${m.color}20` : 'transparent',
+                      color: isSelected ? m.color : 'var(--surface-text)',
+                      border: isSelected ? `1px solid ${m.color}40` : '1px solid transparent',
                     }}
-                  />
-                  <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
-                  <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
-                  <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
-                  <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.ph.key)} />
-                  <Line type="monotone" dataKey="tds" stroke="#8B5CF6" strokeWidth={2} dot={false} name={t(SENSOR_THRESHOLDS.tds.key)} />
-                </LineChart>
-              </ResponsiveContainer>
+                  >
+                    <Icon className="w-3.5 h-3.5" style={{ color: isSelected ? m.color : 'var(--surface-text-muted)' }} />
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="h-[340px] relative">
+              {isChartLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-[1px] rounded-xl transition-all duration-300">
+                  <div className="w-8 h-8 border-3 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                </div>
+              )}
+              {history.length === 0 ? (
+                <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                  Tidak ada data historis untuk rentang waktu ini.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  {activeMetric === 'all' ? (
+                    <LineChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--glass-bg)', backdropFilter: 'blur(12px)',
+                          border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
+                          color: 'var(--surface-text)'
+                        }}
+                        labelStyle={{ color: 'var(--surface-text-muted)', fontSize: 11, fontWeight: 'bold' }}
+                        formatter={(value: any, name: any) => {
+                          let unit = '';
+                          if (name === t(SENSOR_THRESHOLDS.soilMoisture.key)) unit = SENSOR_THRESHOLDS.soilMoisture.unit;
+                          else if (name === t(SENSOR_THRESHOLDS.temperature.key)) unit = SENSOR_THRESHOLDS.temperature.unit;
+                          else if (name === t(SENSOR_THRESHOLDS.humidity.key)) unit = SENSOR_THRESHOLDS.humidity.unit;
+                          else if (name === t(SENSOR_THRESHOLDS.ph.key)) unit = SENSOR_THRESHOLDS.ph.unit;
+                          else if (name === t(SENSOR_THRESHOLDS.tds.key)) unit = SENSOR_THRESHOLDS.tds.unit;
+                          return [`${value} ${unit}`, name];
+                        }}
+                      />
+                      <Line type="monotone" dataKey="soil_moisture" stroke="#3B82F6" strokeWidth={2.5} dot={false} name={t(SENSOR_THRESHOLDS.soilMoisture.key)} />
+                      <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2.5} dot={false} name={t(SENSOR_THRESHOLDS.temperature.key)} />
+                      <Line type="monotone" dataKey="humidity" stroke="#10B981" strokeWidth={2.5} dot={false} name={t(SENSOR_THRESHOLDS.humidity.key)} />
+                      <Line type="monotone" dataKey="ph" stroke="#F59E0B" strokeWidth={2.5} dot={false} name={t(SENSOR_THRESHOLDS.ph.key)} />
+                      <Line type="monotone" dataKey="tds" stroke="#8B5CF6" strokeWidth={2.5} dot={false} name={t(SENSOR_THRESHOLDS.tds.key)} />
+                    </LineChart>
+                  ) : (
+                    <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={metrics.find(m => m.id === activeMetric)?.color} stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor={metrics.find(m => m.id === activeMetric)?.color} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                      <YAxis 
+                        tick={{ fontSize: 10, fill: 'var(--surface-text-muted)' }} 
+                        tickLine={false} 
+                        axisLine={false}
+                        domain={['auto', 'auto']}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          background: 'var(--glass-bg)', backdropFilter: 'blur(12px)',
+                          border: 'var(--glass-border)', borderRadius: '12px', boxShadow: 'var(--glass-shadow)',
+                          color: 'var(--surface-text)'
+                        }}
+                        labelStyle={{ color: 'var(--surface-text-muted)', fontSize: 11, fontWeight: 'bold' }}
+                        formatter={(value: any, name: any) => {
+                          const metricInfo = metrics.find(m => m.id === activeMetric);
+                          let unit = '';
+                          if (activeMetric === 'soil_moisture') unit = SENSOR_THRESHOLDS.soilMoisture.unit;
+                          else if (activeMetric === 'temperature') unit = SENSOR_THRESHOLDS.temperature.unit;
+                          else if (activeMetric === 'humidity') unit = SENSOR_THRESHOLDS.humidity.unit;
+                          else if (activeMetric === 'ph') unit = SENSOR_THRESHOLDS.ph.unit;
+                          else if (activeMetric === 'tds') unit = SENSOR_THRESHOLDS.tds.unit;
+                          return [`${value} ${unit}`, metricInfo?.label || name];
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey={activeMetric} 
+                        stroke={metrics.find(m => m.id === activeMetric)?.color} 
+                        strokeWidth={2.5} 
+                        fillOpacity={1} 
+                        fill="url(#colorMetric)" 
+                        name={metrics.find(m => m.id === activeMetric)?.label} 
+                      />
+                    </AreaChart>
+                  )}
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </>

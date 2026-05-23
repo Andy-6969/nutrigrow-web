@@ -125,6 +125,7 @@ export const translations = {
     monitoring_humidity: 'Kelembaban Udara',
     monitoring_ph: 'pH Nutrisi',
     monitoring_tds: 'EC Nutrisi',
+    monitoring_all_sensors: 'Semua Sensor',
 
     // ── Override ──────────────────────────────────────────────
     override_title: 'Manual Override',
@@ -533,6 +534,7 @@ export const translations = {
     monitoring_humidity: 'Air Humidity',
     monitoring_ph: 'Nutrient pH',
     monitoring_tds: 'Nutrient EC',
+    monitoring_all_sensors: 'All Sensors',
 
     // ── Override ──────────────────────────────────────────────
     override_title: 'Manual Override',
