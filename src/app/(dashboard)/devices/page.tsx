@@ -119,6 +119,17 @@ export default function DevicesPage() {
   const { hasRole } = useRBAC();
   const t = useT();
 
+  // Helper: derive gateway online status from all sensor nodes
+  const deriveGatewayStatus = (allDevices: Device[]): boolean => {
+    const sensorNodes = allDevices.filter(d => d.device_type === 'sensor');
+    if (sensorNodes.length === 0) return false;
+    const now = new Date().getTime();
+    // Gateway is online if at least one sensor node reported data within 1 minute
+    return sensorNodes.some(d =>
+      d.last_heartbeat && (now - new Date(d.last_heartbeat).getTime() < 1 * 60 * 1000)
+    );
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -130,27 +141,18 @@ export default function DevicesPage() {
         setSensorDataMap(sensorsRes);
         
         const newDevices: Device[] = [];
-        
-        newDevices.push({
-          id: 'gateway-main',
-          zone_id: '',
-          zone_name: 'Main Controller',
-          device_type: 'gateway',
-          firmware_version: '2.1.0',
-          battery_level: 100,
-          rssi: -45,
-          last_heartbeat: new Date().toISOString(),
-          is_online: true
-        });
+        const now = new Date().getTime();
 
+        // Build sensor & actuator nodes first
+        const sensorNodes: Device[] = [];
         zonesRes.forEach(z => {
           const s = sensorsRes[z.id];
-          const isOnline = !!(s?.recorded_at && (new Date().getTime() - new Date(s.recorded_at).getTime() < 1 * 60 * 1000));
-          const lastHb = s?.recorded_at ?? new Date().toISOString();
+          const isOnline = !!(s?.recorded_at && (now - new Date(s.recorded_at).getTime() < 1 * 60 * 1000));
+          const lastHb = s?.recorded_at ?? new Date(0).toISOString();
           const bat = s?.battery ?? 100;
           const sig = s?.rssi ?? -60;
 
-          newDevices.push({
+          sensorNodes.push({
             id: `node-sns-${z.id.substring(0,4)}`,
             zone_id: z.id,
             zone_name: z.name,
@@ -174,7 +176,30 @@ export default function DevicesPage() {
             is_online: isOnline
           });
         });
-        
+
+        // Gateway is online only when at least one sensor is active (Scenario 2 logic)
+        const gatewayOnline = sensorNodes.some(d =>
+          d.last_heartbeat && (now - new Date(d.last_heartbeat).getTime() < 1 * 60 * 1000)
+        );
+        // Most recent heartbeat among all online sensors
+        const latestHb = sensorNodes
+          .filter(d => d.is_online)
+          .map(d => new Date(d.last_heartbeat).getTime())
+          .sort((a, b) => b - a)[0];
+
+        newDevices.unshift({
+          id: 'gateway-main',
+          zone_id: '',
+          zone_name: 'Main Controller',
+          device_type: 'gateway',
+          firmware_version: '2.1.0',
+          battery_level: 100,
+          rssi: -45,
+          last_heartbeat: latestHb ? new Date(latestHb).toISOString() : new Date(0).toISOString(),
+          is_online: gatewayOnline
+        });
+
+        newDevices.splice(1, 0, ...sensorNodes);
         setDevices(newDevices);
       } catch (err) {
         console.error('Failed to load devices:', err);
@@ -188,23 +213,53 @@ export default function DevicesPage() {
       const newData = payload.new as SensorData;
       if (newData.zone_id) {
         setSensorDataMap(prev => ({ ...prev, [newData.zone_id as string]: newData }));
-        setDevices(prev => prev.map(d => {
-          if (d.zone_id === newData.zone_id) {
-            return {
-              ...d,
-              last_heartbeat: newData.recorded_at,
-              is_online: true,
-              battery_level: newData.battery ?? d.battery_level,
-              rssi: newData.rssi ?? d.rssi
-            };
-          }
-          return d;
-        }));
+        setDevices(prev => {
+          const updated = prev.map(d => {
+            if (d.zone_id === newData.zone_id) {
+              return {
+                ...d,
+                last_heartbeat: newData.recorded_at,
+                is_online: true,
+                battery_level: newData.battery ?? d.battery_level,
+                rssi: newData.rssi ?? d.rssi
+              };
+            }
+            return d;
+          });
+          // Re-derive gateway status based on updated sensor nodes
+          const gatewayOnline = deriveGatewayStatus(updated);
+          return updated.map(d =>
+            d.id === 'gateway-main'
+              ? { ...d, is_online: gatewayOnline, last_heartbeat: newData.recorded_at }
+              : d
+          );
+        });
       }
     });
 
+    // Periodic re-evaluation every 30s: marks nodes offline when heartbeat expires
+    const intervalId = setInterval(() => {
+      setDevices(prev => {
+        const now = new Date().getTime();
+        const updated = prev.map(d => {
+          if (d.device_type === 'sensor' || d.device_type === 'actuator') {
+            const isOnline = !!(d.last_heartbeat &&
+              (now - new Date(d.last_heartbeat).getTime() < 1 * 60 * 1000));
+            return { ...d, is_online: isOnline };
+          }
+          return d;
+        });
+        // Update gateway based on current sensor statuses
+        const gatewayOnline = deriveGatewayStatus(updated);
+        return updated.map(d =>
+          d.id === 'gateway-main' ? { ...d, is_online: gatewayOnline } : d
+        );
+      });
+    }, 30_000);
+
     return () => {
       sensorService.unsubscribeFromSensorUpdates();
+      clearInterval(intervalId);
     };
   }, []);
 
