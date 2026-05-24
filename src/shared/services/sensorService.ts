@@ -80,7 +80,7 @@ export class SupabaseSensorService implements ISensorService {
     return result;
   }
 
-  /** Ambil tren sensor berdasarkan range ('24h', '7d', '30d') untuk satu zona */
+  /** Ambil tren sensor berdasarkan range ('10m', '1h', '24h', '7d', '30d') untuk satu zona */
   async getSensorHistory(zoneId: string, range: string = '24h'): Promise<SensorHistoryPoint[]> {
     try {
       // 1. Coba panggil RPC get_sensor_history baru
@@ -116,11 +116,13 @@ export class SupabaseSensorService implements ISensorService {
       }
       
       // 3. Fallback: Query tabel sensor_data langsung dan agregasi di memory
-      let limitDays = 1;
-      if (range === '7d') limitDays = 7;
-      if (range === '30d') limitDays = 30;
+      let limitMs = 24 * 60 * 60 * 1000; // default 24h
+      if (range === '7d') limitMs = 7 * 24 * 60 * 60 * 1000;
+      if (range === '30d') limitMs = 30 * 24 * 60 * 60 * 1000;
+      if (range === '1h') limitMs = 60 * 60 * 1000;
+      if (range === '10m') limitMs = 10 * 60 * 1000;
       
-      const startDate = new Date(Date.now() - limitDays * 24 * 60 * 60 * 1000).toISOString();
+      const startDate = new Date(Date.now() - limitMs).toISOString();
       
       const { data: tableData, error: tableError } = await supabase
         .from('sensor_data')
@@ -143,7 +145,38 @@ export class SupabaseSensorService implements ISensorService {
   }
 
   private getMockHistoryForRange(range: string): SensorHistoryPoint[] {
-    if (range === '7d') {
+    if (range === '10m') {
+      // 20 points, setiap 30 detik
+      return Array.from({ length: 20 }, (_, i) => {
+        const d = new Date(Date.now() - (19 - i) * 30 * 1000);
+        const hourStr = String(d.getHours()).padStart(2, '0');
+        const minStr = String(d.getMinutes()).padStart(2, '0');
+        const secStr = String(d.getSeconds() < 30 ? '00' : '30');
+        return {
+          time: `${hourStr}:${minStr}:${secStr}`,
+          soil_moisture: 48 + Math.sin(i * 0.5) * 5 + Math.random() * 2,
+          temperature: 25.5 + Math.sin(i * 0.3) * 1.5 + Math.random() * 0.5,
+          humidity: 62 + Math.cos(i * 0.4) * 4 + Math.random() * 1.5,
+          ph: 6.4 + Math.sin(i * 0.2) * 0.2 + Math.random() * 0.05,
+          tds: 1.5 + Math.sin(i * 0.1) * 0.1 + Math.random() * 0.03,
+        };
+      });
+    } else if (range === '1h') {
+      // 30 points, setiap 2 menit
+      return Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(Date.now() - (29 - i) * 2 * 60 * 1000);
+        const hourStr = String(d.getHours()).padStart(2, '0');
+        const minStr = String(Math.floor(d.getMinutes() / 2) * 2).padStart(2, '0');
+        return {
+          time: `${hourStr}:${minStr}`,
+          soil_moisture: 46 + Math.sin(i * 0.4) * 8 + Math.random() * 3,
+          temperature: 25.8 + Math.sin(i * 0.2) * 3 + Math.random() * 0.8,
+          humidity: 61 + Math.cos(i * 0.3) * 8 + Math.random() * 2,
+          ph: 6.4 + Math.sin(i * 0.15) * 0.4 + Math.random() * 0.08,
+          tds: 1.45 + Math.sin(i * 0.08) * 0.2 + Math.random() * 0.05,
+        };
+      });
+    } else if (range === '7d') {
       return Array.from({ length: 28 }, (_, i) => {
         const d = new Date(Date.now() - (27 - i) * 6 * 60 * 60 * 1000);
         const dayStr = String(d.getDate()).padStart(2, '0');
@@ -174,7 +207,7 @@ export class SupabaseSensorService implements ISensorService {
       });
     } else { // 24h
       return Array.from({ length: 48 }, (_, i) => {
-        const d = new Date(Date.now() - (47 - i) * 30 * 60 * 1000);
+        const d = new Date(Date.now() - (47 - i) * 30 * 1000);
         const hourStr = String(d.getHours()).padStart(2, '0');
         const minStr = String(d.getMinutes() < 30 ? '00' : '30');
         return {
@@ -222,6 +255,22 @@ export class SupabaseSensorService implements ISensorService {
         
         const groupedDate = new Date(date);
         groupedDate.setHours(0, 0, 0, 0);
+        timestamp = groupedDate.getTime();
+      } else if (range === '1h') {
+        // Group by 2 minutes: e.g. "14:32"
+        const minutes = Math.floor(date.getMinutes() / 2) * 2;
+        key = `${String(date.getHours()).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        
+        const groupedDate = new Date(date);
+        groupedDate.setMinutes(minutes, 0, 0);
+        timestamp = groupedDate.getTime();
+      } else if (range === '10m') {
+        // Group by 30 seconds: e.g. "14:32:30"
+        const seconds = date.getSeconds() < 30 ? 0 : 30;
+        key = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        const groupedDate = new Date(date);
+        groupedDate.setSeconds(seconds, 0);
         timestamp = groupedDate.getTime();
       } else {
         // Default 24h: Group by 30 minutes: e.g. "14:30"

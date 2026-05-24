@@ -13,18 +13,21 @@ import { sensorService } from '@/shared/services/sensorService';
 import type { Zone, SensorData } from '@/shared/types/global.types';
 import type { SensorHistoryPoint } from '@/shared/services/sensorService';
 
-function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
+function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor, isOffline }: {
   label: string; value: number; unit: string; icon: React.ElementType;
-  threshold: { low: number; high: number }; iconColor: string;
+  threshold: { low: number; high: number }; iconColor: string; isOffline?: boolean;
 }) {
   const t = useT();
-  const status = getThresholdColor(value, threshold.low, threshold.high);
-  const statusColor = getSensorStatusColor(status);
-  const percentage = Math.min(100, Math.max(0, ((value - 0) / (threshold.high * 1.3)) * 100));
+  const status = isOffline ? 'offline' : getThresholdColor(value, threshold.low, threshold.high);
+  const statusColor = isOffline ? '#9CA3AF' : getSensorStatusColor(status);
+  const percentage = isOffline ? 0 : Math.min(100, Math.max(0, ((value - 0) / (threshold.high * 1.3)) * 100));
 
   return (
-    <div className="glass-sm p-4 flex flex-col items-center gap-2 group hover:scale-[1.02] transition-transform cursor-default">
-      <Icon className="w-6 h-6" style={{ color: iconColor }} />
+    <div className={cn(
+      "glass-sm p-4 flex flex-col items-center gap-2 group hover:scale-[1.02] transition-transform cursor-default",
+      isOffline && "opacity-60"
+    )}>
+      <Icon className="w-6 h-6" style={{ color: isOffline ? '#9CA3AF' : iconColor }} />
       <div className="relative w-20 h-20">
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
@@ -38,14 +41,18 @@ function GaugeCard({ label, value, unit, icon: Icon, threshold, iconColor }: {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>{value.toFixed(1)}</span>
+          <span className="text-lg font-bold" style={{ color: 'var(--surface-text)' }}>
+            {isOffline ? '--' : value.toFixed(1)}
+          </span>
           <span className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>{unit}</span>
         </div>
       </div>
       <p className="text-xs font-medium text-center" style={{ color: 'var(--surface-text-muted)' }}>{label}</p>
       <div className="flex items-center gap-1">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
-        <span className="text-[10px] capitalize" style={{ color: statusColor }}>{status === 'success' ? t('common_normal') : status === 'warning' ? t('common_warning') : t('common_critical')}</span>
+        <span className="text-[10px] capitalize" style={{ color: statusColor }}>
+          {isOffline ? 'Offline' : (status === 'success' ? t('common_normal') : status === 'warning' ? t('common_warning') : t('common_critical'))}
+        </span>
       </div>
     </div>
   );
@@ -56,6 +63,7 @@ export default function MonitoringPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [selectedZone, setSelectedZone] = useState<string>('');
   const [sensorData, setSensorData] = useState<SensorData | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
   const [history, setHistory] = useState<SensorHistoryPoint[]>([]);
   const [timeRange, setTimeRange] = useState('24h');
   const [activeMetric, setActiveMetric] = useState<string>('all');
@@ -109,6 +117,26 @@ export default function MonitoringPage() {
       sensorService.unsubscribeFromSensorUpdates();
     };
   }, [selectedZone]);
+
+  // Monitor hardware online status dynamically (check every 5 seconds)
+  useEffect(() => {
+    if (!sensorData) {
+      setIsOnline(false);
+      return;
+    }
+
+    const checkOnlineStatus = () => {
+      const recordedTime = new Date(sensorData.recorded_at).getTime();
+      const diff = Date.now() - recordedTime;
+      // Jika data terakhir diterima kurang dari 2 menit (120000ms), dianggap online
+      setIsOnline(diff < 120000);
+    };
+
+    checkOnlineStatus();
+
+    const interval = setInterval(checkOnlineStatus, 5000);
+    return () => clearInterval(interval);
+  }, [sensorData]);
 
   // Fetch history when selected zone or timeRange changes
   useEffect(() => {
@@ -190,9 +218,21 @@ export default function MonitoringPage() {
           {/* Sensor Gauges */}
           {sensorData && (
             <div className="glass p-5 opacity-0 animate-fade-in" style={{ animationFillMode: 'forwards' }}>
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--surface-text-muted)' }}>
-                📡 {t('monitoring_current')} — {activeZone?.name}
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--surface-text-muted)' }}>
+                  📡 {t('monitoring_current')} — {activeZone?.name}
+                </h3>
+                <div className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border self-start sm:self-auto",
+                  isOnline 
+                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                    : "bg-red-500/10 text-red-500 border-red-500/20"
+                )}>
+                  <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                  {isOnline ? "Hardware Terkoneksi (Online)" : "Hardware Terputus (Offline)"}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.soilMoisture.key)}
@@ -201,6 +241,7 @@ export default function MonitoringPage() {
                   icon={Droplets}
                   threshold={SENSOR_THRESHOLDS.soilMoisture}
                   iconColor="#3B82F6"
+                  isOffline={!isOnline}
                 />
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.temperature.key)}
@@ -209,6 +250,7 @@ export default function MonitoringPage() {
                   icon={Thermometer}
                   threshold={SENSOR_THRESHOLDS.temperature}
                   iconColor="#EF4444"
+                  isOffline={!isOnline}
                 />
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.humidity.key)}
@@ -217,6 +259,7 @@ export default function MonitoringPage() {
                   icon={Wind}
                   threshold={SENSOR_THRESHOLDS.humidity}
                   iconColor="#10B981"
+                  isOffline={!isOnline}
                 />
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.ph.key)}
@@ -225,6 +268,7 @@ export default function MonitoringPage() {
                   icon={Beaker}
                   threshold={SENSOR_THRESHOLDS.ph}
                   iconColor="#F59E0B"
+                  isOffline={!isOnline}
                 />
                 <GaugeCard
                   label={t(SENSOR_THRESHOLDS.tds.key)}
@@ -233,6 +277,7 @@ export default function MonitoringPage() {
                   icon={Activity}
                   threshold={SENSOR_THRESHOLDS.tds}
                   iconColor="#8B5CF6"
+                  isOffline={!isOnline}
                 />
               </div>
             </div>
@@ -245,7 +290,7 @@ export default function MonitoringPage() {
                 📊 {t('monitoring_chart')}
               </h3>
               <div className="flex gap-1 bg-black/10 border border-white/5 rounded-lg p-1">
-                {['24h', '7d', '30d'].map(range => (
+                {['10m', '1h', '24h', '7d', '30d'].map(range => (
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
