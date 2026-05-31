@@ -4,12 +4,195 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Brain, Check, X, Clock, AlertTriangle, Info, Droplets, 
   FlaskConical, Thermometer, Wind, CheckCircle2, XCircle, 
-  RotateCcw, Sparkles, ChevronRight, Activity, ArrowRight
+  RotateCcw, Sparkles, ChevronRight, Activity, ArrowRight, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { fuzzyService, FuzzyRecommendation } from '@/shared/services/fuzzyService';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useT } from '@/shared/context/LanguageContext';
+import { supabase } from '@/shared/lib/supabase';
+
+// ─── FUZZY LOGIC ENGINE (MAMDANI) ──────────────────────────────
+function trapezoid(x: number, a: number, b: number, c: number, d: number): number {
+  if (x <= a || x >= d) return 0;
+  if (x >= b && x <= c) return 1;
+  if (x > a && x < b) return (x - a) / (b - a);
+  if (x > c && x < d) return (d - x) / (d - c);
+  return 0;
+}
+
+function triangle(x: number, a: number, b: number, c: number): number {
+  if (x <= a || x >= c) return 0;
+  if (x === b) return 1;
+  if (x > a && x < b) return (x - a) / (b - a);
+  if (x > b && x < c) return (c - x) / (c - b);
+  return 0;
+}
+
+interface FuzzyCalculationResult {
+  moisture: { dry: number; normal: number; wet: number };
+  temp: { cold: number; warm: number; hot: number };
+  humidity: { low: number; medium: number; high: number };
+  phState: { acidic: number; neutral: number; alkaline: number };
+  ecState: { low: number; ideal: number; high: number };
+  rules: {
+    r1: number; r2: number; r3: number; r4: number; r5: number; r6: number;
+  };
+  sumActivation: number;
+  rawDuration: number;
+  humidityAdjusted: boolean;
+  ecoAdjusted: boolean;
+  rainDelayed: boolean;
+  finalDuration: number;
+  irrigationDecision: string;
+  fertilizerDecision: string;
+  fertilizerAction: string;
+  nutrisiMl: number;
+  phAdjustment: string | null;
+}
+
+function calculateFuzzy(
+  moisture: number,
+  temp: number,
+  humidity: number,
+  ph: number,
+  ec: number,
+  willRain: boolean,
+  ecoMode: boolean
+): FuzzyCalculationResult {
+  // 1. Fuzzification
+  const moistureDry = trapezoid(moisture, 0, 0, 30, 50);
+  const moistureNormal = triangle(moisture, 40, 60, 80);
+  const moistureWet = trapezoid(moisture, 70, 85, 100, 100);
+
+  const tempCold = trapezoid(temp, 0, 0, 18, 24);
+  const tempWarm = triangle(temp, 22, 28, 32);
+  const tempHot = trapezoid(temp, 30, 35, 60, 60);
+
+  const humLow = trapezoid(humidity, 0, 0, 30, 50);
+  const humMedium = triangle(humidity, 40, 65, 80);
+  const humHigh = trapezoid(humidity, 70, 85, 100, 100);
+
+  const phAcidic = trapezoid(ph, 0, 0, 5.0, 6.0);
+  const phNeutral = triangle(ph, 5.8, 6.5, 7.2);
+  const phAlkaline = trapezoid(ph, 7.0, 8.0, 14.0, 14.0);
+
+  const ecLow = trapezoid(ec, 0, 0, 0.8, 1.5);
+  const ecIdeal = triangle(ec, 1.2, 2.0, 2.8);
+  const ecHigh = trapezoid(ec, 2.5, 3.2, 5.0, 5.0);
+
+  // 2. Rules Evaluation (Irrigation)
+  // R1: Kering AND Panas AND Rendah => SIRAM_SEGERA (25 min)
+  const r1 = Math.min(moistureDry, tempHot, humLow);
+  // R2: Kering AND Normal AND Sedang => SIRAM (15 min)
+  const r2 = Math.min(moistureDry, tempWarm, humMedium);
+  // R3: Kering AND Dingin AND Tinggi => SIRAM_SEDIKIT (8 min)
+  const r3 = Math.min(moistureDry, tempCold, humHigh);
+  // R4: Optimal AND Panas AND Rendah => SIRAM_SEDIKIT (8 min)
+  const r4 = Math.min(moistureNormal, tempHot, humLow);
+  // R5: Optimal AND Normal AND Sedang => TIDAK_PERLU (0 min)
+  const r5 = Math.min(moistureNormal, tempWarm, humMedium);
+  // R6: Basah => TIDAK_PERLU (0 min)
+  const r6 = moistureWet;
+
+  // 3. Defuzzification (Weighted Average)
+  const sumActivation = r1 + r2 + r3 + r4 + r5 + r6;
+  const sumWeight = (r1 * 25) + (r2 * 15) + (r3 * 8) + (r4 * 8) + (r5 * 0) + (r6 * 0);
+  
+  let rawDuration = sumActivation > 0 ? sumWeight / sumActivation : 0;
+  rawDuration = Math.ceil(rawDuration); // Round up
+
+  // 4. Adjustments
+  let finalDuration = rawDuration;
+  let humidityAdjusted = false;
+  let ecoAdjusted = false;
+  let rainDelayed = false;
+
+  if (willRain) {
+    finalDuration = 0;
+    rainDelayed = true;
+  } else {
+    // High humidity cut (50% reduction if RH > 85%)
+    if (humidity > 85 && finalDuration > 0) {
+      finalDuration = Math.ceil(finalDuration * 0.5);
+      humidityAdjusted = true;
+    }
+    // Eco Mode cut (30% reduction if ecoMode is active)
+    if (ecoMode && finalDuration > 0) {
+      finalDuration = Math.ceil(finalDuration * 0.7);
+      ecoAdjusted = true;
+    }
+  }
+
+  // Determine irrigation decision
+  let irrigationDecision = 'TIDAK_PERLU';
+  if (finalDuration > 0) {
+    const maxVal = Math.max(r1, r2, r3, r4);
+    if (maxVal > 0) {
+      if (maxVal === r1) irrigationDecision = 'SIRAM_SEGERA';
+      else if (maxVal === r2) irrigationDecision = 'SIRAM';
+      else irrigationDecision = 'SIRAM_SEDIKIT';
+    }
+  }
+
+  // 5. Fertilizer & pH decisions
+  let fertilizerDecision = 'TIDAK_PERLU';
+  let fertilizerAction = 'Pupuk / pH adjuster tidak diperlukan';
+  let nutrisiMl = 0;
+  let phAdjustment: string | null = null;
+
+  // pH adjustment
+  if (ph < 5.8) {
+    phAdjustment = 'up';
+    fertilizerAction = 'Aktifkan larutan pengoreksi basa (pH Up)';
+  } else if (ph > 7.2) {
+    phAdjustment = 'down';
+    fertilizerAction = 'Aktifkan larutan pengoreksi asam (pH Down)';
+  }
+
+  // Fertilizer
+  if (ec < 1.2) {
+    fertilizerDecision = 'PUPUK_TINGGI';
+    nutrisiMl = 50;
+    fertilizerAction = phAdjustment 
+      ? `Tambahkan pupuk A&B 50ml + ${fertilizerAction}` 
+      : 'Tambahkan pupuk cair A & B sebanyak 50 ml';
+  } else if (ec <= 2.5) {
+    fertilizerDecision = 'PUPUK_RENDAH';
+    nutrisiMl = 15;
+    fertilizerAction = phAdjustment 
+      ? `Tambahkan pupuk A&B 15ml + ${fertilizerAction}`
+      : 'Tambahkan pupuk cair A & B sebanyak 15 ml (pemeliharaan)';
+  } else {
+    fertilizerDecision = 'TIDAK_PERLU';
+    nutrisiMl = 0;
+    if (phAdjustment) {
+      fertilizerAction = `Bilas garam di akar (Flushing) + ${fertilizerAction}`;
+    } else {
+      fertilizerAction = 'Bilas penumpukan garam di akar (Flushing)';
+    }
+  }
+
+  return {
+    moisture: { dry: moistureDry, normal: moistureNormal, wet: moistureWet },
+    temp: { cold: tempCold, warm: tempWarm, hot: tempHot },
+    humidity: { low: humLow, medium: humMedium, high: humHigh },
+    phState: { acidic: phAcidic, neutral: phNeutral, alkaline: phAlkaline },
+    ecState: { low: ecLow, ideal: ecIdeal, high: ecHigh },
+    rules: { r1, r2, r3, r4, r5, r6 },
+    sumActivation,
+    rawDuration,
+    humidityAdjusted,
+    ecoAdjusted,
+    rainDelayed,
+    finalDuration,
+    irrigationDecision,
+    fertilizerDecision,
+    fertilizerAction,
+    nutrisiMl,
+    phAdjustment
+  };
+}
 
 export default function FuzzyRecommendationsPage() {
   const t = useT();
@@ -21,6 +204,19 @@ export default function FuzzyRecommendationsPage() {
   const [now, setNow] = useState(Date.now());
   const [isProcessing, setIsProcessing] = useState<Record<number, 'approve' | 'reject' | null>>({});
   const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+  // Simulation Panel States
+  const [showSim, setShowSim] = useState(false);
+  const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
+  const [selectedZone, setSelectedZone] = useState<string>('');
+  const [simMoisture, setSimMoisture] = useState<number>(35);
+  const [simTemp, setSimTemp] = useState<number>(28);
+  const [simHumidity, setSimHumidity] = useState<number>(60);
+  const [simPh, setSimPh] = useState<number>(6.2);
+  const [simEc, setSimEc] = useState<number>(1.8);
+  const [simWillRain, setSimWillRain] = useState<boolean>(false);
+  const [simEcoMode, setSimEcoMode] = useState<boolean>(false);
+  const [simSending, setSimSending] = useState(false);
 
   // 1. Tick for countdowns
   useEffect(() => {
@@ -39,12 +235,25 @@ export default function FuzzyRecommendationsPage() {
       ]);
       setPending(fetchedPending);
       setHistory(fetchedHistory);
+
+      // Fetch zones for simulation
+      const { data: fetchedZones, error: zonesError } = await supabase
+        .from('zones')
+        .select('id, name')
+        .order('name');
+      
+      if (!zonesError && fetchedZones) {
+        setZones(fetchedZones);
+        if (fetchedZones.length > 0 && !selectedZone) {
+          setSelectedZone(fetchedZones[0].id);
+        }
+      }
     } catch (err) {
       console.error('Error fetching fuzzy recommendations:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedZone]);
 
   // 3. Real-time Subscription
   useEffect(() => {
@@ -58,6 +267,68 @@ export default function FuzzyRecommendationsPage() {
       fuzzyService.unsubscribeFromRecommendations();
     };
   }, [fetchData]);
+
+  // Handle Simulation Sending
+  const handleSimulateSend = async () => {
+    if (!selectedZone) {
+      setStatusMsg({ type: 'error', text: 'Silakan pilih zona terlebih dahulu.' });
+      return;
+    }
+
+    const zoneName = zones.find(z => z.id === selectedZone)?.name || 'Zona';
+    
+    // Calculate live values
+    const calculation = calculateFuzzy(
+      simMoisture,
+      simTemp,
+      simHumidity,
+      simPh,
+      simEc,
+      simWillRain,
+      simEcoMode
+    );
+
+    const payload = {
+      zone_id: selectedZone,
+      zone_name: zoneName,
+      soil_moisture: simMoisture,
+      temperature: simTemp,
+      humidity: simHumidity,
+      ph: simPh,
+      ec: simEc,
+      will_rain: simWillRain,
+      irrigation_decision: calculation.irrigationDecision,
+      irrigation_score: calculation.sumActivation > 0 ? Number((calculation.rawDuration / 25).toFixed(2)) : 0,
+      irrigation_duration: calculation.finalDuration * 60, // Store in seconds for layout
+      fertilizer_decision: calculation.fertilizerDecision,
+      fertilizer_confidence: calculation.fertilizerDecision !== 'TIDAK_PERLU' ? 0.95 : 0,
+      fertilizer_action: calculation.fertilizerAction,
+      nutrisi_ml: calculation.nutrisiMl,
+      ph_adjustment: calculation.phAdjustment,
+      status: 'pending' as const,
+      auto_execute_at: new Date(Date.now() + 5 * 60000).toISOString(), // 5 minutes timer
+    };
+
+    setSimSending(true);
+    setStatusMsg(null);
+
+    try {
+      await fuzzyService.insertRecommendation(payload);
+      setStatusMsg({
+        type: 'success',
+        text: `Sukses! Rekomendasi fuzzy simulasi untuk ${zoneName} berhasil ditambahkan ke antrian.`
+      });
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      setStatusMsg({
+        type: 'error',
+        text: err.message || 'Gagal mengirim rekomendasi simulasi.'
+      });
+    } finally {
+      setSimSending(false);
+    }
+  };
 
   // 4. Action Handlers
   const handleApprove = async (rec: FuzzyRecommendation) => {
@@ -223,6 +494,342 @@ export default function FuzzyRecommendationsPage() {
           </button>
         </div>
       )}
+
+      {/* Simulation Panel */}
+      <div className="glass rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--surface-border)', background: 'var(--surface-card-ambient)' }}>
+        <button 
+          onClick={() => setShowSim(!showSim)}
+          className="w-full flex items-center justify-between p-5 hover:bg-white/5 transition-colors font-bold text-lg"
+          style={{ color: 'var(--surface-text)' }}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-emerald-400" />
+            <span>Simulasi Parameter Sensor (Demo AI Fuzzy Logic)</span>
+          </div>
+          <ChevronDown className={cn("w-5 h-5 transition-transform duration-300", showSim && "rotate-180")} />
+        </button>
+
+        {showSim && (
+          <div className="p-6 border-t border-white/5 grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ borderColor: 'var(--surface-border)' }}>
+            {/* Left Column: Inputs Form */}
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-bold text-sm text-slate-300 flex items-center gap-1.5 mb-1">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  1. Input Parameter Sensor
+                </h4>
+                <p className="text-xs text-slate-400">Geser slider atau ubah nilai sensor untuk menguji respon algoritma Fuzzy secara langsung.</p>
+              </div>
+              
+              {/* Zone Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-300 block font-semibold">Pilih Lahan / Zona Target</label>
+                <select 
+                  value={selectedZone}
+                  onChange={(e) => setSelectedZone(e.target.value)}
+                  className="w-full bg-black/30 border p-3 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200"
+                  style={{ borderColor: 'var(--surface-border)' }}
+                >
+                  {zones.length === 0 ? (
+                    <option value="">Tidak ada zona tersedia</option>
+                  ) : (
+                    zones.map(z => (
+                      <option key={z.id} value={z.id} className="bg-slate-900">{z.name}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* Sliders */}
+              <div className="space-y-4">
+                {/* Soil Moisture */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-blue-400 flex items-center gap-1">
+                      <Droplets className="w-3.5 h-3.5" /> Kelembaban Tanah
+                    </span>
+                    <span className="text-slate-200">{simMoisture}%</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="100" 
+                    value={simMoisture} 
+                    onChange={(e) => setSimMoisture(Number(e.target.value))}
+                    className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>0% (Kering)</span>
+                    <span>50% (Normal)</span>
+                    <span>100% (Basah)</span>
+                  </div>
+                </div>
+
+                {/* Temperature */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-orange-400 flex items-center gap-1">
+                      <Thermometer className="w-3.5 h-3.5" /> Suhu Udara
+                    </span>
+                    <span className="text-slate-200">{simTemp}°C</span>
+                  </div>
+                  <input 
+                    type="range" min="-10" max="60" 
+                    value={simTemp} 
+                    onChange={(e) => setSimTemp(Number(e.target.value))}
+                    className="w-full accent-orange-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>-10°C (Beku)</span>
+                    <span>25°C (Warm)</span>
+                    <span>60°C (Panas)</span>
+                  </div>
+                </div>
+
+                {/* Humidity */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-teal-400 flex items-center gap-1">
+                      <Wind className="w-3.5 h-3.5" /> Kelembaban Udara
+                    </span>
+                    <span className="text-slate-200">{simHumidity}% RH</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="100" 
+                    value={simHumidity} 
+                    onChange={(e) => setSimHumidity(Number(e.target.value))}
+                    className="w-full accent-teal-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>0% (Kering)</span>
+                    <span>65% (Normal)</span>
+                    <span>100% (Lembab)</span>
+                  </div>
+                </div>
+
+                {/* pH */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-yellow-400 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> Derajat Keasaman (pH)
+                    </span>
+                    <span className="text-slate-200">pH {simPh.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="14" step="0.1"
+                    value={simPh} 
+                    onChange={(e) => setSimPh(Number(e.target.value))}
+                    className="w-full accent-yellow-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>pH 0 (Sangat Asam)</span>
+                    <span>pH 7 (Netral)</span>
+                    <span>pH 14 (Sangat Basa)</span>
+                  </div>
+                </div>
+
+                {/* EC */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-purple-400 flex items-center gap-1">
+                      <FlaskConical className="w-3.5 h-3.5" /> Kepekatan Nutrisi (EC)
+                    </span>
+                    <span className="text-slate-200">{simEc.toFixed(2)} mS/cm</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="5" step="0.05"
+                    value={simEc} 
+                    onChange={(e) => setSimEc(Number(e.target.value))}
+                    className="w-full accent-purple-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>0.0 mS (Tawar)</span>
+                    <span>2.0 mS (Ideal)</span>
+                    <span>5.0 mS (Sangat Pekat)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
+                  <input 
+                    type="checkbox" checked={simWillRain} 
+                    onChange={(e) => setSimWillRain(e.target.checked)}
+                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">Akan Hujan</p>
+                    <p className="text-[10px] text-slate-400">Prediksi cuaca BMKG</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
+                  <input 
+                    type="checkbox" checked={simEcoMode} 
+                    onChange={(e) => setSimEcoMode(e.target.checked)}
+                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">Eco Mode Aktif</p>
+                    <p className="text-[10px] text-slate-400">Menghemat air 30%</p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Send Button */}
+              <button
+                onClick={handleSimulateSend}
+                disabled={simSending || zones.length === 0}
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {simSending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Mengirim rekomendasi...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Kirim Rekomendasi Simulasi ke Antrian</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Right Column: Visual Math Calculator */}
+            {(() => {
+              const calc = calculateFuzzy(
+                simMoisture,
+                simTemp,
+                simHumidity,
+                simPh,
+                simEc,
+                simWillRain,
+                simEcoMode
+              );
+              
+              return (
+                <div className="space-y-6 lg:border-l lg:border-white/5 lg:pl-8">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-300 flex items-center gap-1.5 mb-1">
+                      <Brain className="w-4 h-4 text-emerald-400" />
+                      2. Kalkulator Langkah Logika Fuzzy (Mamdani)
+                    </h4>
+                    <p className="text-xs text-slate-400">Visualisasi instan derajat keanggotaan, evaluasi basis aturan, dan perhitungan defuzzifikasi.</p>
+                  </div>
+
+                  <div className="space-y-4 text-xs">
+                    {/* Fuzzification Outputs */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <p className="font-bold text-slate-300 text-[11px] uppercase tracking-wider">Tahap 1: Fuzzifikasi (Keanggotaan)</p>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-[11px]">
+                        <div>
+                          <p className="text-slate-400 font-medium mb-1">Kelembaban Tanah:</p>
+                          <ul className="space-y-0.5 font-mono">
+                            <li className={calc.moisture.dry > 0 ? "text-red-400 font-semibold" : "text-slate-500"}>- Kering (Dry): {calc.moisture.dry.toFixed(2)}</li>
+                            <li className={calc.moisture.normal > 0 ? "text-blue-400 font-semibold" : "text-slate-500"}>- Optimal (Normal): {calc.moisture.normal.toFixed(2)}</li>
+                            <li className={calc.moisture.wet > 0 ? "text-green-400 font-semibold" : "text-slate-500"}>- Basah (Wet): {calc.moisture.wet.toFixed(2)}</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 font-medium mb-1">Suhu Udara:</p>
+                          <ul className="space-y-0.5 font-mono">
+                            <li className={calc.temp.cold > 0 ? "text-cyan-400 font-semibold" : "text-slate-500"}>- Dingin (Cold): {calc.temp.cold.toFixed(2)}</li>
+                            <li className={calc.temp.warm > 0 ? "text-amber-400 font-semibold" : "text-slate-500"}>- Normal (Warm): {calc.temp.warm.toFixed(2)}</li>
+                            <li className={calc.temp.hot > 0 ? "text-orange-400 font-semibold" : "text-slate-500"}>- Panas (Hot): {calc.temp.hot.toFixed(2)}</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rules Evaluation */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <p className="font-bold text-slate-300 text-[11px] uppercase tracking-wider">Tahap 2: Evaluasi Aturan (Inference)</p>
+                      <ul className="space-y-1.5 font-mono text-[11px]">
+                        <li className={cn(calc.rules.r1 > 0 ? "text-red-400 font-semibold" : "text-slate-500")}>
+                          [R1] Kering & Panas & Rendah =&gt; SIRAM_SEGERA (25m) : {calc.rules.r1.toFixed(2)}
+                        </li>
+                        <li className={cn(calc.rules.r2 > 0 ? "text-blue-400 font-semibold" : "text-slate-500")}>
+                          [R2] Kering & Normal & Sedang =&gt; SIRAM (15m) : {calc.rules.r2.toFixed(2)}
+                        </li>
+                        <li className={cn(calc.rules.r3 > 0 ? "text-cyan-400 font-semibold" : "text-slate-500")}>
+                          [R3] Kering & Dingin & Tinggi =&gt; SIRAM_SEDIKIT (8m) : {calc.rules.r3.toFixed(2)}
+                        </li>
+                        <li className={cn(calc.rules.r4 > 0 ? "text-cyan-400 font-semibold" : "text-slate-500")}>
+                          [R4] Optimal & Panas & Rendah =&gt; SIRAM_SEDIKIT (8m) : {calc.rules.r4.toFixed(2)}
+                        </li>
+                        <li className={cn(calc.rules.r5 > 0 ? "text-emerald-500" : "text-slate-500")}>
+                          [R5] Optimal & Normal & Sedang =&gt; TIDAK_PERLU (0m) : {calc.rules.r5.toFixed(2)}
+                        </li>
+                        <li className={cn(calc.rules.r6 > 0 ? "text-emerald-500" : "text-slate-500")}>
+                          [R6] Basah =&gt; TIDAK_PERLU (0m) : {calc.rules.r6.toFixed(2)}
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Defuzzification & Adjustments */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <p className="font-bold text-slate-300 text-[11px] uppercase tracking-wider">Tahap 3 & 4: Defuzzifikasi & Penyesuaian</p>
+                      
+                      <div className="space-y-2 font-mono text-[11px] text-slate-300">
+                        <div>
+                          <p className="text-slate-400 font-semibold mb-0.5">Rumus Weighted Average:</p>
+                          <p>
+                            (R1×25 + R2×15 + R3×8 + R4×8) / (R1+R2+R3+R4+R5+R6) =
+                          </p>
+                          <p className="text-emerald-400 font-bold mt-0.5">
+                            ({(calc.rules.r1*25).toFixed(1)} + {(calc.rules.r2*15).toFixed(1)} + {(calc.rules.r3*8).toFixed(1)} + {(calc.rules.r4*8).toFixed(1)}) / {calc.sumActivation.toFixed(2)} = {calc.rawDuration} menit
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/5 space-y-1">
+                          <p className="text-slate-400 font-semibold">Efek Fitur Cerdas / Lingkungan:</p>
+                          {calc.rainDelayed && (
+                            <p className="text-amber-400 font-semibold flex items-center gap-1">
+                              <AlertTriangle className="w-3.5 h-3.5" /> BMKG Rain Block: Durasi dipangkas ke 0 menit (Menunggu Hujan)
+                            </p>
+                          )}
+                          {calc.humidityAdjusted && (
+                            <p className="text-blue-400 font-semibold flex items-center gap-1">
+                              <Info className="w-3.5 h-3.5" /> High Humidity Cut: Durasi dikurangi 50% (RH &gt; 85%)
+                            </p>
+                          )}
+                          {calc.ecoAdjusted && (
+                            <p className="text-teal-400 font-semibold flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5" /> Eco-Mode Active: Durasi dikurangi 30%
+                            </p>
+                          )}
+                          {!calc.rainDelayed && !calc.humidityAdjusted && !calc.ecoAdjusted && (
+                            <p className="text-slate-400">- Tidak ada penyesuaian aktif.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Final Outputs Preview */}
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+                      <p className="font-bold text-emerald-400 text-[11px] uppercase tracking-wider">Hasil Akhir Keputusan Fuzzy</p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-slate-400">Keputusan Irigasi</p>
+                          <p className="text-sm font-bold text-slate-100">{calc.irrigationDecision}</p>
+                          <p className="text-xs text-slate-300">{calc.finalDuration} menit ({calc.finalDuration * 60} detik)</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-slate-400">Keputusan Nutrisi / pH</p>
+                          <p className="text-sm font-bold text-slate-100 truncate" title={calc.fertilizerAction}>{calc.fertilizerDecision}</p>
+                          <p className="text-xs text-slate-300 truncate" title={calc.fertilizerAction}>{calc.fertilizerAction}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
 
       {/* Main Grid */}
       <div className="space-y-8">

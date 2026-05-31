@@ -65,8 +65,20 @@ export class SupabaseFuzzyService {
         zone_id: zoneId,
       });
     } catch (apiError) {
-      console.error('[fuzzyService] Failed to approve via VPS API:', apiError);
-      throw apiError;
+      console.warn('[fuzzyService] Failed to approve via VPS API, falling back to direct database update:', apiError);
+      
+      const { error } = await supabase
+        .from('fuzzy_recommendations')
+        .update({ 
+          status: 'approved',
+          executed_at: new Date().toISOString()
+        })
+        .eq('id', recommendationId);
+
+      if (error) {
+        console.error('[fuzzyService] Direct database update failed:', error.message);
+        throw error;
+      }
     }
   }
 
@@ -77,8 +89,31 @@ export class SupabaseFuzzyService {
         zone_id: zoneId,
       });
     } catch (apiError) {
-      console.error('[fuzzyService] Failed to reject via VPS API:', apiError);
-      throw apiError;
+      console.warn('[fuzzyService] Failed to reject via VPS API, falling back to direct database update:', apiError);
+
+      const { error } = await supabase
+        .from('fuzzy_recommendations')
+        .update({ 
+          status: 'rejected',
+          executed_at: new Date().toISOString()
+        })
+        .eq('id', recommendationId);
+
+      if (error) {
+        console.error('[fuzzyService] Direct database update failed:', error.message);
+        throw error;
+      }
+    }
+  }
+
+  async insertRecommendation(payload: Partial<FuzzyRecommendation>): Promise<void> {
+    const { error } = await supabase
+      .from('fuzzy_recommendations')
+      .insert([payload]);
+
+    if (error) {
+      console.error('[fuzzyService] Failed to insert recommendation:', error.message);
+      throw error;
     }
   }
 
