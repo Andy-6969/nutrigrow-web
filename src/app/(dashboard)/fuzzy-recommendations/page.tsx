@@ -223,6 +223,8 @@ export default function FuzzyRecommendationsPage() {
   const [latestRecordedAt, setLatestRecordedAt] = useState<string | null>(null);
   const [isZoneOnline, setIsZoneOnline] = useState<boolean>(false);
 
+  const isOffline = !isSimulationMode && !isZoneOnline;
+
   // Fetch and apply latest sensor data for the selected zone
   const handleLoadRealtimeData = useCallback(async (zoneId: string) => {
     if (!zoneId) return;
@@ -761,9 +763,11 @@ export default function FuzzyRecommendationsPage() {
                     <span className="text-blue-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
                       <Droplets className="w-3.5 h-3.5" /> Moist
                     </span>
-                    <p className="text-2xl font-black text-slate-100">{simMoisture}%</p>
+                    <p className="text-2xl font-black text-slate-100">
+                      {isOffline ? '--' : `${simMoisture}%`}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {simMoisture < 40 ? '🔴 KERING' : simMoisture > 70 ? '🟢 BASAH' : '🔵 OPTIMAL'}
+                      {isOffline ? '🔴 OFFLINE' : simMoisture < 40 ? '🔴 KERING' : simMoisture > 70 ? '🟢 BASAH' : '🔵 OPTIMAL'}
                     </p>
                   </div>
 
@@ -772,9 +776,11 @@ export default function FuzzyRecommendationsPage() {
                     <span className="text-orange-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
                       <Thermometer className="w-3.5 h-3.5" /> Suhu
                     </span>
-                    <p className="text-2xl font-black text-slate-100">{simTemp}°C</p>
+                    <p className="text-2xl font-black text-slate-100">
+                      {isOffline ? '--' : `${simTemp}°C`}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {simTemp < 20 ? '🔵 DINGIN' : simTemp > 32 ? '🔴 PANAS' : '🟢 WARM'}
+                      {isOffline ? '🔴 OFFLINE' : simTemp < 20 ? '🔵 DINGIN' : simTemp > 32 ? '🔴 PANAS' : '🟢 WARM'}
                     </p>
                   </div>
 
@@ -783,9 +789,11 @@ export default function FuzzyRecommendationsPage() {
                     <span className="text-teal-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
                       <Wind className="w-3.5 h-3.5" /> Kelembaban
                     </span>
-                    <p className="text-2xl font-black text-slate-100">{simHumidity}%</p>
+                    <p className="text-2xl font-black text-slate-100">
+                      {isOffline ? '--' : `${simHumidity}%`}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {simHumidity < 40 ? '🔴 RENDAH' : simHumidity > 80 ? '🔵 TINGGI' : '🟢 SEDANG'}
+                      {isOffline ? '🔴 OFFLINE' : simHumidity < 40 ? '🔴 RENDAH' : simHumidity > 80 ? '🔵 TINGGI' : '🟢 SEDANG'}
                     </p>
                   </div>
 
@@ -794,9 +802,11 @@ export default function FuzzyRecommendationsPage() {
                     <span className="text-yellow-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
                       <Sparkles className="w-3.5 h-3.5" /> pH Tanah
                     </span>
-                    <p className="text-2xl font-black text-slate-100">{simPh.toFixed(1)}</p>
+                    <p className="text-2xl font-black text-slate-100">
+                      {isOffline ? '--' : simPh.toFixed(1)}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {simPh < 5.8 ? '🔴 ASAM' : simPh > 7.2 ? '🔵 BASA' : '🟢 OPTIMAL'}
+                      {isOffline ? '🔴 OFFLINE' : simPh < 5.8 ? '🔴 ASAM' : simPh > 7.2 ? '🔵 BASA' : '🟢 OPTIMAL'}
                     </p>
                   </div>
 
@@ -806,9 +816,11 @@ export default function FuzzyRecommendationsPage() {
                       <FlaskConical className="w-3.5 h-3.5" /> Nutrisi (EC)
                     </span>
                     <div className="flex items-baseline justify-between">
-                      <p className="text-2xl font-black text-slate-100">{simEc.toFixed(2)} <span className="text-xs font-normal text-slate-400">mS/cm</span></p>
+                      <p className="text-2xl font-black text-slate-100">
+                        {isOffline ? '--' : <>{simEc.toFixed(2)} <span className="text-xs font-normal text-slate-400">mS/cm</span></>}
+                      </p>
                       <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                        {simEc < 1.2 ? '🔴 RENDAH' : simEc > 2.5 ? '🔵 TINGGI' : '🟢 OPTIMAL'}
+                        {isOffline ? '🔴 OFFLINE' : simEc < 1.2 ? '🔴 RENDAH' : simEc > 2.5 ? '🔵 TINGGI' : '🟢 OPTIMAL'}
                       </p>
                     </div>
                   </div>
@@ -845,7 +857,7 @@ export default function FuzzyRecommendationsPage() {
               {/* Send Button */}
               <button
                 onClick={handleSimulateSend}
-                disabled={simSending || zones.length === 0}
+                disabled={simSending || zones.length === 0 || isOffline}
                 className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {simSending ? (
@@ -853,17 +865,40 @@ export default function FuzzyRecommendationsPage() {
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>Mengirim rekomendasi...</span>
                   </>
+                ) : isOffline ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                    <span>Sensor Offline - Tidak Bisa Dikirim</span>
+                  </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
                     <span>Kirim Rekomendasi Simulasi ke Antrian</span>
                   </>
-                )}
+                )
+                }
               </button>
             </div>
 
             {/* Right Column: Visual Math Calculator */}
             {(() => {
+              if (isOffline) {
+                return (
+                  <div className="space-y-6 lg:border-l lg:border-white/5 lg:pl-8 flex flex-col justify-center items-center text-center py-12 animate-fade-in">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-2">
+                      <AlertTriangle className="w-8 h-8 animate-pulse" />
+                    </div>
+                    <h4 className="font-bold text-base text-slate-200">Sensor Terputus (Offline)</h4>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      Sistem AI Fuzzy tidak dapat memproses data karena perangkat sensor pada zona ini sedang offline.
+                    </p>
+                    <p className="text-xs text-slate-500 max-w-xs mt-2">
+                      Silakan hubungkan perangkat keras Anda, atau beralih to <strong>Mode Simulasi (Manual)</strong> untuk mensimulasikan logika keputusan.
+                    </p>
+                  </div>
+                );
+              }
+
               const calc = calculateFuzzy(
                 simMoisture,
                 simTemp,
