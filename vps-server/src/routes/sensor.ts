@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
+import { evaluateFuzzyAuto } from '../lib/fuzzyAutoExecutor';
 
 export const sensorRouter = Router();
 
@@ -61,6 +62,11 @@ sensorRouter.post('/data', async (req, res) => {
     console.error('[sensor/data] Insert error:', error.message);
     return res.status(500).json({ error: 'Failed to save sensor data' });
   }
+
+  // Trigger automatic fuzzy logic evaluation
+  evaluateFuzzyAuto(data).catch((err) => {
+    console.error('[sensor/data] evaluateFuzzyAuto async error:', err);
+  });
 
   // Cek alert TDS
   let tdsAlert: string | null = null;
@@ -129,6 +135,16 @@ sensorRouter.post('/batch', async (req, res) => {
     const { error } = await supabase.from('sensor_data').insert(rows);
     if (error) {
       return res.status(500).json({ error: 'Failed to save batch', detail: error.message });
+    }
+
+    // Trigger auto fuzzy evaluation for each valid reading in the batch
+    for (const reading of readings) {
+      const parsed = SensorPayloadSchema.safeParse(reading);
+      if (parsed.success) {
+        evaluateFuzzyAuto(parsed.data).catch((err) => {
+          console.error('[sensor/batch] evaluateFuzzyAuto batch async error:', err);
+        });
+      }
     }
   }
 

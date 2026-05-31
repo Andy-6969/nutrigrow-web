@@ -4,6 +4,7 @@
 
 import mqtt, { MqttClient } from 'mqtt';
 import { supabase } from '../lib/supabase';
+import { evaluateFuzzyAuto } from '../lib/fuzzyAutoExecutor';
 
 // ─── Konstanta Topik MQTT ─────────────────────────────────────
 // Sesuaikan dengan konfigurasi ESP32 di lapangan
@@ -106,6 +107,10 @@ class NutriGrowMqttClient {
       console.error(`[MQTT] Failed to save sensor data for zone ${data.zone_id}:`, error.message);
     } else {
       console.log(`[MQTT] 📡 Saved sensor data — Zone: ${data.zone_id}, TDS: ${data.tds ?? 'N/A'} mS/cm`);
+      // Trigger automatic fuzzy logic evaluation
+      evaluateFuzzyAuto(data).catch((err) => {
+        console.error('[MQTT] evaluateFuzzyAuto async error:', err);
+      });
     }
   }
 

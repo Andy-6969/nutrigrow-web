@@ -596,21 +596,29 @@ export default function FuzzyRecommendationsPage() {
               </div>
 
               {/* Info text / Fetch indicator */}
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-slate-400 text-[11px]">
-                  {isSimulationMode 
-                    ? "💡 Geser slider di bawah secara bebas untuk mensimulasikan kondisi." 
-                    : "🔒 Slider dikunci. Data diambil otomatis dari database sensor realtime."}
-                </span>
-                {!isSimulationMode && (
-                  <button
-                    onClick={() => handleLoadRealtimeData(selectedZone)}
-                    disabled={isFetchingRealtime || !selectedZone}
-                    className="text-emerald-400 font-bold hover:text-emerald-300 active:scale-95 disabled:opacity-50 flex items-center gap-1 shrink-0 transition-all"
-                  >
-                    <RotateCcw className={cn("w-3.5 h-3.5", isFetchingRealtime && "animate-spin")} />
-                    Refresh Sensor
-                  </button>
+              <div className="flex flex-col gap-2 px-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 text-[11px]">
+                    {isSimulationMode 
+                      ? "💡 Geser slider di bawah secara bebas untuk mensimulasikan kondisi." 
+                      : "🔒 Slider dikunci. Data diambil otomatis dari database sensor realtime."}
+                  </span>
+                  {!isSimulationMode && (
+                    <button
+                      onClick={() => handleLoadRealtimeData(selectedZone)}
+                      disabled={isFetchingRealtime || !selectedZone}
+                      className="text-emerald-400 font-bold hover:text-emerald-300 active:scale-95 disabled:opacity-50 flex items-center gap-1 shrink-0 transition-all"
+                    >
+                      <RotateCcw className={cn("w-3.5 h-3.5", isFetchingRealtime && "animate-spin")} />
+                      Refresh Sensor
+                    </button>
+                  )}
+                </div>
+                {!isSimulationMode && !isOffline && (
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                    <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-400 shrink-0" />
+                    <span>🟢 Auto-Pilot Aktif: Sistem mengevaluasi & mengeksekusi irigasi/fertigasi secara otomatis di lapangan saat sensor terpicu.</span>
+                  </div>
                 )}
               </div>
               
@@ -857,8 +865,13 @@ export default function FuzzyRecommendationsPage() {
               {/* Send Button */}
               <button
                 onClick={handleSimulateSend}
-                disabled={simSending || zones.length === 0 || isOffline}
-                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-700/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={simSending || zones.length === 0 || isOffline || !isSimulationMode}
+                className={cn(
+                  "w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
+                  !isSimulationMode && !isOffline
+                    ? "bg-emerald-950/20 text-emerald-400 border border-emerald-500/20 cursor-default"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-700/20 active:scale-[0.98] disabled:opacity-50"
+                )}
               >
                 {simSending ? (
                   <>
@@ -870,13 +883,17 @@ export default function FuzzyRecommendationsPage() {
                     <AlertTriangle className="w-4 h-4 text-red-400" />
                     <span>Sensor Offline - Tidak Bisa Dikirim</span>
                   </>
+                ) : !isSimulationMode ? (
+                  <>
+                    <Check className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />
+                    <span>Sistem Irigasi Otomatis (Auto-Pilot) Aktif</span>
+                  </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
                     <span>Kirim Rekomendasi Simulasi ke Antrian</span>
                   </>
-                )
-                }
+                )}
               </button>
             </div>
 
