@@ -219,11 +219,8 @@ export default function FuzzyRecommendationsPage() {
   const [simEcoMode, setSimEcoMode] = useState<boolean>(false);
   const [simSending, setSimSending] = useState(false);
   const [isFetchingRealtime, setIsFetchingRealtime] = useState(false);
-  const [isSimulationMode, setIsSimulationMode] = useState<boolean>(false); // false = pull from realtime, true = static simulation manual override
   const [latestRecordedAt, setLatestRecordedAt] = useState<string | null>(null);
   const [isZoneOnline, setIsZoneOnline] = useState<boolean>(false);
-
-  const isOffline = !isSimulationMode && !isZoneOnline;
 
   // Fetch and apply latest sensor data for the selected zone
   const handleLoadRealtimeData = useCallback(async (zoneId: string) => {
@@ -255,12 +252,7 @@ export default function FuzzyRecommendationsPage() {
     }
   }, []);
 
-  // Auto-load realtime sensor data when zone changes or mode is set to 'realtime'
-  useEffect(() => {
-    if (selectedZone && showSim && !isSimulationMode) {
-      handleLoadRealtimeData(selectedZone);
-    }
-  }, [selectedZone, showSim, isSimulationMode, handleLoadRealtimeData]);
+  // Backend automatically evaluates live sensors. This panel is solely for manual simulation.
 
   // 1. Tick for countdowns
   useEffect(() => {
@@ -567,59 +559,21 @@ export default function FuzzyRecommendationsPage() {
                 </div>
               </div>
 
-              {/* Mode Selector */}
-              <div className="grid grid-cols-2 gap-1 p-1 bg-black/40 border rounded-xl" style={{ borderColor: 'var(--surface-border)' }}>
-                <button
-                  onClick={() => setIsSimulationMode(false)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]",
-                    !isSimulationMode 
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20" 
-                      : "text-slate-400 hover:text-slate-200"
-                  )}
-                >
-                  <Activity className="w-3.5 h-3.5" />
-                  Mode Realtime (Live)
-                </button>
-                <button
-                  onClick={() => setIsSimulationMode(true)}
-                  className={cn(
-                    "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]",
-                    isSimulationMode 
-                      ? "bg-amber-600 text-white shadow-md shadow-amber-950/20" 
-                      : "text-slate-400 hover:text-slate-200"
-                  )}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Mode Simulasi (Manual)
-                </button>
-              </div>
-
               {/* Info text / Fetch indicator */}
-              <div className="flex flex-col gap-2 px-1">
+              <div className="flex flex-col gap-2 px-1 mb-4">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400 text-[11px]">
-                    {isSimulationMode 
-                      ? "💡 Geser slider di bawah secara bebas untuk mensimulasikan kondisi." 
-                      : "🔒 Slider dikunci. Data diambil otomatis dari database sensor realtime."}
+                    💡 Geser slider di bawah untuk mensimulasikan nilai, atau tarik data realtime.
                   </span>
-                  {!isSimulationMode && (
-                    <button
-                      onClick={() => handleLoadRealtimeData(selectedZone)}
-                      disabled={isFetchingRealtime || !selectedZone}
-                      className="text-emerald-400 font-bold hover:text-emerald-300 active:scale-95 disabled:opacity-50 flex items-center gap-1 shrink-0 transition-all"
-                    >
-                      <RotateCcw className={cn("w-3.5 h-3.5", isFetchingRealtime && "animate-spin")} />
-                      Refresh Sensor
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleLoadRealtimeData(selectedZone)}
+                    disabled={isFetchingRealtime || !selectedZone}
+                    className="text-emerald-400 font-bold hover:text-emerald-300 active:scale-95 disabled:opacity-50 flex items-center gap-1 shrink-0 transition-all"
+                  >
+                    <RotateCcw className={cn("w-3.5 h-3.5", isFetchingRealtime && "animate-spin")} />
+                    Tarik Data Realtime
+                  </button>
                 </div>
-                {!isSimulationMode && !isOffline && (
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
-                    <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-400 shrink-0" />
-                    <span>🟢 Auto-Pilot Aktif: Sistem mengevaluasi & mengeksekusi irigasi/fertigasi secara otomatis di lapangan saat sensor terpicu.</span>
-                  </div>
-                )}
               </div>
               
               {/* Zone Selector & Online/Offline Status */}
@@ -628,7 +582,7 @@ export default function FuzzyRecommendationsPage() {
                   <label className="text-xs text-slate-300 block font-semibold">Pilih Lahan / Zona Target</label>
                   
                   {/* Online/Offline Status Badge */}
-                  {!isSimulationMode && selectedZone && (
+                  {selectedZone && (
                     <div className={cn(
                       "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border animate-fade-in",
                       isZoneOnline 
@@ -657,8 +611,7 @@ export default function FuzzyRecommendationsPage() {
               </div>
 
               {/* Sliders vs Realtime Grid */}
-              {isSimulationMode ? (
-                <div className="space-y-4 animate-fade-in">
+              <div className="space-y-4 animate-fade-in">
                   {/* Soil Moisture */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
@@ -764,76 +717,7 @@ export default function FuzzyRecommendationsPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                  {/* Moisture Card */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <span className="text-blue-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <Droplets className="w-3.5 h-3.5" /> Moist
-                    </span>
-                    <p className="text-2xl font-black text-slate-100">
-                      {isOffline ? '--' : `${simMoisture}%`}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {isOffline ? '🔴 OFFLINE' : simMoisture < 40 ? '🔴 KERING' : simMoisture > 70 ? '🟢 BASAH' : '🔵 OPTIMAL'}
-                    </p>
-                  </div>
 
-                  {/* Temp Card */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <span className="text-orange-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <Thermometer className="w-3.5 h-3.5" /> Suhu
-                    </span>
-                    <p className="text-2xl font-black text-slate-100">
-                      {isOffline ? '--' : `${simTemp}°C`}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {isOffline ? '🔴 OFFLINE' : simTemp < 20 ? '🔵 DINGIN' : simTemp > 32 ? '🔴 PANAS' : '🟢 WARM'}
-                    </p>
-                  </div>
-
-                  {/* Humidity Card */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <span className="text-teal-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <Wind className="w-3.5 h-3.5" /> Kelembaban
-                    </span>
-                    <p className="text-2xl font-black text-slate-100">
-                      {isOffline ? '--' : `${simHumidity}%`}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {isOffline ? '🔴 OFFLINE' : simHumidity < 40 ? '🔴 RENDAH' : simHumidity > 80 ? '🔵 TINGGI' : '🟢 SEDANG'}
-                    </p>
-                  </div>
-
-                  {/* pH Card */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <span className="text-yellow-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5" /> pH Tanah
-                    </span>
-                    <p className="text-2xl font-black text-slate-100">
-                      {isOffline ? '--' : simPh.toFixed(1)}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                      {isOffline ? '🔴 OFFLINE' : simPh < 5.8 ? '🔴 ASAM' : simPh > 7.2 ? '🔵 BASA' : '🟢 OPTIMAL'}
-                    </p>
-                  </div>
-
-                  {/* EC Card */}
-                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 col-span-2 space-y-1">
-                    <span className="text-purple-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <FlaskConical className="w-3.5 h-3.5" /> Nutrisi (EC)
-                    </span>
-                    <div className="flex items-baseline justify-between">
-                      <p className="text-2xl font-black text-slate-100">
-                        {isOffline ? '--' : <>{simEc.toFixed(2)} <span className="text-xs font-normal text-slate-400">mS/cm</span></>}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                        {isOffline ? '🔴 OFFLINE' : simEc < 1.2 ? '🔴 RENDAH' : simEc > 2.5 ? '🔵 TINGGI' : '🟢 OPTIMAL'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Toggles */}
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -865,28 +749,16 @@ export default function FuzzyRecommendationsPage() {
               {/* Send Button */}
               <button
                 onClick={handleSimulateSend}
-                disabled={simSending || zones.length === 0 || isOffline || !isSimulationMode}
+                disabled={simSending || zones.length === 0}
                 className={cn(
                   "w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
-                  !isSimulationMode && !isOffline
-                    ? "bg-emerald-950/20 text-emerald-400 border border-emerald-500/20 cursor-default"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-700/20 active:scale-[0.98] disabled:opacity-50"
+                  "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-700/20 active:scale-[0.98] disabled:opacity-50"
                 )}
               >
                 {simSending ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>Mengirim rekomendasi...</span>
-                  </>
-                ) : isOffline ? (
-                  <>
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                    <span>Sensor Offline - Tidak Bisa Dikirim</span>
-                  </>
-                ) : !isSimulationMode ? (
-                  <>
-                    <Check className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />
-                    <span>Sistem Irigasi Otomatis (Auto-Pilot) Aktif</span>
                   </>
                 ) : (
                   <>
@@ -899,23 +771,6 @@ export default function FuzzyRecommendationsPage() {
 
             {/* Right Column: Visual Math Calculator */}
             {(() => {
-              if (isOffline) {
-                return (
-                  <div className="space-y-6 lg:border-l lg:border-white/5 lg:pl-8 flex flex-col justify-center items-center text-center py-12 animate-fade-in">
-                    <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-2">
-                      <AlertTriangle className="w-8 h-8 animate-pulse" />
-                    </div>
-                    <h4 className="font-bold text-base text-slate-200">Sensor Terputus (Offline)</h4>
-                    <p className="text-xs text-slate-400 max-w-sm">
-                      Sistem AI Fuzzy tidak dapat memproses data karena perangkat sensor pada zona ini sedang offline.
-                    </p>
-                    <p className="text-xs text-slate-500 max-w-xs mt-2">
-                      Silakan hubungkan perangkat keras Anda, atau beralih to <strong>Mode Simulasi (Manual)</strong> untuk mensimulasikan logika keputusan.
-                    </p>
-                  </div>
-                );
-              }
-
               const calc = calculateFuzzy(
                 simMoisture,
                 simTemp,
