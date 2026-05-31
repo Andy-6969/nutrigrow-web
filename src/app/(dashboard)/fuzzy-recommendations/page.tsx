@@ -11,6 +11,7 @@ import { fuzzyService, FuzzyRecommendation } from '@/shared/services/fuzzyServic
 import { useAuth } from '@/shared/context/AuthContext';
 import { useT } from '@/shared/context/LanguageContext';
 import { supabase } from '@/shared/lib/supabase';
+import { sensorService } from '@/shared/services/sensorService';
 
 // ─── FUZZY LOGIC ENGINE (MAMDANI) ──────────────────────────────
 function trapezoid(x: number, a: number, b: number, c: number, d: number): number {
@@ -217,6 +218,35 @@ export default function FuzzyRecommendationsPage() {
   const [simWillRain, setSimWillRain] = useState<boolean>(false);
   const [simEcoMode, setSimEcoMode] = useState<boolean>(false);
   const [simSending, setSimSending] = useState(false);
+  const [isFetchingRealtime, setIsFetchingRealtime] = useState(false);
+  const [isSimulationMode, setIsSimulationMode] = useState<boolean>(false); // false = pull from realtime, true = static simulation manual override
+
+  // Fetch and apply latest sensor data for the selected zone
+  const handleLoadRealtimeData = useCallback(async (zoneId: string) => {
+    if (!zoneId) return;
+    setIsFetchingRealtime(true);
+    try {
+      const data = await sensorService.getSensorData(zoneId);
+      if (data) {
+        setSimMoisture(data.soil_moisture ?? 35);
+        setSimTemp(data.temperature ?? 28);
+        setSimHumidity(data.humidity ?? 60);
+        setSimPh(data.ph ?? 6.2);
+        setSimEc(data.tds ?? 1.8);
+      }
+    } catch (err) {
+      console.warn('[fuzzy-recommendations] Failed to load realtime sensor data:', err);
+    } finally {
+      setIsFetchingRealtime(false);
+    }
+  }, []);
+
+  // Auto-load realtime sensor data when zone changes or mode is set to 'realtime'
+  useEffect(() => {
+    if (selectedZone && showSim && !isSimulationMode) {
+      handleLoadRealtimeData(selectedZone);
+    }
+  }, [selectedZone, showSim, isSimulationMode, handleLoadRealtimeData]);
 
   // 1. Tick for countdowns
   useEffect(() => {
@@ -513,12 +543,61 @@ export default function FuzzyRecommendationsPage() {
           <div className="p-6 border-t border-white/5 grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ borderColor: 'var(--surface-border)' }}>
             {/* Left Column: Inputs Form */}
             <div className="space-y-6">
-              <div>
-                <h4 className="font-bold text-sm text-slate-300 flex items-center gap-1.5 mb-1">
-                  <Activity className="w-4 h-4 text-emerald-400" />
-                  1. Input Parameter Sensor
-                </h4>
-                <p className="text-xs text-slate-400">Geser slider atau ubah nilai sensor untuk menguji respon algoritma Fuzzy secara langsung.</p>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div>
+                  <h4 className="font-bold text-sm text-slate-300 flex items-center gap-1.5 mb-1">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    1. Input Parameter Sensor
+                  </h4>
+                  <p className="text-xs text-slate-400">Pilih mode untuk menggunakan data real-time sensor atau mensimulasikan nilai custom.</p>
+                </div>
+              </div>
+
+              {/* Mode Selector */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-black/40 border rounded-xl" style={{ borderColor: 'var(--surface-border)' }}>
+                <button
+                  onClick={() => setIsSimulationMode(false)}
+                  className={cn(
+                    "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]",
+                    !isSimulationMode 
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20" 
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  Mode Realtime (Live)
+                </button>
+                <button
+                  onClick={() => setIsSimulationMode(true)}
+                  className={cn(
+                    "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]",
+                    isSimulationMode 
+                      ? "bg-amber-600 text-white shadow-md shadow-amber-950/20" 
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Mode Simulasi (Manual)
+                </button>
+              </div>
+
+              {/* Info text / Fetch indicator */}
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="text-slate-400 text-[11px]">
+                  {isSimulationMode 
+                    ? "💡 Geser slider di bawah secara bebas untuk mensimulasikan kondisi." 
+                    : "🔒 Slider dikunci. Data diambil otomatis dari database sensor realtime."}
+                </span>
+                {!isSimulationMode && (
+                  <button
+                    onClick={() => handleLoadRealtimeData(selectedZone)}
+                    disabled={isFetchingRealtime || !selectedZone}
+                    className="text-emerald-400 font-bold hover:text-emerald-300 active:scale-95 disabled:opacity-50 flex items-center gap-1 shrink-0 transition-all"
+                  >
+                    <RotateCcw className={cn("w-3.5 h-3.5", isFetchingRealtime && "animate-spin")} />
+                    Refresh Sensor
+                  </button>
+                )}
               </div>
               
               {/* Zone Selector */}
@@ -543,7 +622,7 @@ export default function FuzzyRecommendationsPage() {
               {/* Sliders */}
               <div className="space-y-4">
                 {/* Soil Moisture */}
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-blue-400 flex items-center gap-1">
                       <Droplets className="w-3.5 h-3.5" /> Kelembaban Tanah
@@ -553,8 +632,9 @@ export default function FuzzyRecommendationsPage() {
                   <input 
                     type="range" min="0" max="100" 
                     value={simMoisture} 
+                    disabled={!isSimulationMode}
                     onChange={(e) => setSimMoisture(Number(e.target.value))}
-                    className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>0% (Kering)</span>
@@ -564,7 +644,7 @@ export default function FuzzyRecommendationsPage() {
                 </div>
 
                 {/* Temperature */}
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-orange-400 flex items-center gap-1">
                       <Thermometer className="w-3.5 h-3.5" /> Suhu Udara
@@ -574,8 +654,9 @@ export default function FuzzyRecommendationsPage() {
                   <input 
                     type="range" min="-10" max="60" 
                     value={simTemp} 
+                    disabled={!isSimulationMode}
                     onChange={(e) => setSimTemp(Number(e.target.value))}
-                    className="w-full accent-orange-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    className="w-full accent-orange-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>-10°C (Beku)</span>
@@ -585,7 +666,7 @@ export default function FuzzyRecommendationsPage() {
                 </div>
 
                 {/* Humidity */}
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-teal-400 flex items-center gap-1">
                       <Wind className="w-3.5 h-3.5" /> Kelembaban Udara
@@ -595,8 +676,9 @@ export default function FuzzyRecommendationsPage() {
                   <input 
                     type="range" min="0" max="100" 
                     value={simHumidity} 
+                    disabled={!isSimulationMode}
                     onChange={(e) => setSimHumidity(Number(e.target.value))}
-                    className="w-full accent-teal-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    className="w-full accent-teal-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>0% (Kering)</span>
@@ -606,7 +688,7 @@ export default function FuzzyRecommendationsPage() {
                 </div>
 
                 {/* pH */}
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-yellow-400 flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5" /> Derajat Keasaman (pH)
@@ -616,8 +698,9 @@ export default function FuzzyRecommendationsPage() {
                   <input 
                     type="range" min="0" max="14" step="0.1"
                     value={simPh} 
+                    disabled={!isSimulationMode}
                     onChange={(e) => setSimPh(Number(e.target.value))}
-                    className="w-full accent-yellow-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    className="w-full accent-yellow-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>pH 0 (Sangat Asam)</span>
@@ -627,7 +710,7 @@ export default function FuzzyRecommendationsPage() {
                 </div>
 
                 {/* EC */}
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-purple-400 flex items-center gap-1">
                       <FlaskConical className="w-3.5 h-3.5" /> Kepekatan Nutrisi (EC)
@@ -637,8 +720,9 @@ export default function FuzzyRecommendationsPage() {
                   <input 
                     type="range" min="0" max="5" step="0.05"
                     value={simEc} 
+                    disabled={!isSimulationMode}
                     onChange={(e) => setSimEc(Number(e.target.value))}
-                    className="w-full accent-purple-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    className="w-full accent-purple-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>0.0 mS (Tawar)</span>
