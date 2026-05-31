@@ -220,6 +220,8 @@ export default function FuzzyRecommendationsPage() {
   const [simSending, setSimSending] = useState(false);
   const [isFetchingRealtime, setIsFetchingRealtime] = useState(false);
   const [isSimulationMode, setIsSimulationMode] = useState<boolean>(false); // false = pull from realtime, true = static simulation manual override
+  const [latestRecordedAt, setLatestRecordedAt] = useState<string | null>(null);
+  const [isZoneOnline, setIsZoneOnline] = useState<boolean>(false);
 
   // Fetch and apply latest sensor data for the selected zone
   const handleLoadRealtimeData = useCallback(async (zoneId: string) => {
@@ -233,9 +235,19 @@ export default function FuzzyRecommendationsPage() {
         setSimHumidity(data.humidity ?? 60);
         setSimPh(data.ph ?? 6.2);
         setSimEc(data.tds ?? 1.8);
+        setLatestRecordedAt(data.recorded_at);
+        
+        // Online status logic: check if data is newer than 10 minutes
+        const online = new Date().getTime() - new Date(data.recorded_at).getTime() < 10 * 60 * 1000;
+        setIsZoneOnline(online);
+      } else {
+        setLatestRecordedAt(null);
+        setIsZoneOnline(false);
       }
     } catch (err) {
       console.warn('[fuzzy-recommendations] Failed to load realtime sensor data:', err);
+      setLatestRecordedAt(null);
+      setIsZoneOnline(false);
     } finally {
       setIsFetchingRealtime(false);
     }
@@ -600,9 +612,24 @@ export default function FuzzyRecommendationsPage() {
                 )}
               </div>
               
-              {/* Zone Selector */}
+              {/* Zone Selector & Online/Offline Status */}
               <div className="space-y-1.5">
-                <label className="text-xs text-slate-300 block font-semibold">Pilih Lahan / Zona Target</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-slate-300 block font-semibold">Pilih Lahan / Zona Target</label>
+                  
+                  {/* Online/Offline Status Badge */}
+                  {!isSimulationMode && selectedZone && (
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border animate-fade-in",
+                      isZoneOnline 
+                        ? "bg-green-500/10 text-green-400 border-green-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]" 
+                        : "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.05)]"
+                    )}>
+                      <span className={cn("w-1.5 h-1.5 rounded-full", isZoneOnline ? "bg-green-400 animate-pulse" : "bg-red-400")} />
+                      <span>{isZoneOnline ? "Sensor Online" : "Sensor Offline"}</span>
+                    </div>
+                  )}
+                </div>
                 <select 
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
@@ -619,118 +646,174 @@ export default function FuzzyRecommendationsPage() {
                 </select>
               </div>
 
-              {/* Sliders */}
-              <div className="space-y-4">
-                {/* Soil Moisture */}
-                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-blue-400 flex items-center gap-1">
-                      <Droplets className="w-3.5 h-3.5" /> Kelembaban Tanah
-                    </span>
-                    <span className="text-slate-200">{simMoisture}%</span>
+              {/* Sliders vs Realtime Grid */}
+              {isSimulationMode ? (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Soil Moisture */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-blue-400 flex items-center gap-1">
+                        <Droplets className="w-3.5 h-3.5" /> Kelembaban Tanah
+                      </span>
+                      <span className="text-slate-200">{simMoisture}%</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" 
+                      value={simMoisture} 
+                      onChange={(e) => setSimMoisture(Number(e.target.value))}
+                      className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>0% (Kering)</span>
+                      <span>50% (Normal)</span>
+                      <span>100% (Basah)</span>
+                    </div>
                   </div>
-                  <input 
-                    type="range" min="0" max="100" 
-                    value={simMoisture} 
-                    disabled={!isSimulationMode}
-                    onChange={(e) => setSimMoisture(Number(e.target.value))}
-                    className="w-full accent-blue-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>0% (Kering)</span>
-                    <span>50% (Normal)</span>
-                    <span>100% (Basah)</span>
-                  </div>
-                </div>
 
-                {/* Temperature */}
-                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-orange-400 flex items-center gap-1">
-                      <Thermometer className="w-3.5 h-3.5" /> Suhu Udara
-                    </span>
-                    <span className="text-slate-200">{simTemp}°C</span>
+                  {/* Temperature */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-orange-400 flex items-center gap-1">
+                        <Thermometer className="w-3.5 h-3.5" /> Suhu Udara
+                      </span>
+                      <span className="text-slate-200">{simTemp}°C</span>
+                    </div>
+                    <input 
+                      type="range" min="-10" max="60" 
+                      value={simTemp} 
+                      onChange={(e) => setSimTemp(Number(e.target.value))}
+                      className="w-full accent-orange-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>-10°C (Beku)</span>
+                      <span>25°C (Warm)</span>
+                      <span>60°C (Panas)</span>
+                    </div>
                   </div>
-                  <input 
-                    type="range" min="-10" max="60" 
-                    value={simTemp} 
-                    disabled={!isSimulationMode}
-                    onChange={(e) => setSimTemp(Number(e.target.value))}
-                    className="w-full accent-orange-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>-10°C (Beku)</span>
-                    <span>25°C (Warm)</span>
-                    <span>60°C (Panas)</span>
-                  </div>
-                </div>
 
-                {/* Humidity */}
-                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-teal-400 flex items-center gap-1">
-                      <Wind className="w-3.5 h-3.5" /> Kelembaban Udara
-                    </span>
-                    <span className="text-slate-200">{simHumidity}% RH</span>
+                  {/* Humidity */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-teal-400 flex items-center gap-1">
+                        <Wind className="w-3.5 h-3.5" /> Kelembaban Udara
+                      </span>
+                      <span className="text-slate-200">{simHumidity}% RH</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="100" 
+                      value={simHumidity} 
+                      onChange={(e) => setSimHumidity(Number(e.target.value))}
+                      className="w-full accent-teal-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>0% (Kering)</span>
+                      <span>65% (Normal)</span>
+                      <span>100% (Lembab)</span>
+                    </div>
                   </div>
-                  <input 
-                    type="range" min="0" max="100" 
-                    value={simHumidity} 
-                    disabled={!isSimulationMode}
-                    onChange={(e) => setSimHumidity(Number(e.target.value))}
-                    className="w-full accent-teal-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>0% (Kering)</span>
-                    <span>65% (Normal)</span>
-                    <span>100% (Lembab)</span>
-                  </div>
-                </div>
 
-                {/* pH */}
-                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-yellow-400 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" /> Derajat Keasaman (pH)
-                    </span>
-                    <span className="text-slate-200">pH {simPh.toFixed(1)}</span>
+                  {/* pH */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-yellow-400 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5" /> Derajat Keasaman (pH)
+                      </span>
+                      <span className="text-slate-200">pH {simPh.toFixed(1)}</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="14" step="0.1"
+                      value={simPh} 
+                      onChange={(e) => setSimPh(Number(e.target.value))}
+                      className="w-full accent-yellow-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>pH 0 (Sangat Asam)</span>
+                      <span>pH 7 (Netral)</span>
+                      <span>pH 14 (Sangat Basa)</span>
+                    </div>
                   </div>
-                  <input 
-                    type="range" min="0" max="14" step="0.1"
-                    value={simPh} 
-                    disabled={!isSimulationMode}
-                    onChange={(e) => setSimPh(Number(e.target.value))}
-                    className="w-full accent-yellow-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>pH 0 (Sangat Asam)</span>
-                    <span>pH 7 (Netral)</span>
-                    <span>pH 14 (Sangat Basa)</span>
-                  </div>
-                </div>
 
-                {/* EC */}
-                <div className={cn("space-y-1 transition-opacity duration-300", !isSimulationMode && "opacity-80")}>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-purple-400 flex items-center gap-1">
-                      <FlaskConical className="w-3.5 h-3.5" /> Kepekatan Nutrisi (EC)
-                    </span>
-                    <span className="text-slate-200">{simEc.toFixed(2)} mS/cm</span>
-                  </div>
-                  <input 
-                    type="range" min="0" max="5" step="0.05"
-                    value={simEc} 
-                    disabled={!isSimulationMode}
-                    onChange={(e) => setSimEc(Number(e.target.value))}
-                    className="w-full accent-purple-500 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>0.0 mS (Tawar)</span>
-                    <span>2.0 mS (Ideal)</span>
-                    <span>5.0 mS (Sangat Pekat)</span>
+                  {/* EC */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-purple-400 flex items-center gap-1">
+                        <FlaskConical className="w-3.5 h-3.5" /> Kepekatan Nutrisi (EC)
+                      </span>
+                      <span className="text-slate-200">{simEc.toFixed(2)} mS/cm</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="5" step="0.05"
+                      value={simEc} 
+                      onChange={(e) => setSimEc(Number(e.target.value))}
+                      className="w-full accent-purple-500 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>0.0 mS (Tawar)</span>
+                      <span>2.0 mS (Ideal)</span>
+                      <span>5.0 mS (Sangat Pekat)</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                  {/* Moisture Card */}
+                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
+                    <span className="text-blue-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                      <Droplets className="w-3.5 h-3.5" /> Moist
+                    </span>
+                    <p className="text-2xl font-black text-slate-100">{simMoisture}%</p>
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      {simMoisture < 40 ? '🔴 KERING' : simMoisture > 70 ? '🟢 BASAH' : '🔵 OPTIMAL'}
+                    </p>
+                  </div>
+
+                  {/* Temp Card */}
+                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
+                    <span className="text-orange-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                      <Thermometer className="w-3.5 h-3.5" /> Suhu
+                    </span>
+                    <p className="text-2xl font-black text-slate-100">{simTemp}°C</p>
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      {simTemp < 20 ? '🔵 DINGIN' : simTemp > 32 ? '🔴 PANAS' : '🟢 WARM'}
+                    </p>
+                  </div>
+
+                  {/* Humidity Card */}
+                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
+                    <span className="text-teal-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                      <Wind className="w-3.5 h-3.5" /> Kelembaban
+                    </span>
+                    <p className="text-2xl font-black text-slate-100">{simHumidity}%</p>
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      {simHumidity < 40 ? '🔴 RENDAH' : simHumidity > 80 ? '🔵 TINGGI' : '🟢 SEDANG'}
+                    </p>
+                  </div>
+
+                  {/* pH Card */}
+                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-1">
+                    <span className="text-yellow-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5" /> pH Tanah
+                    </span>
+                    <p className="text-2xl font-black text-slate-100">{simPh.toFixed(1)}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      {simPh < 5.8 ? '🔴 ASAM' : simPh > 7.2 ? '🔵 BASA' : '🟢 OPTIMAL'}
+                    </p>
+                  </div>
+
+                  {/* EC Card */}
+                  <div className="p-4 rounded-xl bg-black/30 border border-white/5 col-span-2 space-y-1">
+                    <span className="text-purple-400 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                      <FlaskConical className="w-3.5 h-3.5" /> Nutrisi (EC)
+                    </span>
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-2xl font-black text-slate-100">{simEc.toFixed(2)} <span className="text-xs font-normal text-slate-400">mS/cm</span></p>
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                        {simEc < 1.2 ? '🔴 RENDAH' : simEc > 2.5 ? '🔵 TINGGI' : '🟢 OPTIMAL'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Toggles */}
               <div className="grid grid-cols-2 gap-4 pt-2">
