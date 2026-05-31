@@ -15,6 +15,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { useT } from '@/shared/context/LanguageContext';
 import PendingApprovalPage from '@/app/(dashboard)/pending-approval/page';
+import { useToast } from '@/shared/context/ToastContext';
+import { supabase } from '@/shared/lib/supabase';
 
 const navItemDefs = [
   { id: 'overview',             tKey: 'nav_dashboard',             icon: LayoutDashboard, href: '/overview' },
@@ -54,6 +56,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const { profile, role, isLoading, logout } = useAuth();
   const { canAccess } = useRBAC();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!role || role === 'guest') return;
+
+    const channel = supabase
+      .channel('global-notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        (payload) => {
+          const n = payload.new as any;
+          toast({
+            type: n.type === 'alert' || n.type === 'error' ? 'error' : n.type === 'warning' ? 'warning' : 'info',
+            title: n.title || 'Notifikasi Baru',
+            message: n.body,
+            duration: 8000,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [role, toast]);
 
   const unreadCount = mockNotifications.filter(n => !n.is_read).length;
 
