@@ -462,9 +462,9 @@ function AnimatedLoRa() {
 
         {/* LoRa HUD Info Card overlay */}
         <g className="animate-float-card">
-          <rect x="50" y="15" width="100" height="20" rx="5" fill="#0D1F1A" stroke="#34D399" strokeWidth="1" />
-          <circle cx="62" cy="25" r="2.5" fill="#34D399" className="animate-blink" />
-          <text x="70" y="27.5" fill="#E0F2FE" fontSize="7" fontWeight="bold" textAnchor="start" fontFamily="sans-serif">LORA P2P: CONNECTED</text>
+          <rect x="35" y="15" width="130" height="20" rx="5" fill="#0D1F1A" stroke="#34D399" strokeWidth="1" />
+          <circle cx="47" cy="25" r="2.5" fill="#34D399" className="animate-blink" />
+          <text x="56" y="27.2" fill="#E0F2FE" fontSize="6.5" fontWeight="bold" textAnchor="start" fontFamily="sans-serif">LORA P2P: CONNECTED</text>
         </g>
       </svg>
       <style>{`
