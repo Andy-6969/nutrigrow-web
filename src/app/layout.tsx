@@ -5,6 +5,7 @@ import { AuthProvider } from '@/shared/context/AuthContext';
 import { ToastProvider } from '@/shared/context/ToastContext';
 import { LanguageProvider } from '@/shared/context/LanguageContext';
 import PWAInit from '@/shared/components/PWAInit';
+import SplashOnboarding from '@/shared/components/SplashOnboarding';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SplashOnboarding />
         <AuthProvider>
           <ToastProvider>
             <LanguageProvider>
