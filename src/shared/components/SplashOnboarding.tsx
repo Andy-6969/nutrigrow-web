@@ -7,6 +7,7 @@ import {
   Droplets, CloudRain, Radio, ToggleRight, ArrowRight,
   Cpu, Zap, Activity,
 } from 'lucide-react';
+import { useAuth } from '@/shared/context/AuthContext';
 
 /* ─────────────────────────────────────────────────────
    CONSTANTS
@@ -502,23 +503,30 @@ function OnboardingFlow({ onDone }: { onDone: () => void }) {
 ───────────────────────────────────────────────────── */
 export default function SplashOnboarding() {
   const [phase, setPhase] = useState<'idle' | 'splash' | 'onboarding' | 'done'>('idle');
+  const { session } = useAuth();
 
   useEffect(() => {
-    // Check if user has already seen onboarding
-    const done = localStorage.getItem(STORAGE_KEY);
-    if (done) {
+    // Always start with the splash screen on fresh mount
+    setPhase('splash');
+  }, []);
+
+  const handleSplashDone = () => {
+    const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
+    const isLoggedIn = !!session;
+
+    if (isLoggedIn || onboardingDone) {
       setPhase('done');
     } else {
-      setPhase('splash');
+      setPhase('onboarding');
     }
-  }, []);
+  };
 
   if (phase === 'idle' || phase === 'done') return null;
 
   return (
     <>
       {phase === 'splash' && (
-        <SplashScreen onDone={() => setPhase('onboarding')} />
+        <SplashScreen onDone={handleSplashDone} />
       )}
       {phase === 'onboarding' && (
         <OnboardingFlow onDone={() => setPhase('done')} />
