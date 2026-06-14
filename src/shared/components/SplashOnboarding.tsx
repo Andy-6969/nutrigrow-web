@@ -299,10 +299,10 @@ function OnboardingSlide({
     <div
       className={`absolute inset-0 flex flex-col transition-all duration-500 ease-out ${
         isActive
-          ? 'opacity-100 translate-x-0'
+          ? 'opacity-100 translate-x-0 z-10 pointer-events-auto'
           : direction === 'forward'
-          ? 'opacity-0 translate-x-8'
-          : 'opacity-0 -translate-x-8'
+          ? 'opacity-0 translate-x-8 pointer-events-none'
+          : 'opacity-0 -translate-x-8 pointer-events-none'
       }`}
     >
       {/* Top area: image */}
