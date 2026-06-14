@@ -27,9 +27,9 @@ export default function LoginPage() {
   // If already logged in, redirect immediately
   useEffect(() => {
     if (isInitialized && session) {
-      window.location.href = getRedirectPath(role);
+      router.replace(getRedirectPath(role));
     }
-  }, [isInitialized, session, role]);
+  }, [isInitialized, session, role, router]);
 
   // ─── Google OAuth ──────────────────────────────────────────
   const handleGoogleLogin = async () => {
