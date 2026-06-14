@@ -292,6 +292,7 @@ function OnboardingSlide({
 
   const handleCTA = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
+    onEnter();
     router.push('/overview');
   };
 
