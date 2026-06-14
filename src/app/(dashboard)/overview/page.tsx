@@ -15,7 +15,7 @@ import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/componen
 import { fetchWeather } from '@/shared/services/weatherService';
 import { useT } from '@/shared/context/LanguageContext';
 import { overrideService } from '@/shared/services/overrideService';
-import NutriGrowBanner from '@/shared/components/NutriGrowBanner';
+
 
 // Static particle data — defined outside component to avoid re-creation
 const PARTICLES = [
@@ -457,10 +457,6 @@ export default function OverviewPage() {
         ))}
       </div>
 
-      {/* ── HERO BANNER ── */}
-      <div className="relative z-10 max-w-[1800px] mx-auto">
-        <NutriGrowBanner />
-      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative z-10 max-w-[1800px] mx-auto">
 
