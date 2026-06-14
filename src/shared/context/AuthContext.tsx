@@ -184,9 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveSession]);
 
   const logout = useCallback(async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('nutrigrow_onboarding_done');
-    }
     await supabase.auth.signOut();
     clearAuthCookie();
     // State update happens automatically via onAuthStateChange

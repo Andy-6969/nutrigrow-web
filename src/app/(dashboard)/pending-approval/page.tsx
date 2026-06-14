@@ -19,11 +19,8 @@ export default function PendingApprovalPage() {
   }, [role, router]);
 
   const handleLogout = async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('nutrigrow_onboarding_done');
-    }
     await logout();
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   const lsEmail = typeof window !== 'undefined' ? localStorage.getItem('ng-registered-email') : null;
