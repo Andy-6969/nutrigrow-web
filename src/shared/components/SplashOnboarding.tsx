@@ -594,6 +594,8 @@ function AnimatedEcoSavings() {
           <path d="M0 0 Q-5 -15 -2 -25 Q1 -35 5 -40" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" fill="none" />
           <path d="M-2 -25 Q-15 -30 -12 -15 Q-5 -15 -2 -25" fill="#A3E635" filter="url(#glow-lime)" />
           <path d="M1 -33 Q12 -38 12 -23 Q5 -23 1 -33" fill="#10B981" />
+          {/* Leaf 3: Top Tip (Pucuk) */}
+          <path d="M5 -40 Q0 -48 6 -52 Q12 -46 5 -40" fill="#34D399" filter="url(#glow-lime)" />
         </g>
 
         {/* Rotating outer indicator dots */}
