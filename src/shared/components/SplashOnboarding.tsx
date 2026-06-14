@@ -59,7 +59,7 @@ const ONBOARDING_SLIDES = [
 ───────────────────────────────────────────────────── */
 function CircuitLeafIcon() {
   return (
-    <svg viewBox="0 0 120 120" className="w-24 h-24" fill="none">
+    <svg viewBox="0 0 120 120" className="w-24 h-24 animate-leaf-breath" fill="none" style={{ transformOrigin: 'center' }}>
       <defs>
         <filter id="glow">
           <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -74,9 +74,9 @@ function CircuitLeafIcon() {
           <stop offset="100%" stopColor="#064E3B" />
         </linearGradient>
         <linearGradient id="circuitG" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#10B981" stopOpacity="0" />
+          <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
           <stop offset="50%" stopColor="#10B981" stopOpacity="1" />
-          <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.8" />
         </linearGradient>
       </defs>
 
@@ -88,25 +88,130 @@ function CircuitLeafIcon() {
         opacity={0.9}
       />
 
-      {/* Central vein */}
-      <path d="M60 18 Q60 55 60 90" stroke="#A7F3D0" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Central vein with drawing/pulse effect */}
+      <path 
+        d="M60 18 Q60 55 60 90" 
+        stroke="#A7F3D0" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        className="animate-vein"
+      />
 
-      {/* Circuit branches */}
-      <path d="M60 40 L80 40 L80 30 L90 30" stroke="url(#circuitG)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="90" cy="30" r="3" fill="#10B981" filter="url(#glow)" />
+      {/* Circuit branches with flowing signal pulse */}
+      <path 
+        d="M60 40 L80 40 L80 30 L90 30" 
+        stroke="url(#circuitG)" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        className="animate-branch-1"
+      />
+      <circle cx="90" cy="30" r="3" fill="#10B981" filter="url(#glow)" className="animate-node-1" />
 
-      <path d="M60 55 L75 55 L75 65 L85 65" stroke="url(#circuitG)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="85" cy="65" r="3" fill="#06B6D4" filter="url(#glow)" />
+      <path 
+        d="M60 55 L75 55 L75 65 L85 65" 
+        stroke="url(#circuitG)" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        className="animate-branch-2"
+      />
+      <circle cx="85" cy="65" r="3" fill="#06B6D4" filter="url(#glow)" className="animate-node-2" />
 
-      <path d="M60 45 L42 45 L42 35 L32 35" stroke="url(#circuitG)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="32" cy="35" r="3" fill="#34D399" filter="url(#glow)" />
+      <path 
+        d="M60 45 L42 45 L42 35 L32 35" 
+        stroke="url(#circuitG)" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        className="animate-branch-3"
+      />
+      <circle cx="32" cy="35" r="3" fill="#34D399" filter="url(#glow)" className="animate-node-3" />
 
-      <path d="M60 65 L40 65 L40 72 L30 72" stroke="url(#circuitG)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="30" cy="72" r="3" fill="#10B981" filter="url(#glow)" />
+      <path 
+        d="M60 65 L40 65 L40 72 L30 72" 
+        stroke="url(#circuitG)" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        className="animate-branch-4"
+      />
+      <circle cx="30" cy="72" r="3" fill="#10B981" filter="url(#glow)" className="animate-node-4" />
 
-      {/* Small squares (circuit pads) */}
-      <rect x="55" y="35" width="10" height="6" rx="1" fill="none" stroke="#6EE7B7" strokeWidth="1" opacity="0.6" />
-      <rect x="55" y="60" width="10" height="6" rx="1" fill="none" stroke="#6EE7B7" strokeWidth="1" opacity="0.6" />
+      {/* Small squares (circuit pads) pulsing */}
+      <rect x="55" y="35" width="10" height="6" rx="1" fill="none" stroke="#6EE7B7" strokeWidth="1" className="animate-pad" />
+      <rect x="55" y="60" width="10" height="6" rx="1" fill="none" stroke="#6EE7B7" strokeWidth="1" className="animate-pad" style={{ animationDelay: '0.5s' }} />
+
+      <style>{`
+        @keyframes leafBreath {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4)); }
+          50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.8)); }
+        }
+        @keyframes veinPulse {
+          0% { stroke-dashoffset: 80; opacity: 0.5; }
+          50% { stroke-dashoffset: 0; opacity: 1; }
+          100% { stroke-dashoffset: -80; opacity: 0.5; }
+        }
+        @keyframes branchPulse {
+          0% { stroke-dashoffset: 40; opacity: 0.2; }
+          40% { stroke-dashoffset: 0; opacity: 1; }
+          80%, 100% { stroke-dashoffset: -40; opacity: 0.2; }
+        }
+        @keyframes nodeBlink {
+          0%, 100% { opacity: 0.4; transform: scale(0.9); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes padBlink {
+          0%, 100% { opacity: 0.3; stroke: #6EE7B7; }
+          50% { opacity: 0.8; stroke: #34D399; }
+        }
+        .animate-leaf-breath {
+          animation: leafBreath 3s ease-in-out infinite;
+        }
+        .animate-vein {
+          stroke-dasharray: 40 40;
+          animation: veinPulse 3s linear infinite;
+        }
+        .animate-branch-1 {
+          stroke-dasharray: 30 30;
+          animation: branchPulse 2.5s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+        .animate-branch-2 {
+          stroke-dasharray: 30 30;
+          animation: branchPulse 2.5s ease-in-out infinite;
+          animation-delay: 0.7s;
+        }
+        .animate-branch-3 {
+          stroke-dasharray: 30 30;
+          animation: branchPulse 2.5s ease-in-out infinite;
+          animation-delay: 1.2s;
+        }
+        .animate-branch-4 {
+          stroke-dasharray: 30 30;
+          animation: branchPulse 2.5s ease-in-out infinite;
+          animation-delay: 1.7s;
+        }
+        .animate-node-1 {
+          transform-origin: 90px 30px;
+          animation: nodeBlink 2.5s ease-in-out infinite;
+          animation-delay: 0.5s;
+        }
+        .animate-node-2 {
+          transform-origin: 85px 65px;
+          animation: nodeBlink 2.5s ease-in-out infinite;
+          animation-delay: 1s;
+        }
+        .animate-node-3 {
+          transform-origin: 32px 35px;
+          animation: nodeBlink 2.5s ease-in-out infinite;
+          animation-delay: 1.5s;
+        }
+        .animate-node-4 {
+          transform-origin: 30px 72px;
+          animation: nodeBlink 2.5s ease-in-out infinite;
+          animation-delay: 2s;
+        }
+        .animate-pad {
+          animation: padBlink 2s ease-in-out infinite;
+        }
+      `}</style>
     </svg>
   );
 }
