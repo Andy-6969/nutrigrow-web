@@ -909,8 +909,12 @@ export default function SplashOnboarding() {
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
     const isLoggedIn = !!session;
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
 
-    if (isLoggedIn || onboardingDone) {
+    if (isLoggedIn || onboardingDone || isDesktop) {
+      if (isDesktop && !onboardingDone) {
+        localStorage.setItem(STORAGE_KEY, 'true');
+      }
       setPhase('done');
     } else {
       setPhase('onboarding');
