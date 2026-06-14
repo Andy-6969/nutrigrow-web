@@ -266,6 +266,403 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 }
 
 /* ─────────────────────────────────────────────────────
+   COMPONENTS: CUSTOM PREMIUM SVG ANIMATIONS (Lottie Alternatives)
+───────────────────────────────────────────────────── */
+function AnimatedSmartDelay() {
+  return (
+    <div className="relative w-full max-w-[280px] h-[280px] flex items-center justify-center">
+      <svg viewBox="0 0 200 200" className="w-full h-full" fill="none">
+        <defs>
+          <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#22D3EE" />
+            <stop offset="100%" stopColor="#0891B2" />
+          </linearGradient>
+          <linearGradient id="groundGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#064E3B" />
+            <stop offset="50%" stopColor="#10B981" />
+            <stop offset="100%" stopColor="#064E3B" />
+          </linearGradient>
+        </defs>
+
+        {/* Outer Tech Radar Rings */}
+        <circle cx="100" cy="100" r="85" stroke="rgba(6, 182, 212, 0.15)" strokeWidth="1" strokeDasharray="4 4" />
+        <circle cx="100" cy="100" r="70" stroke="rgba(16, 185, 129, 0.1)" strokeWidth="1.5" />
+        
+        {/* Orbital Node */}
+        <circle cx="100" cy="100" r="70" fill="none" />
+        <circle cx="30" cy="100" r="3" fill="#22D3EE" filter="url(#glow-cyan)" className="animate-orbit" style={{ transformOrigin: '100px 100px' }} />
+
+        {/* Rain Drops */}
+        <g opacity="0.8">
+          <line x1="85" y1="90" x2="80" y2="115" stroke="#22D3EE" strokeWidth="1.5" strokeLinecap="round" className="animate-rain-1" />
+          <line x1="100" y1="95" x2="95" y2="120" stroke="#22D3EE" strokeWidth="1.5" strokeLinecap="round" className="animate-rain-2" />
+          <line x1="115" y1="90" x2="110" y2="115" stroke="#22D3EE" strokeWidth="1.5" strokeLinecap="round" className="animate-rain-3" />
+        </g>
+
+        {/* Cloud Body */}
+        <path 
+          d="M70 85 A18 18 0 0 1 100 75 A22 22 0 0 1 135 80 A18 18 0 0 1 130 98 L70 98 A15 15 0 0 1 70 85 Z" 
+          fill="url(#cloudGrad)" 
+          filter="url(#glow-cyan)"
+          className="animate-float" 
+        />
+        
+        {/* Cloud Details */}
+        <path d="M85 88 Q90 85 95 88" stroke="#E0F2FE" strokeWidth="1" strokeLinecap="round" opacity="0.6" />
+        <path d="M105 88 Q110 85 115 88" stroke="#E0F2FE" strokeWidth="1" strokeLinecap="round" opacity="0.6" />
+
+        {/* Rain Barrier / Smart Delay HUD */}
+        <path d="M60 125 C80 115, 120 115, 140 125" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow-cyan)" className="animate-barrier" />
+        
+        {/* Dotted target beneath */}
+        <ellipse cx="100" cy="155" rx="40" ry="10" stroke="rgba(16, 185, 129, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+        
+        {/* Ground Plants / Soil */}
+        <path d="M50 160 Q100 150 150 160" stroke="url(#groundGrad)" strokeWidth="3" strokeLinecap="round" />
+        
+        {/* Signal Waves from Ground */}
+        <ellipse cx="100" cy="155" rx="20" ry="5" stroke="#10B981" strokeWidth="1" className="animate-soil-wave" />
+        <ellipse cx="100" cy="155" rx="35" ry="8.7" stroke="#10B981" strokeWidth="1" className="animate-soil-wave" style={{ animationDelay: '0.8s' }} />
+
+        {/* Mini Plant Shoots */}
+        <path d="M75 156 Q73 148 70 146 Q74 148 76 156" fill="#34D399" />
+        <path d="M125 156 Q127 148 130 146 Q126 148 124 156" fill="#34D399" />
+        <path d="M100 153 Q99 143 95 140 Q101 144 100 153" fill="#059669" filter="url(#glow-cyan)" />
+
+        {/* Weather Forecast Badge Overlay */}
+        <g className="animate-float" style={{ animationDelay: '-1s' }}>
+          <rect x="110" y="40" width="60" height="22" rx="6" fill="#0D1F1A" stroke="#22D3EE" strokeWidth="1" />
+          <text x="140" y="54" fill="#22D3EE" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">95% RAIN</text>
+        </g>
+        
+        <g className="animate-float" style={{ animationDelay: '-2s' }}>
+          <rect x="30" y="45" width="65" height="22" rx="6" fill="#0D1F1A" stroke="#10B981" strokeWidth="1" />
+          <text x="62.5" y="59" fill="#10B981" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">SMART DELAY</text>
+        </g>
+      </svg>
+      <style>{`
+        @keyframes orbit {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes rain {
+          0% { stroke-dashoffset: 0; opacity: 0; transform: translateY(-10px); }
+          30% { opacity: 0.8; }
+          60% { opacity: 0.4; }
+          100% { stroke-dashoffset: -30; opacity: 0; transform: translateY(20px); }
+        }
+        @keyframes barrierPulse {
+          0%, 100% { opacity: 0.8; stroke-width: 2.5; filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.5)); }
+          50% { opacity: 1; stroke-width: 3.5; filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8)); }
+        }
+        @keyframes soilWave {
+          0% { transform: scale(0.6); opacity: 1; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        .animate-orbit {
+          animation: orbit 10s linear infinite;
+        }
+        .animate-float {
+          animation: float 4s ease-in-out infinite;
+        }
+        .animate-rain-1 {
+          stroke-dasharray: 8 20;
+          animation: rain 1.5s linear infinite;
+        }
+        .animate-rain-2 {
+          stroke-dasharray: 8 20;
+          animation: rain 1.5s linear infinite;
+          animation-delay: 0.5s;
+        }
+        .animate-rain-3 {
+          stroke-dasharray: 8 20;
+          animation: rain 1.5s linear infinite;
+          animation-delay: 1s;
+        }
+        .animate-barrier {
+          animation: barrierPulse 2s ease-in-out infinite;
+        }
+        .animate-soil-wave {
+          transform-origin: 100px 155px;
+          animation: soilWave 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function AnimatedLoRa() {
+  return (
+    <div className="relative w-full max-w-[280px] h-[280px] flex items-center justify-center">
+      <svg viewBox="0 0 200 200" className="w-full h-full" fill="none">
+        <defs>
+          <filter id="glow-emerald" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <linearGradient id="towerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#34D399" />
+            <stop offset="100%" stopColor="#064E3B" />
+          </linearGradient>
+        </defs>
+
+        {/* Tech grid ring background */}
+        <circle cx="100" cy="110" r="80" stroke="rgba(16, 185, 129, 0.08)" strokeWidth="1" />
+        <circle cx="100" cy="110" r="50" stroke="rgba(16, 185, 129, 0.05)" strokeWidth="1" strokeDasharray="3 3" />
+
+        {/* Signal Lines to Remote Nodes */}
+        <line x1="100" y1="70" x2="40" y2="120" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
+        <line x1="100" y1="70" x2="160" y2="120" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
+        <line x1="100" y1="70" x2="60" y2="155" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
+        <line x1="100" y1="70" x2="140" y2="155" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
+
+        {/* Data Packets traveling along lines */}
+        <circle cx="40" cy="120" r="3" fill="#34D399" filter="url(#glow-emerald)" className="animate-packet-1" />
+        <circle cx="160" cy="120" r="3" fill="#34D399" filter="url(#glow-emerald)" className="animate-packet-2" />
+        <circle cx="60" cy="155" r="3" fill="#10B981" filter="url(#glow-emerald)" className="animate-packet-3" />
+        <circle cx="140" cy="155" r="3" fill="#10B981" filter="url(#glow-emerald)" className="animate-packet-4" />
+
+        {/* Central Gateway Tower */}
+        <path d="M90 140 L100 65 L110 140" stroke="url(#towerGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="94" y1="110" x2="106" y2="110" stroke="#10B981" strokeWidth="1.5" />
+        <line x1="97" y1="85" x2="103" y2="85" stroke="#10B981" strokeWidth="1.5" />
+        
+        {/* Transmitter Head */}
+        <circle cx="100" cy="65" r="8" fill="#0D1F1A" stroke="#34D399" strokeWidth="2" />
+        <circle cx="100" cy="65" r="3" fill="#34D399" filter="url(#glow-emerald)" className="animate-pulse-node" />
+
+        {/* Concentric Signal Pulse Waves */}
+        <path d="M85 58 A20 20 0 0 1 115 58" stroke="#34D399" strokeWidth="1.5" strokeLinecap="round" className="animate-signal-wave-1" />
+        <path d="M75 51 A32 32 0 0 1 125 51" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" className="animate-signal-wave-2" />
+        <path d="M65 44 A44 44 0 0 1 135 44" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" className="animate-signal-wave-3" />
+
+        {/* Ground Platform */}
+        <ellipse cx="100" cy="140" rx="30" ry="6" fill="#0D1F1A" stroke="#064E3B" strokeWidth="2" />
+
+        {/* Node Device Icons at remote ends */}
+        <circle cx="40" cy="120" r="10" fill="#0D1F1A" stroke="#34D399" strokeWidth="1.5" />
+        <circle cx="40" cy="120" r="3" fill="#34D399" />
+        
+        <circle cx="160" cy="120" r="10" fill="#0D1F1A" stroke="#34D399" strokeWidth="1.5" />
+        <circle cx="160" cy="120" r="3" fill="#34D399" />
+        
+        <circle cx="60" cy="155" r="10" fill="#0D1F1A" stroke="#10B981" strokeWidth="1.5" />
+        <circle cx="60" cy="155" r="3" fill="#10B981" />
+        
+        <circle cx="140" cy="155" r="10" fill="#0D1F1A" stroke="#10B981" strokeWidth="1.5" />
+        <circle cx="140" cy="155" r="3" fill="#10B981" />
+
+        {/* LoRa HUD Info Card overlay */}
+        <g className="animate-float-card">
+          <rect x="55" y="15" width="90" height="20" rx="5" fill="#0D1F1A" stroke="#34D399" strokeWidth="1" />
+          <circle cx="65" cy="25" r="2.5" fill="#34D399" className="animate-blink" />
+          <text x="108" y="27" fill="#E0F2FE" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">LORA P2P: CONNECTED</text>
+        </g>
+      </svg>
+      <style>{`
+        @keyframes floatCard {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes signalPulse {
+          0% { opacity: 0.2; transform: scale(0.9); }
+          50% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.15); }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        @keyframes packet1 {
+          0% { transform: translate(0, 0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translate(60px, -50px); opacity: 0; }
+        }
+        @keyframes packet2 {
+          0% { transform: translate(0, 0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translate(-60px, -50px); opacity: 0; }
+        }
+        @keyframes packet3 {
+          0% { transform: translate(0, 0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translate(40px, -85px); opacity: 0; }
+        }
+        @keyframes packet4 {
+          0% { transform: translate(0, 0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translate(-40px, -85px); opacity: 0; }
+        }
+        .animate-float-card {
+          animation: floatCard 3s ease-in-out infinite;
+        }
+        .animate-blink {
+          animation: blink 1s ease-in-out infinite;
+        }
+        .animate-pulse-node {
+          animation: blink 1.2s ease-in-out infinite;
+        }
+        .animate-signal-wave-1 {
+          transform-origin: 100px 65px;
+          animation: signalPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+        .animate-signal-wave-2 {
+          transform-origin: 100px 65px;
+          animation: signalPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+          animation-delay: 0.6s;
+        }
+        .animate-signal-wave-3 {
+          transform-origin: 100px 65px;
+          animation: signalPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+          animation-delay: 1.2s;
+        }
+        .animate-packet-1 {
+          animation: packet1 2s linear infinite;
+        }
+        .animate-packet-2 {
+          animation: packet2 2s linear infinite;
+          animation-delay: 0.5s;
+        }
+        .animate-packet-3 {
+          animation: packet3 2.5s linear infinite;
+          animation-delay: 0.8s;
+        }
+        .animate-packet-4 {
+          animation: packet4 2.5s linear infinite;
+          animation-delay: 1.3s;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function AnimatedEcoSavings() {
+  return (
+    <div className="relative w-full max-w-[280px] h-[280px] flex items-center justify-center">
+      <svg viewBox="0 0 200 200" className="w-full h-full" fill="none">
+        <defs>
+          <filter id="glow-lime" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#A3E635" />
+            <stop offset="100%" stopColor="#10B981" />
+          </linearGradient>
+        </defs>
+
+        {/* Tech HUD Ring Gauge */}
+        <circle cx="100" cy="100" r="75" stroke="rgba(163, 230, 53, 0.1)" strokeWidth="8" />
+        
+        {/* Animated Dash Progress Ring */}
+        <circle 
+          cx="100" 
+          cy="100" 
+          r="75" 
+          stroke="url(#circleGrad)" 
+          strokeWidth="6" 
+          strokeLinecap="round"
+          strokeDasharray="471" 
+          strokeDashoffset="120"
+          className="animate-gauge"
+          filter="url(#glow-lime)"
+        />
+
+        {/* Tech Grid / Crosshairs inside */}
+        <line x1="100" y1="35" x2="100" y2="45" stroke="rgba(163, 230, 53, 0.3)" strokeWidth="1" />
+        <line x1="100" y1="155" x2="100" y2="165" stroke="rgba(163, 230, 53, 0.3)" strokeWidth="1" />
+        <line x1="35" y1="100" x2="45" y2="100" stroke="rgba(163, 230, 53, 0.3)" strokeWidth="1" />
+        <line x1="155" y1="100" x2="165" y2="100" stroke="rgba(163, 230, 53, 0.3)" strokeWidth="1" />
+
+        {/* Glowing HUD Center Metrics */}
+        <circle cx="100" cy="100" r="50" fill="#0D1F1A" stroke="rgba(16, 185, 129, 0.3)" strokeWidth="1" />
+        
+        {/* Growing Plant Sprout inside dashboard */}
+        <g transform="translate(100, 115) scale(0.9)">
+          <path d="M0 0 Q-5 -15 -2 -25 Q1 -35 5 -40" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M-2 -25 Q-15 -30 -12 -15 Q-5 -15 -2 -25" fill="#A3E635" filter="url(#glow-lime)" />
+          <path d="M1 -33 Q12 -38 12 -23 Q5 -23 1 -33" fill="#10B981" />
+        </g>
+
+        {/* Rotating outer indicator dots */}
+        <circle cx="100" cy="100" r="85" stroke="none" fill="none" />
+        <circle cx="100" cy="15" r="4" fill="#A3E635" filter="url(#glow-lime)" className="animate-indicator-rotate" style={{ transformOrigin: '100px 100px' }} />
+
+        {/* Dashboard floating bar charts */}
+        <g className="animate-chart-float" opacity="0.9">
+          <rect x="25" y="125" width="50" height="35" rx="4" fill="#0D1F1A" stroke="#10B981" strokeWidth="1" />
+          <rect x="35" y="148" width="6" height="6" fill="#10B981" className="animate-bar-1" />
+          <rect x="45" y="142" width="6" height="12" fill="#34D399" className="animate-bar-2" />
+          <rect x="55" y="136" width="6" height="18" fill="#A3E635" className="animate-bar-3" />
+        </g>
+
+        {/* Resource Efficiency HUD overlay */}
+        <g className="animate-chart-float" style={{ animationDelay: '-1.5s' }} opacity="0.9">
+          <rect x="125" y="125" width="55" height="35" rx="4" fill="#0D1F1A" stroke="#A3E635" strokeWidth="1" />
+          <text x="152.5" y="140" fill="#A3E635" fontSize="10" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">+34%</text>
+          <text x="152.5" y="152" fill="#86EFAC" fontSize="6.5" fontWeight="semibold" textAnchor="middle" fontFamily="sans-serif">EFFICIENCY</text>
+        </g>
+      </svg>
+      <style>{`
+        @keyframes rotateIndicator {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes gaugePulse {
+          0%, 100% { stroke-dashoffset: 120; opacity: 0.9; }
+          50% { stroke-dashoffset: 70; opacity: 1; filter: drop-shadow(0 0 6px rgba(163, 230, 53, 0.7)); }
+        }
+        @keyframes chartFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        @keyframes growBar {
+          0%, 100% { transform: scaleY(1); }
+          50% { transform: scaleY(1.3); }
+        }
+        .animate-indicator-rotate {
+          animation: rotateIndicator 12s linear infinite;
+        }
+        .animate-gauge {
+          transform: rotate(-90deg);
+          transform-origin: 100px 100px;
+          animation: gaugePulse 4s ease-in-out infinite;
+        }
+        .animate-chart-float {
+          animation: chartFloat 3s ease-in-out infinite;
+        }
+        .animate-bar-1 {
+          transform-origin: 35px 154px;
+          animation: growBar 2s ease-in-out infinite;
+        }
+        .animate-bar-2 {
+          transform-origin: 45px 154px;
+          animation: growBar 2s ease-in-out infinite;
+          animation-delay: 0.4s;
+        }
+        .animate-bar-3 {
+          transform-origin: 55px 154px;
+          animation: growBar 2s ease-in-out infinite;
+          animation-delay: 0.8s;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
    COMPONENT: ONBOARDING SLIDE
 ───────────────────────────────────────────────────── */
 function OnboardingSlide({
@@ -312,6 +709,14 @@ function OnboardingSlide({
         {/* Gradient overlay on image */}
         <div className={`absolute inset-0 bg-gradient-to-b ${slide.gradient} to-[#060F0C] z-10`} />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#060F0C] z-10" />
+
+        {/* Animated Custom SVG Alternative */}
+        <div className="absolute inset-0 flex items-center justify-center p-8 z-[12]">
+          {slide.id === 1 && <AnimatedSmartDelay />}
+          {slide.id === 2 && <AnimatedLoRa />}
+          {slide.id === 3 && <AnimatedEcoSavings />}
+        </div>
+
 
 
 
