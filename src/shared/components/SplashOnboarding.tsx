@@ -688,10 +688,16 @@ function OnboardingSlide({
 }) {
   const router = useRouter();
 
-  const handleCTA = () => {
+  const handleLogin = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
     onEnter();
-    router.push('/overview');
+    router.push('/login');
+  };
+
+  const handleRegister = () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
+    onEnter();
+    router.push('/register');
   };
 
   return (
@@ -776,17 +782,17 @@ function OnboardingSlide({
         {slide.isFinal ? (
           <div className="flex flex-col gap-3">
             <button
-              onClick={handleCTA}
+              onClick={handleLogin}
               className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-base tracking-wide transition-all duration-200 hover:shadow-[0_0_24px_rgba(16,185,129,0.4)] flex items-center justify-center gap-2 group"
             >
-              Masuk ke Beranda
+              Login
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={handleCTA}
+              onClick={handleRegister}
               className="w-full py-3 rounded-2xl border border-emerald-500/30 text-emerald-300 font-semibold text-sm tracking-wide hover:bg-emerald-950/50 transition-all duration-200"
             >
-              Akses Dasbor
+              Register
             </button>
           </div>
         ) : (
