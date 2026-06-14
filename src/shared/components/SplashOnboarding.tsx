@@ -8,7 +8,6 @@ import {
   Cpu, Zap, Activity,
 } from 'lucide-react';
 import { useAuth } from '@/shared/context/AuthContext';
-import CollageSplashScreen from './CollageSplashScreen';
 
 /* ─────────────────────────────────────────────────────
    CONSTANTS
@@ -495,19 +494,12 @@ function OnboardingFlow({ onDone }: { onDone: () => void }) {
 ───────────────────────────────────────────────────── */
 export default function SplashOnboarding() {
   const [phase, setPhase] = useState<'idle' | 'splash' | 'onboarding' | 'done'>('idle');
-  const [autoPlay, setAutoPlay] = useState(false);
   const { session } = useAuth();
 
   useEffect(() => {
     // Always start with the splash screen on fresh mount
     setPhase('splash');
   }, []);
-
-  useEffect(() => {
-    const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
-    const isLoggedIn = !!session;
-    setAutoPlay(isLoggedIn || onboardingDone);
-  }, [session]);
 
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
@@ -525,7 +517,7 @@ export default function SplashOnboarding() {
   return (
     <>
       {phase === 'splash' && (
-        <CollageSplashScreen onComplete={handleSplashDone} autoPlay={autoPlay} />
+        <SplashScreen onDone={handleSplashDone} />
       )}
       {phase === 'onboarding' && (
         <OnboardingFlow onDone={() => setPhase('done')} />
