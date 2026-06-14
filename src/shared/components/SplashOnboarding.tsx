@@ -8,6 +8,7 @@ import {
   Cpu, Zap, Activity,
 } from 'lucide-react';
 import { useAuth } from '@/shared/context/AuthContext';
+import CollageSplashScreen from './CollageSplashScreen';
 
 /* ─────────────────────────────────────────────────────
    CONSTANTS
@@ -313,16 +314,7 @@ function OnboardingSlide({
         <div className={`absolute inset-0 bg-gradient-to-b ${slide.gradient} to-[#060F0C] z-10`} />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#060F0C] z-10" />
 
-        {/* The illustration image — hidden on slide 1 (index 0) */}
-        <div className="absolute inset-0 flex items-center justify-center p-8 z-0">
-          {index !== 0 && (
-            <img
-              src={slide.image}
-              alt={`Onboarding ${index + 1}`}
-              className="w-full max-w-lg h-full object-contain opacity-90 drop-shadow-[0_0_40px_rgba(16,185,129,0.3)]"
-            />
-          )}
-        </div>
+
 
         {/* Skip button — top right */}
         {!slide.isFinal && (
@@ -503,12 +495,19 @@ function OnboardingFlow({ onDone }: { onDone: () => void }) {
 ───────────────────────────────────────────────────── */
 export default function SplashOnboarding() {
   const [phase, setPhase] = useState<'idle' | 'splash' | 'onboarding' | 'done'>('idle');
+  const [autoPlay, setAutoPlay] = useState(false);
   const { session } = useAuth();
 
   useEffect(() => {
     // Always start with the splash screen on fresh mount
     setPhase('splash');
   }, []);
+
+  useEffect(() => {
+    const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
+    const isLoggedIn = !!session;
+    setAutoPlay(isLoggedIn || onboardingDone);
+  }, [session]);
 
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
@@ -526,7 +525,7 @@ export default function SplashOnboarding() {
   return (
     <>
       {phase === 'splash' && (
-        <SplashScreen onDone={handleSplashDone} />
+        <CollageSplashScreen onComplete={handleSplashDone} autoPlay={autoPlay} />
       )}
       {phase === 'onboarding' && (
         <OnboardingFlow onDone={() => setPhase('done')} />

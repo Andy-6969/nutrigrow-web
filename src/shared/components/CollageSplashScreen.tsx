@@ -3,9 +3,31 @@ import { Leaf, Play, Sparkles, ArrowRight } from 'lucide-react';
 
 interface CollageSplashScreenProps {
   onComplete?: () => void;
+  autoPlay?: boolean;
 }
 
-export default function CollageSplashScreen({ onComplete }: CollageSplashScreenProps) {
+const PARTICLES = [
+  { x: 3,  y: 5,  size: 2,   color: 'rgba(16,185,129,0.7)',  dur: 14, del: 0   },
+  { x: 12, y: 20, size: 1.5, color: 'rgba(6,182,212,0.6)',   dur: 18, del: 1.5 },
+  { x: 22, y: 45, size: 2.5, color: 'rgba(16,185,129,0.5)',  dur: 12, del: 3   },
+  { x: 35, y: 10, size: 1,   color: 'rgba(99,102,241,0.6)',  dur: 20, del: 0.5 },
+  { x: 48, y: 60, size: 2,   color: 'rgba(6,182,212,0.5)',   dur: 16, del: 2   },
+  { x: 58, y: 30, size: 1.5, color: 'rgba(16,185,129,0.7)',  dur: 13, del: 4   },
+  { x: 67, y: 70, size: 1,   color: 'rgba(6,182,212,0.4)',   dur: 22, del: 1   },
+  { x: 75, y: 15, size: 2,   color: 'rgba(52,211,153,0.6)',  dur: 17, del: 3.5 },
+  { x: 82, y: 50, size: 1.5, color: 'rgba(16,185,129,0.5)',  dur: 15, del: 0.8 },
+  { x: 90, y: 35, size: 2.5, color: 'rgba(99,102,241,0.5)',  dur: 19, del: 2.5 },
+  { x: 8,  y: 75, size: 1,   color: 'rgba(6,182,212,0.6)',   dur: 11, del: 5   },
+  { x: 18, y: 90, size: 2,   color: 'rgba(16,185,129,0.6)',  dur: 16, del: 1.2 },
+  { x: 30, y: 55, size: 1.5, color: 'rgba(52,211,153,0.5)',  dur: 21, del: 3.8 },
+  { x: 42, y: 85, size: 1,   color: 'rgba(6,182,212,0.5)',   dur: 14, del: 0.3 },
+  { x: 55, y: 40, size: 2,   color: 'rgba(16,185,129,0.7)',  dur: 18, del: 2.8 },
+  { x: 72, y: 25, size: 2.5, color: 'rgba(6,182,212,0.4)',   dur: 23, del: 1.7 },
+  { x: 85, y: 65, size: 1,   color: 'rgba(52,211,153,0.7)',  dur: 15, del: 0.6 },
+  { x: 93, y: 10, size: 2,   color: 'rgba(16,185,129,0.5)',  dur: 20, del: 3.2 },
+];
+
+export default function CollageSplashScreen({ onComplete, autoPlay }: CollageSplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -16,6 +38,15 @@ export default function CollageSplashScreen({ onComplete }: CollageSplashScreenP
       if (onComplete) onComplete();
     }, 800); // match fade-out duration
   };
+
+  useEffect(() => {
+    if (autoPlay) {
+      const timer = setTimeout(() => {
+        handleStart();
+      }, 2500); // auto-advance after 2.5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlay]);
 
   if (!isVisible) return null;
 
@@ -81,26 +112,37 @@ export default function CollageSplashScreen({ onComplete }: CollageSplashScreenP
       `}</style>
 
       {/* Dashboard-Style HUD Background Layer */}
-      <div className="absolute inset-0 bg-[#060F0C] overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 bg-[#060F0C] overflow-hidden pointer-events-none select-none">
         {/* Auroras (Glowing ambient lights) */}
-        <div 
-          className="absolute rounded-full"
+        <div className="absolute rounded-full"
           style={{
-            top: '10%', left: '15%', width: '700px', height: '400px',
-            background: 'radial-gradient(ellipse, rgba(16, 185, 129, 0.12) 0%, transparent 70%)',
+            top: '5%', left: '8%', width: '650px', height: '650px',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.16) 0%, rgba(5,150,105,0.06) 50%, transparent 70%)',
+            filter: 'blur(60px)',
+            animation: 'aurora1 14s ease-in-out infinite',
+          }} />
+        <div className="absolute rounded-full"
+          style={{
+            top: '-12%', right: '4%', width: '580px', height: '580px',
+            background: 'radial-gradient(circle, rgba(6,182,212,0.13) 0%, rgba(8,145,178,0.05) 50%, transparent 70%)',
+            filter: 'blur(75px)',
+            animation: 'aurora2 17s ease-in-out infinite',
+          }} />
+        <div className="absolute rounded-full"
+          style={{
+            bottom: '2%', right: '18%', width: '480px', height: '480px',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.10) 0%, rgba(79,70,229,0.04) 50%, transparent 70%)',
+            filter: 'blur(70px)',
+            animation: 'aurora3 20s ease-in-out infinite',
+          }} />
+        <div className="absolute rounded-full"
+          style={{
+            bottom: '-8%', left: '32%', width: '750px', height: '380px',
+            background: 'radial-gradient(ellipse, rgba(20,184,166,0.09) 0%, transparent 70%)',
             filter: 'blur(90px)',
-            animation: 'aurora1 25s ease-in-out infinite',
-          }} 
-        />
-        <div 
-          className="absolute rounded-full"
-          style={{
-            bottom: '10%', right: '10%', width: '650px', height: '350px',
-            background: 'radial-gradient(ellipse, rgba(6, 182, 212, 0.08) 0%, transparent 70%)',
-            filter: 'blur(80px)',
             animation: 'aurora2 22s ease-in-out infinite reverse',
-          }} 
-        />
+          }} />
+
         {/* Center Green glow behind the Leaf collage */}
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
@@ -112,38 +154,47 @@ export default function CollageSplashScreen({ onComplete }: CollageSplashScreenP
         />
 
         {/* Large Subtle Glowing Grid */}
-        <div 
-          className="absolute inset-0 opacity-80"
+        <div className="absolute inset-0"
           style={{
-            backgroundImage: 'linear-gradient(rgba(16, 185, 129, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.025) 1px, transparent 1px)',
+            backgroundImage: 'linear-gradient(rgba(16,185,129,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.022) 1px, transparent 1px)',
             backgroundSize: '60px 60px',
             animation: 'gridDrift 14s linear infinite',
-          }} 
-        />
+          }} />
 
         {/* Scan Sweep lines (cinematic HUD) */}
-        <div 
-          className="absolute left-0 right-0 h-px pointer-events-none"
+        <div className="absolute left-0 right-0 h-px"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0) 10%, rgba(16, 185, 129, 0.5) 35%, rgba(6, 182, 212, 0.4) 50%, rgba(16, 185, 129, 0.5) 65%, rgba(16, 185, 129, 0) 90%, transparent 100%)',
-            boxShadow: '0 0 14px rgba(16, 185, 129, 0.35)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(16,185,129,0) 10%, rgba(16,185,129,0.5) 35%, rgba(6,182,212,0.4) 50%, rgba(16,185,129,0.5) 65%, rgba(16,185,129,0) 90%, transparent 100%)',
+            boxShadow: '0 0 14px rgba(16,185,129,0.35)',
             animation: 'scanSweep 10s linear infinite',
-          }} 
-        />
+          }} />
         
         {/* Floating pulse rings in background */}
         {[0, 2, 4].map((delay, i) => (
-          <div 
-            key={i} 
-            className="absolute rounded-full border pointer-events-none"
+          <div key={i} className="absolute rounded-full border"
             style={{
               width: '600px', height: '600px',
               top: '50%', left: '50%',
-              borderColor: i === 0 ? 'rgba(16, 185, 129, 0.06)' : i === 1 ? 'rgba(6, 182, 212, 0.05)' : 'rgba(99, 102, 241, 0.04)',
+              borderColor: i === 0 ? 'rgba(16,185,129,0.06)' : i === 1 ? 'rgba(6,182,212,0.05)' : 'rgba(99,102,241,0.04)',
               animation: `pulseRing 7s ease-out infinite`,
               animationDelay: `${delay}s`,
-            }} 
-          />
+            }} />
+        ))}
+
+        {/* Floating particles (ambient dust) */}
+        {PARTICLES.map((p, i) => (
+          <div key={i} className="absolute rounded-full"
+            style={{
+              left: `${p.x}%`,
+              bottom: `${p.y}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              background: p.color,
+              filter: 'blur(0.5px)',
+              opacity: 0,
+              animation: `particleFloat ${p.dur}s linear infinite`,
+              animationDelay: `${p.del}s`,
+            }} />
         ))}
       </div>
 
