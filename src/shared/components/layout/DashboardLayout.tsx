@@ -109,10 +109,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('nutrigrow_onboarding_done');
+    }
     try {
       await logout();
     } finally {
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
 
