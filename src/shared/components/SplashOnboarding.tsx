@@ -292,7 +292,7 @@ function OnboardingSlide({
 
   const handleCTA = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
-    router.push('/(dashboard)/overview');
+    router.push('/overview');
   };
 
   return (
@@ -311,13 +311,15 @@ function OnboardingSlide({
         <div className={`absolute inset-0 bg-gradient-to-b ${slide.gradient} to-[#060F0C] z-10`} />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#060F0C] z-10" />
 
-        {/* The illustration image */}
+        {/* The illustration image — hidden on slide 1 (index 0) */}
         <div className="absolute inset-0 flex items-center justify-center p-8 z-0">
-          <img
-            src={slide.image}
-            alt={`Onboarding ${index + 1}`}
-            className="w-full max-w-lg h-full object-contain opacity-90 drop-shadow-[0_0_40px_rgba(16,185,129,0.3)]"
-          />
+          {index !== 0 && (
+            <img
+              src={slide.image}
+              alt={`Onboarding ${index + 1}`}
+              className="w-full max-w-lg h-full object-contain opacity-90 drop-shadow-[0_0_40px_rgba(16,185,129,0.3)]"
+            />
+          )}
         </div>
 
         {/* Skip button — top right */}
