@@ -899,12 +899,17 @@ function OnboardingFlow({ onDone }: { onDone: () => void }) {
 ───────────────────────────────────────────────────── */
 export default function SplashOnboarding() {
   const [phase, setPhase] = useState<'idle' | 'splash' | 'onboarding' | 'done'>('idle');
-  const { session } = useAuth();
+  const { session, isInitialized } = useAuth();
 
   useEffect(() => {
-    // Always start with the splash screen on fresh mount
-    setPhase('splash');
-  }, []);
+    if (!isInitialized) return;
+
+    // Only initialize the phase once on mount
+    setPhase((prev) => {
+      if (prev !== 'idle') return prev;
+      return session ? 'done' : 'splash';
+    });
+  }, [isInitialized, session]);
 
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
