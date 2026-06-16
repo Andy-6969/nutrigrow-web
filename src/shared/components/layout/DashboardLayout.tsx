@@ -297,7 +297,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* User + Logout */}
             <div
-              className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l"
+              className="flex items-center gap-2 pl-2 ml-1 border-l"
               style={{ borderColor: 'var(--topbar-border)' }}
             >
               {profile?.avatar_url ? (

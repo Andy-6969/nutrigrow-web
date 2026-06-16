@@ -16,6 +16,7 @@ import { fetchWeather } from '@/shared/services/weatherService';
 import { useT } from '@/shared/context/LanguageContext';
 import { overrideService } from '@/shared/services/overrideService';
 
+
 // Static particle data — defined outside component to avoid re-creation
 const PARTICLES = [
   { x: 3,  y: 5,  size: 2,   color: 'rgba(16,185,129,0.7)',  dur: 14, del: 0   },
@@ -455,6 +456,7 @@ export default function OverviewPage() {
             }} />
         ))}
       </div>
+
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative z-10 max-w-[1800px] mx-auto">
 
