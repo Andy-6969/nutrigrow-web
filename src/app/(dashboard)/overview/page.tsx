@@ -110,6 +110,13 @@ export default function OverviewPage() {
       }
     };
     loadData();
+
+    // Polling sensor setiap 30 detik — fallback jika Realtime gagal/terblokir RLS
+    const sensorPoll = setInterval(async () => {
+      const sensors = await sensorService.getAllSensorData();
+      setSensorDataMap(sensors);
+    }, 30000);
+
     sensorService.subscribeToSensorUpdates((payload) => {
       const newData = payload.new as SensorData;
       if (newData.zone_id) setSensorDataMap(prev => ({ ...prev, [newData.zone_id as string]: newData }));
@@ -123,6 +130,7 @@ export default function OverviewPage() {
       setActiveOverrides(active);
     });
     return () => {
+      clearInterval(sensorPoll);
       sensorService.unsubscribeFromSensorUpdates();
       sensorService.unsubscribeFromZoneUpdates();
       overrideService.unsubscribeFromOverrides();

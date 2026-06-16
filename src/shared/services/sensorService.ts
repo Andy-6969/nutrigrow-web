@@ -330,11 +330,21 @@ export class SupabaseSensorService implements ISensorService {
   }
 
   subscribeToSensorUpdates(callback: (payload: SupabasePayload) => void): void {
-    if (this.sensorChannel) return;
+    // Hapus channel lama jika ada — pastikan callback baru selalu terdaftar
+    if (this.sensorChannel) {
+      supabase.removeChannel(this.sensorChannel);
+      this.sensorChannel = null;
+    }
     this.sensorChannel = supabase
-      .channel('public:sensor_data')
+      .channel(`public:sensor_data:${Date.now()}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, callback)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[sensorService] Realtime sensor_data channel subscribed ✅');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[sensorService] Realtime channel error/timeout:', status);
+        }
+      });
   }
 
   unsubscribeFromSensorUpdates(): void {
