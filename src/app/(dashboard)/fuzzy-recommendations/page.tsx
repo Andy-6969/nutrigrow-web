@@ -470,6 +470,8 @@ export default function FuzzyRecommendationsPage() {
         return 'bg-red-500/20 text-red-400 border border-red-500/30';
       case 'auto_executed':
         return 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      case 'expired':
+        return 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
       default:
         return 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
     }
@@ -483,10 +485,18 @@ export default function FuzzyRecommendationsPage() {
         return 'Ditolak';
       case 'auto_executed':
         return 'Eksekusi Otomatis';
+      case 'expired':
+        return 'Kadaluarsa';
       default:
         return status;
     }
   };
+
+  // Filter out pending recommendations that have expired locally
+  const activePending = pending.filter(rec => {
+    const remSecs = getRemainingSeconds(rec.auto_execute_at);
+    return remSecs > 0;
+  });
 
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
@@ -915,7 +925,7 @@ export default function FuzzyRecommendationsPage() {
               <Clock className="w-5 h-5 text-amber-500" />
               Menunggu Persetujuan
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                {pending.length} pending
+                {activePending.length} pending
               </span>
             </h3>
           </div>
@@ -925,7 +935,7 @@ export default function FuzzyRecommendationsPage() {
               <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
               <p className="text-sm" style={{ color: 'var(--surface-text-muted)' }}>Memproses data rekomendasi fuzzy...</p>
             </div>
-          ) : pending.length === 0 ? (
+          ) : activePending.length === 0 ? (
             <div className="glass p-10 text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20">
                 <CheckCircle2 className="w-6 h-6" />
@@ -937,7 +947,7 @@ export default function FuzzyRecommendationsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {pending.map((rec) => {
+              {activePending.map((rec) => {
                 const remSecs = getRemainingSeconds(rec.auto_execute_at);
                 const isTimerRunning = remSecs > 0;
                 
