@@ -35,6 +35,15 @@ export default function OverridePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-hide status message after 3 seconds
+  useEffect(() => {
+    if (!statusMsg) return;
+    const timer = setTimeout(() => {
+      setStatusMsg(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [statusMsg]);
+
   const fetchData = useCallback(async () => {
     try {
       const [fetchedZones, fetchedSensors, active, history] = await Promise.all([

@@ -110,6 +110,13 @@ export default function OverviewPage() {
       }
     };
     loadData();
+
+    // Polling sensor setiap 30 detik — fallback jika Realtime gagal/terblokir RLS
+    const sensorPoll = setInterval(async () => {
+      const sensors = await sensorService.getAllSensorData();
+      setSensorDataMap(sensors);
+    }, 30000);
+
     sensorService.subscribeToSensorUpdates((payload) => {
       const newData = payload.new as SensorData;
       if (newData.zone_id) setSensorDataMap(prev => ({ ...prev, [newData.zone_id as string]: newData }));
@@ -123,6 +130,7 @@ export default function OverviewPage() {
       setActiveOverrides(active);
     });
     return () => {
+      clearInterval(sensorPoll);
       sensorService.unsubscribeFromSensorUpdates();
       sensorService.unsubscribeFromZoneUpdates();
       overrideService.unsubscribeFromOverrides();
@@ -310,7 +318,7 @@ export default function OverviewPage() {
   const isSensorOnline = !!(
     liveSensor &&
     liveSensor.recorded_at &&
-    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 1 * 60 * 1000)
+    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 10 * 60 * 1000)
   );
 
   const animCondition = isSensorOnline ? toCondition(selectedZone?.status) : 'offline';
@@ -715,12 +723,12 @@ export default function OverviewPage() {
             </div>
 
             {[
-              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: (isSensorOnline && liveSensor?.soil_moisture) ? `${liveSensor.soil_moisture}%` : '--', label: t('overview_soil_moisture') },
-              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: (isSensorOnline && liveSensor?.temperature) ? `${liveSensor.temperature}°C` : '--',  label: t('overview_air_temp') },
+              { pos: 'top-[12%] left-[4%] sm:left-[8%]',    icon: <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400"/>,          val: (isSensorOnline && liveSensor?.soil_moisture != null) ? `${liveSensor.soil_moisture}%` : '--', label: t('overview_soil_moisture') },
+              { pos: 'top-[26%] right-[0%] sm:right-[4%]',    icon: <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400"/>,     val: (isSensorOnline && liveSensor?.temperature != null) ? `${liveSensor.temperature}°C` : '--',  label: t('overview_air_temp') },
               { 
                 pos: 'bottom-[25%] left-[0%] sm:left-[4%]',  
                 icon: <span className="w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center text-purple-400 font-bold text-[8px] sm:text-[10px]">pH</span>, 
-                val: (isSensorOnline && liveSensor?.ph) ? `${liveSensor.ph}` : '--', 
+                val: (isSensorOnline && liveSensor?.ph != null) ? `${liveSensor.ph}` : '--', 
                 label: t('overview_nutrient_ph'),
                 extra: (isSensorOnline && liveSensor?.ph != null)
                   ? liveSensor.ph < 5.5 ? { label: t('common_lang_code') === 'id' ? 'ASAM' : 'ACID', color: '#f87171' }
@@ -728,7 +736,7 @@ export default function OverviewPage() {
                   : { label: 'OPTIMAL', color: '#4ade80' }
                   : { label: 'NO SIGNAL', color: '#9ca3af' },
               },
-              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: (isSensorOnline && liveSensor?.humidity) ? `${liveSensor.humidity}%` : '--',      label: t('overview_air_humidity') },
+              { pos: 'bottom-[11%] right-[4%] sm:right-[8%]',icon: <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400"/>,              val: (isSensorOnline && liveSensor?.humidity != null) ? `${liveSensor.humidity}%` : '--',      label: t('overview_air_humidity') },
               { pos: 'top-[50%] right-[-6%] sm:right-[0%]',    icon: <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-violet-400"/>,        val: (isSensorOnline && liveSensor?.tds != null) ? `${liveSensor.tds.toFixed(1)}` : '--', label: t('overview_nutrient_ec'),
                 extra: (isSensorOnline && liveSensor?.tds != null)
                   ? liveSensor.tds < 1.2 ? { label: t('overview_ec_low'), color: '#60a5fa' }

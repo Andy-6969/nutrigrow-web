@@ -112,8 +112,14 @@ export default function MonitoringPage() {
       }
     });
 
+    // Polling fallback setiap 30 detik — jika Realtime gagal/terblokir RLS
+    const pollInterval = setInterval(() => {
+      if (isMounted) loadCurrentData();
+    }, 30000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       sensorService.unsubscribeFromSensorUpdates();
     };
   }, [selectedZone]);
