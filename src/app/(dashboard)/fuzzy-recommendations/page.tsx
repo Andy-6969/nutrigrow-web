@@ -262,6 +262,15 @@ export default function FuzzyRecommendationsPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Auto-hide status message after 3 seconds
+  useEffect(() => {
+    if (!statusMsg) return;
+    const timer = setTimeout(() => {
+      setStatusMsg(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [statusMsg]);
+
   // 2. Fetch Data
   const fetchData = useCallback(async () => {
     try {
