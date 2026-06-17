@@ -409,6 +409,12 @@ export const translations = {
     pending_step_3: 'Admin akan mengubah role Anda menjadi Pemilik Kebun di panel manajemen.',
     pending_recheck: 'Periksa Ulang Status',
     pending_logout: 'Keluar',
+
+    // ── Connection status ─────────────────────────────────────
+    connection_lost_title: 'Koneksi Terputus',
+    connection_lost_desc: 'Anda sedang offline. Harap periksa koneksi internet Anda.',
+    connection_back_title: 'Koneksi Pulih',
+    connection_back_desc: 'Anda kembali online. Sinkronisasi data aktif kembali.',
   },
 
   en: {
@@ -825,5 +831,11 @@ export const translations = {
     pending_step_3: 'Admin will change your role to Farm Owner in the management panel.',
     pending_recheck: 'Re-check Status',
     pending_logout: 'Logout',
+
+    // ── Connection status ─────────────────────────────────────
+    connection_lost_title: 'Connection Lost',
+    connection_lost_desc: 'You are currently offline. Please check your internet connection.',
+    connection_back_title: 'Connection Restored',
+    connection_back_desc: 'You are back online. Data synchronization is active.',
   }
 };

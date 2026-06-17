@@ -83,6 +83,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [role, toast]);
 
+  // ─── Browser connectivity state listeners ──────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      toast({
+        type: 'success',
+        title: t('connection_back_title'),
+        message: t('connection_back_desc'),
+        duration: 5000,
+      });
+    };
+
+    const handleOffline = () => {
+      toast({
+        type: 'error',
+        title: t('connection_lost_title'),
+        message: t('connection_lost_desc'),
+        duration: 10000,
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check in case page was loaded offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      handleOffline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [toast, t]);
+
   const unreadCount = mockNotifications.filter(n => !n.is_read).length;
 
   // ─── Guest quarantine guard ─────────────────────────────────────
