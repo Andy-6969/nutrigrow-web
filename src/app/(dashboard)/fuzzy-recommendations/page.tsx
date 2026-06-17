@@ -15,7 +15,7 @@ import { sensorService } from '@/shared/services/sensorService';
 
 // ─── FUZZY LOGIC ENGINE (MAMDANI) ──────────────────────────────
 function trapezoid(x: number, a: number, b: number, c: number, d: number): number {
-  if (x <= a || x >= d) return 0;
+  if (x < a || x > d) return 0;
   if (x >= b && x <= c) return 1;
   if (x > a && x < b) return (x - a) / (b - a);
   if (x > c && x < d) return (d - x) / (d - c);
