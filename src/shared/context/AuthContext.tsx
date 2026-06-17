@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
@@ -105,9 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const resolveSession = useCallback(async (newSession: Session | null) => {
-    setIsLoading(true);
+    if (!hasLoadedRef.current) {
+      setIsLoading(true);
+    }
     try {
       if (newSession) {
         setSession(newSession);
@@ -155,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
+      hasLoadedRef.current = true;
     }
   }, []);
 
