@@ -79,7 +79,7 @@ def build_pdf():
     size: A4;
     margin-top: 3cm;
     margin-bottom: 3cm;
-    margin-left: 4cm;
+    margin-left: 3cm;
     margin-right: 3cm;
 }}
 body {{
@@ -350,11 +350,9 @@ li {{
             if page.number == 0:
                 continue
                 
-            # Draw header line at y=32 (from x=72 to x=523.6) - matches 1 inch left/right margin on A4
-            # A4 is 595.3 x 841.9 pt. Left margin is 4cm = 113.4 pt, Right margin is 3cm = 85 pt (so x is from 113.4 to 510)
-            # Wait, let's use the exact points corresponding to Left 4cm (113.4) and Right 3cm (510.3)
-            # A4 width = 595.3 pt. 4cm = 113.4 pt. 3cm = 85 pt. Right margin end = 595.3 - 85 = 510.3 pt.
-            left_x = 113.4
+            # Draw header line matches 3cm left/right margin on A4
+            # A4 width = 595.3 pt. 3cm left = 85.0 pt, 3cm right = 85.0 pt (so x is from 85.0 to 510.3)
+            left_x = 85.0
             right_x = 510.3
             
             page.draw_line(
