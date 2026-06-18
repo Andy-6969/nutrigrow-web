@@ -871,14 +871,32 @@ export default function SplashOnboarding() {
     // Only initialize the phase once on mount
     setPhase((prev) => {
       if (prev !== 'idle') return prev;
+
+      // Check if splash was already shown in this browser session
+      const sessionSplashShown = typeof window !== 'undefined' && sessionStorage.getItem('ng_session_splash_shown') === 'true';
+      if (sessionSplashShown) {
+        const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isLoggedIn = !!session;
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+
+        if (isLoggedIn || onboardingDone || isDesktop) {
+          return 'done';
+        }
+        return 'onboarding';
+      }
+
       return 'splash';
     });
-  }, [isInitialized]);
+  }, [isInitialized, session]);
 
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
     const isLoggedIn = !!session;
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('ng_session_splash_shown', 'true');
+    }
 
     if (isLoggedIn || onboardingDone || isDesktop) {
       if (isDesktop && !onboardingDone) {
@@ -898,7 +916,12 @@ export default function SplashOnboarding() {
         <SplashScreen onDone={handleSplashDone} />
       )}
       {phase === 'onboarding' && (
-        <OnboardingFlow onDone={() => setPhase('done')} />
+        <OnboardingFlow onDone={() => {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('ng_session_splash_shown', 'true');
+          }
+          setPhase('done');
+        }} />
       )}
     </>
   );
