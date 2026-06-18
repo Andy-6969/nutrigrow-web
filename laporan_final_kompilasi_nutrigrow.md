@@ -44,7 +44,7 @@ Untuk menjawab masalah tersebut, dikembangkan sistem **NutriGrow (Bitanic Pro V4
 * **Bagi Perkembangan Teknologi**: Memberikan referensi desain arsitektur IoT terdistribusi yang tangguh menggunakan kombinasi LoRa, MQTT, Supabase, dan Fuzzy Logic di server lokal/cloud.
 
 ### **1.5 Ruang Lingkup Proyek (*Project Scope*)**
-* **Lingkup Perangkat Keras**: Node sensor (ESP32) di Lapangan (Zona A) untuk mengukur kelembaban tanah dan suhu/kelembaban udara (DHT22) serta katup solenoid. Gateway/Controller (ESP32) di Pos Jaga (Zona B) untuk mengukur pH, TDS, dan mengontrol relay pompa air/pupuk.
+* **Lingkup Perangkat Keras**: Node sensor (ESP32) di Lapangan (Zona A) untuk mengukur kelembaban tanah dan suhu/kelembaban udara (DHT22). Gateway/Controller (ESP32) di Pos Jaga (Zona B) untuk mengukur pH, TDS, dan mengontrol relay pompa air/pupuk.
 * **Lingkup Komunikasi**: ESP-NOW untuk komunikasi sensor-aktuator lokal, LoRa 433 MHz untuk transmisi antar-zona (5-15 km), MQTTS (port 8883) ke VPS, dan WebSocket/WSS (port 443) ke klien.
 * **Lingkup Perangkat Lunak**: REST API Node.js/Express di VPS Ubuntu 22.04 LTS, database PostgreSQL Supabase Cloud, dan visualisasi Next.js SPA serta Expo Mobile.
 * **Pengecualian (*Non-Goals*)**: Tidak mencakup otomasi parameter greenhouse tertutup, hidroponik vertikal, modul e-commerce hasil panen, dan analisis citra drone.
@@ -104,11 +104,11 @@ Berikut adalah diagram representasi fisik topologi jaringan, perangkat, media, d
 *Gambar 3.1 Diagram Topologi Jaringan Fisik Sistem NutriGrow*
 
 ### **3.5 Tools & Teknologi yang Digunakan**
-* **Hardware**: ESP32, ESP8266, Modul LoRa Ra-02 (433 MHz), Sensor DHT22, Soil Moisture, pH analog, TDS sensor, Relay 4-Channel, Solenoid Valve 12V, Router Mikrotik hAP lite.
+* **Hardware**: ESP32, ESP8266, Modul LoRa Ra-02 (433 MHz), Sensor DHT22, Soil Moisture, pH analog, TDS sensor, Relay 4-Channel, Router Mikrotik hAP lite.
 * **Software**: Next.js (Frontend), Node.js/Express (Backend API), Supabase (PostgreSQL Database), Mosquitto (MQTT Broker), PM2 (Process Manager), VS Code.
 
 ### **3.6 Rencana Estimasi Anggaran (*Project Budget*)**
-* **Hardware & Perangkat Keras**: ESP32 (3x @Rp75.000), ESP8266 (2x @Rp45.000), Modul LoRa Ra-02 (2x @Rp80.000), Sensor (DHT22, Soil, pH, TDS @Rp350.000), Pompa 12V + Relay + Solenoid Valve (@Rp400.000), Router Mikrotik hAP lite (Rp350.000). Total: **Rp 1.625.000**.
+* **Hardware & Perangkat Keras**: ESP32 (3x @Rp75.000), ESP8266 (2x @Rp45.000), Modul LoRa Ra-02 (2x @Rp80.000), Sensor (DHT22, Soil, pH, TDS @Rp350.000), Pompa 12V + Relay (@Rp250.000), Router Mikrotik hAP lite (Rp350.000). Total: **Rp 1.475.000**.
 * **Infrastruktur Server**: Cloud VPS Ubuntu (6 vCPU/16GB RAM) sewa per bulan: **Rp 350.000/bulan**.
 
 ### **3.7 Jadwal Proyek (*Project Schedule*)**
@@ -261,10 +261,10 @@ Pengujian failover bertujuan memastikan ketiadaan *single point of failure* (SPO
 | **Restart Broker MQTT** | Restart service mosquitto di VPS. | Backend dan ESP32 Gateway melakukan reconnect otomatis. Data sensor kembali mengalir setelah broker aktif. | Broker dimatikan selama 2 menit. Log backend menunjukkan status kehilangan koneksi. Setelah broker aktif kembali, backend secara otomatis melakukan reconnect (MQTT Broker connected) dan re-subscribe ke seluruh topic sensor. | **PASS** |
 | **Kegagalan Sensor Zona A** | Cabut sensor DHT22 dari ESP32 Node A. | Node A mengirim data parsial. Dashboard menampilkan status offline untuk sensor yang dicabut. | Ketika DHT22 dicabut, ESP32 Lapangan mengirimkan payload dengan flag error. Dashboard web menampilkan status "Sensor Offline" berwarna merah pada widget suhu & kelembapan udara Zona A, sementara sensor tanah dan Zona B tetap terbaca normal. | **PASS** |
 | **Kegagalan Sensor Zona B** | Cabut sensor pH/TDS dari ESP32 B. | ESP32 B mengirim nilai pH default (7.0) / TDS (0). Dashboard memicu alert kalibrasi. | Sensor pH analog dicabut. ESP32 Controller mendeteksi deviasi pembacaan ADC dan mengirimkan nilai pH default 7.0 (netral). Dashboard memunculkan notifikasi alert "Warning: Sensor pH membutuhkan kalibrasi/cek fisik". | **PASS** |
-| **Kegagalan LoRa** | Matikan transmitter ESP8266 Lapangan. | Gateway Zona B mendeteksi hilangnya sinyal LoRa. Solenoid otomatis menutup demi keamanan. | Daya pemancar ESP8266 Lapangan dimatikan. ESP32 Gateway di Zona B mendeteksi *packet timeout* (>60 detik) dari Zona A. Status Zona A berubah menjadi offline di dashboard, dan katup solenoid Zona A menutup secara otomatis. | **PASS** |
+| **Kegagalan LoRa** | Matikan transmitter ESP8266 Lapangan. | Gateway Zona B mendeteksi hilangnya sinyal LoRa. Sistem beralih ke mode aman (*safety fallback*). | Daya pemancar ESP8266 Lapangan dimatikan. ESP32 Gateway di Zona B mendeteksi *packet timeout* (>60 detik) dari Zona A. Status Zona A berubah menjadi offline di dashboard, dan status kontrol irigasi lapangan beralih ke mode aman secara otomatis. | **PASS** |
 | **Putus WiFi Gateway B** | Matikan router Mikrotik di Zona B. | Gateway ESP32 B beralih ke mode kontrol otonom lokal (kontrol pompa offline berbasis TDS & pH lokal). | Access point Router Mikrotik dimatikan selama 2 menit. ESP32 Controller mendeteksi putusnya WiFi, langsung memicu *fallback* ke mode otonom lokal (pompa air/pupuk dijalankan berbasis parameter sensor pH/TDS lokal tanpa sinkronisasi cloud). | **PASS** |
 | **Kegagalan Weather API** | Blokir akses internet ke Weather API. | Sistem Fuzzy Logic secara otomatis mengabaikan data cuaca dan menggunakan sensor lokal sepenuhnya. | DNS BMKG/OpenWeather ditutup sengaja pada VPS. REST API gagal menarik data prakiraan cuaca, memicu *fail-safe* di engine fuzzy. Keputusan durasi penyiraman tetap keluar secara aman berdasarkan kondisi kelembapan tanah real-time lapangan. | **PASS** |
-| **Mati Listrik (Power Loss)**| Cabut pasokan daya di Pos Jaga. | Pompa dan aktuator mati otomatis (default NC/Normally Closed) untuk mencegah banjir lahan. | Pasokan daya 12V ke aktuator dilepas. Katup solenoid (tipe Normally Closed) menutup secara otomatis ketika tidak dialiri arus. Pompa air dan pompa pupuk mati total sehingga tidak ada risiko kebocoran cairan fertigasi tak terkendali. | **PASS** |
+| **Mati Listrik (Power Loss)**| Cabut pasokan daya di Pos Jaga. | Pompa dan aktuator mati otomatis untuk mencegah banjir lahan. | Pasokan daya ke pompa dan aktuator dilepas. Pompa air dan pompa pupuk mati total secara otomatis ketika tidak dialiri arus sehingga tidak ada risiko kebocoran cairan fertigasi tak terkendali. | **PASS** |
 | **Kegagalan Daya VPS** | Lakukan reboot VPS secara paksa. | PM2 startup script dan systemd Mosquitto otomatis memicu start service pasca-reboot. | VPS di-reboot secara paksa. Layanan systemd Mosquitto broker menyala otomatis pada waktu boot. PM2 daemon mendeteksi tersimpannya konfigurasi startup dan berhasil me-restore proses backend Node.js dan WebSocket Server dalam waktu total 18.5 detik pasca-boot. | **PASS** |
 
 * **Bukti Visual Hasil Pengujian Keandalan & Pemulihan (Failover)**:
@@ -484,7 +484,6 @@ Tingkat kehilangan paket (*packet loss*) nirkabel lokal LoRa dan ESP-NOW berada 
 * `nutrigrow/+/sensor_lokal`: Data sensor terpisah dari pos jaga (ESP32 Controller -> VPS)
 * `nutrigrow/actuator/pompa_air`: Perintah ON/OFF pompa air (VPS -> ESP32 Controller)
 * `nutrigrow/actuator/pompa_pupuk`: Perintah ON/OFF pompa pupuk (VPS -> ESP32 Controller)
-* `nutrigrow/actuator/solenoid`: Perintah solenoid valve (VPS -> ESP32 Controller)
 
 ### **2. Daftar Tabel Supabase & Status RLS**
 | Tabel | Fungsi | RLS Status |
@@ -494,7 +493,7 @@ Tingkat kehilangan paket (*packet loss*) nirkabel lokal LoRa dan ESP-NOW berada 
 | **farms** | Daftar kebun/lahan pertanian | **Aktif** |
 | **user_profiles** | Profil pengguna (role, assigned_zones) | **Aktif** |
 | **alerts** | Log peringatan sensor melampaui threshold | **Aktif** |
-| **actuator_log** | Log perintah aktuator (pompa, solenoid) | **Aktif** |
+| **actuator_log** | Log perintah aktuator (pompa) | **Aktif** |
 | **fuzzy_recommendations** | Rekomendasi irigasi dari Fuzzy Logic | **Aktif** |
 | **irrigation_logs** | Log eksekusi irigasi (manual/auto/eco) | **Aktif** |
 | **weather_data** | Data cuaca dari API eksternal | **Aktif** |
