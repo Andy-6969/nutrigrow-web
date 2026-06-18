@@ -9,11 +9,11 @@
 ## **SISTEM MONITORING DAN OTOMASI IRIGASI CERDAS PADA PERTANIAN BERBASIS IOT MENGGUNAKAN FUZZY LOGIC DENGAN WEB DASHBOARD**
 
 **Disusun oleh:**
-1. Muhammad Pandya Hanif Ramadhan (NIM 1)
-2. Muhammad Athaillah Hardianto (NIM 2)
-3. Muhammad Ali Diepo (NIM 3)
-4. Maulana Daviq Putra (NIM 2307422024)
-5. Ravila Sasla Arandika (NIM 5)
+1. Maulana Daviq Putra (2307422024)
+2. Muhammad Ali Diepo Ar-Rasyid (2307422023)
+3. Muhammad Athaillah Hardianto (2307422011)
+4. Muhammad Pandya Hanif Ramadhan (2307422006)
+5. Ravila Sasla Arandika (2307422026)
 
 **PROGRAM STUDI TEKNIK MULTIMEDIA DAN JARINGAN**
 **JURUSAN TEKNIK INFORMATIKA DAN KOMPUTER**

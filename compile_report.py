@@ -37,11 +37,28 @@ def build_pdf():
         <img class="cover-logo" src="pnj_logo.png" alt="Logo PNJ">
         <div class="cover-authors-label">Disusun oleh:</div>
         <div class="cover-authors">
-            1. Muhammad Pandya Hanif Ramadhan (NIM 1)<br>
-            2. Muhammad Athaillah Hardianto (NIM 2)<br>
-            3. Muhammad Ali Diepo (NIM 3)<br>
-            4. Maulana Daviq Putra (NIM 2307422024)<br>
-            5. Ravila Sasla Arandika (NIM 5)
+            <table class="authors-table">
+                <tr>
+                    <td class="author-name">Maulana Daviq Putra</td>
+                    <td class="author-nim">(2307422024)</td>
+                </tr>
+                <tr>
+                    <td class="author-name">Muhammad Ali Diepo Ar-Rasyid</td>
+                    <td class="author-nim">(2307422023)</td>
+                </tr>
+                <tr>
+                    <td class="author-name">Muhammad Athaillah Hardianto</td>
+                    <td class="author-nim">(2307422011)</td>
+                </tr>
+                <tr>
+                    <td class="author-name">Muhammad Pandya Hanif Ramadhan</td>
+                    <td class="author-nim">(2307422006)</td>
+                </tr>
+                <tr>
+                    <td class="author-name">Ravila Sasla Arandika</td>
+                    <td class="author-nim">(2307422026)</td>
+                </tr>
+            </table>
         </div>
         <div class="cover-institution">
             PROGRAM STUDI TEKNIK MULTIMEDIA DAN JARINGAN<br>
@@ -169,6 +186,30 @@ body {{
     font-size: 12pt;
     margin-bottom: 2cm;
     line-height: 1.4;
+}}
+.authors-table {{
+    width: auto !important;
+    margin: 0 auto !important;
+    border-collapse: collapse !important;
+    border: none !important;
+}}
+.authors-table tr {{
+    page-break-inside: avoid !important;
+}}
+.authors-table td {{
+    border: none !important;
+    padding: 3px 0px !important;
+    text-align: left !important;
+    vertical-align: middle !important;
+    font-size: 12pt !important;
+}}
+.author-name {{
+    width: 280px !important;
+    text-align: left !important;
+}}
+.author-nim {{
+    text-align: left !important;
+    padding-left: 20px !important;
 }}
 .cover-institution {{
     font-size: 14pt;
@@ -327,27 +368,6 @@ ul, ol {{
 li {{
     margin-bottom: 0.3em;
     text-align: justify;
-}}
-
-/* References specific styling */
-.references-list {{
-    padding-left: 2.2em !important;
-    margin-bottom: 1.5em;
-}}
-
-.references-list li {{
-    text-align: left !important;
-    margin-bottom: 0.8em;
-    line-height: 1.6;
-    word-break: break-word;
-    /* Hanging indent style: indents subsequent lines of each reference entry */
-    padding-left: 1.5em;
-    text-indent: -1.5em;
-}}
-
-.references-list a {{
-    word-break: break-all !important;
-    overflow-wrap: anywhere !important;
 }}
 
 /* Page breaks */
