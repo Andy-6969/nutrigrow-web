@@ -332,9 +332,12 @@ export default function OverviewPage() {
     setIsOverriding(true);
     
     try {
-      if (isRunning && activeOverride) {
-        // Mode: STOP
-        await overrideService.stopOverride(activeOverride.id, activeOverride.mode as any);
+      if (isRunning) {
+        // Mode: STOP (Stop all active overrides for this zone)
+        const overridesToStop = activeOverrides.filter(o => o.zone_id === selectedZone.id);
+        await Promise.all(
+          overridesToStop.map(o => overrideService.stopOverride(o.id, o.mode as any))
+        );
       } else {
         // Mode: START
         const target = irrigationMode === 'water' ? 'pump' : irrigationMode === 'fertilizer' ? 'pump_pupuk' : 'solenoid';
@@ -806,9 +809,24 @@ export default function OverviewPage() {
             <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>{t('override_mode_label').toUpperCase()}</p>
             <div className="grid grid-cols-3 gap-2">
               {IRRIGATION_MODES.map(mode => {
-                const isActive = irrigationMode === mode.id;
+                const isModeRunning = activeOverrides.some(o => 
+                  o.zone_id === selectedZone?.id && (
+                    (mode.id === 'water' && o.mode === 'pump') ||
+                    (mode.id === 'fertilizer' && (o.mode === 'pump_pupuk' || o.mode === 'fertigation')) ||
+                    (mode.id === 'solenoid' && o.mode === 'solenoid')
+                  )
+                );
+                const isActive = isRunning ? isModeRunning : irrigationMode === mode.id;
+                
                 return (
-                  <button key={mode.id} onClick={() => setIrrigationMode(mode.id)}
+                  <button 
+                    key={mode.id} 
+                    onClick={() => {
+                      if (!isRunning) {
+                        setIrrigationMode(mode.id);
+                      }
+                    }}
+                    disabled={isRunning}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200"
                     style={isActive ? {
                       background: mode.bgColor,
@@ -818,6 +836,8 @@ export default function OverviewPage() {
                     } : {
                       background: 'var(--surface-card)',
                       border: '1px solid var(--surface-border)',
+                      opacity: isRunning ? 0.5 : 1,
+                      cursor: isRunning ? 'not-allowed' : 'pointer'
                     }}
                   >
                     <span className="text-xl">{mode.emoji}</span>
