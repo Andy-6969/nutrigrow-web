@@ -674,7 +674,7 @@ export default function OverviewPage() {
         {/* ── CENTER COLUMN (HUD) ── */}
         <div className="order-1 xl:order-2 xl:col-span-6 flex flex-col items-center justify-center relative min-h-[400px] xl:min-h-[500px] mb-6 xl:mb-0 animate-card-entrance animate-delay-2">
 
-          <div className="absolute top-0 text-center w-full z-20 px-12" style={slideInStyle} key={`header-${animKey}`}>
+          <div className="relative text-center w-full z-20 px-4 sm:px-12 mb-6 mt-2" style={slideInStyle} key={`header-${animKey}`}>
             <h2 className="text-3xl font-extrabold tracking-[0.2em] uppercase" style={textMain}>
               {selectedZone ? (selectedZone.name.split(' - ')[1] || selectedZone.name) : t('overview_main_greenhouse')}
             </h2>
@@ -684,7 +684,7 @@ export default function OverviewPage() {
                 style={{ backgroundColor: isSensorOnline ? (zoneStatus?.color ?? '#10b981') : '#ef4444' }} 
               />
               <span className="text-xs font-mono tracking-widest" style={{ color: isSensorOnline ? '#10b981' : '#f87171' }}>
-                {isSensorOnline ? t('overview_system_online') : t('overview_system_offline')} // {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
+                {isSensorOnline ? t('overview_system_online') : t('overview_system_offline')} · {t('overview_node')} {String(zoneIndex + 1).padStart(2, '0')} {t('overview_of')} {String(zones.length).padStart(2, '0')}
               </span>
               {selectedZone && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
