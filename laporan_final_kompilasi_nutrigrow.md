@@ -516,24 +516,19 @@ Tingkat kehilangan paket (*packet loss*) nirkabel lokal LoRa dan ESP-NOW berada 
 | **eco_savings_log** | Log penghematan air mode Eco | **Aktif** |
 
 ### **3. Referensi**
+1. OWASP Foundation. (2023). *OWASP API Security Top 10 2023*. https://owasp.org/API-Security/
+2. OWASP Foundation. (2021). *OWASP Top 10 2021*. https://owasp.org/Top10/
+3. Supabase Documentation. (2025). *Row Level Security*. https://supabase.com/docs/guides/database/postgres/row-level-security
+4. Espressif Systems. (2026). *ESP-NOW User Guide*. https://docs.espressif.com/
+5. Semtech Corporation. (2025). *LoRa and LoRaWAN Technical Overview*. https://www.semtech.com/
+6. Armanto, A. et al. (2025). *Smart Water Automation System to Regulate Watering of Horticultural Plants with Arduino-based Fuzzy Logic*. International Journal of Integrative Sciences (IJIS). https://mryformosapublisher.org/index.php/ijis/article/view/24
+7. Saravanan, S. et al. (2023). *Study and Development of IoT Based Smart Irrigation System Using Soil Moisture and Weather Prediction*. International Journal for Research in Applied Science & Engineering Technology (IJRASET). https://doi.org/10.22214/ijraset.2023.50948
+8. Morchid, A. et al. (2023). *Fuzzy-IoT Smart Irrigation System for Precision Scheduling and Monitoring*. Computers and Electronics in Agriculture, ScienceDirect. https://www.sciencedirect.com/science/article/abs/pii/S0168169923007950
+9. Hasan et al. (2025). *IoT-Based Smart Fertigation Scheduling and Wireless Microclimate Monitoring for a Greenhouse Dutch Bucket Hydroponic System*. Irrigation and Drainage, Wiley. https://doi.org/10.1002/ird.70012
+10. Ngoma, D.H. et al. (2025). *Design and Development of IoT Smart Drip Irrigation and Fertigation Prototype for Small and Medium Scale Farmers*. Journal of The Institution of Engineers (India), Springer. https://doi.org/10.1007/s40030-024-00857-7
+11. Saha, G. et al. (2025). *An IoT-Based Smart Plant Monitoring and Irrigation System with Real-Time Environmental Sensing, Automated Alerts, and Cloud Analytics*. arXiv Preprint. https://arxiv.org/pdf/2601.15830
+12. Jaywant, A.P. & Desai, A.S. (2024). *Cloud-Integrated Precision Agriculture with LoRaWAN and ESP32*. Journal of Computer and Creative Technology (JCCT). IEEE ICOSEC 2024. https://so13.tci-thaijo.org/index.php/jcct/article/view/1560
+13. Multiple Authors. (2025). *Cloud–Edge–Device Collaborative Computing in Smart Agriculture: Architectures, Applications, and Future Perspectives*. Frontiers in Plant Science. https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2025.1668545/full
+14. Imbernon-Mulero, A. et al. (2023). *Evaluation of an Autonomous Smart System for Optimal Management of Fertigation with Variable Sources of Irrigation Water*. Frontiers in Plant Science. https://doi.org/10.3389/fpls.2023.1149956
+15. Garcia, L. et al. (2020). *IoT-Based Smart Irrigation Systems: An Overview on the Recent Trends on Sensors and IoT Systems for Irrigation in Precision Agriculture*. Sensors, MDPI. https://doi.org/10.3390/s20041042
 
-<ol class="references-list">
-  <li>OWASP Foundation. (2023). <em>OWASP API Security Top 10 2023</em>. <a href="https://owasp.org/API-Security/">https://owasp.org/API-Security/</a></li>
-  <li>OWASP Foundation. (2021). <em>OWASP Top 10 2021</em>. <a href="https://owasp.org/Top10/">https://owasp.org/Top10/</a></li>
-  <li>Supabase Documentation. (2025). <em>Row Level Security</em>. <a href="https://supabase.com/docs/guides/database/postgres/row-level-security">https://supabase.com/docs/guides/database/postgres/row-level-security</a></li>
-  <li>Espressif Systems. (2026). <em>ESP-NOW User Guide</em>. <a href="https://docs.espressif.com/">https://docs.espressif.com/</a></li>
-  <li>Semtech Corporation. (2025). <em>LoRa and LoRaWAN Technical Overview</em>. <a href="https://www.semtech.com/">https://www.semtech.com/</a></li>
-</ol>
-
-<ol class="references-list" start="51">
-  <li>Armanto, A. et al. (2025). <em>Smart Water Automation System to Regulate Watering of Horticultural Plants with Arduino-based Fuzzy Logic</em>. International Journal of Integrative Sciences (IJIS). <a href="https://mryformosapublisher.org/index.php/ijis/article/view/24">https://mryformosapublisher.org/index.php/ijis/article/view/24</a></li>
-  <li>Saravanan, S. et al. (2023). <em>Study and Development of IoT Based Smart Irrigation System Using Soil Moisture and Weather Prediction</em>. International Journal for Research in Applied Science &amp; Engineering Technology (IJRASET), ISSN: 2321-9653, SJIF Impact Factor: 8.067. <a href="https://doi.org/10.22214/ijraset.2023.50948">https://doi.org/10.22214/ijraset.2023.50948</a></li>
-  <li>Morchid, A. et al. (2023). <em>Fuzzy-IoT Smart Irrigation System for Precision Scheduling and Monitoring</em>. Computers and Electronics in Agriculture, ScienceDirect. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0168169923007950">https://www.sciencedirect.com/science/article/abs/pii/S0168169923007950</a></li>
-  <li>Hasan et al. (2025). <em>IoT-Based Smart Fertigation Scheduling and Wireless Microclimate Monitoring for a Greenhouse Dutch Bucket Hydroponic System</em>. Irrigation and Drainage, Wiley. <a href="https://doi.org/10.1002/ird.70012">https://doi.org/10.1002/ird.70012</a></li>
-  <li>Ngoma, D.H. et al. (2025). <em>Design and Development of IoT Smart Drip Irrigation and Fertigation Prototype for Small and Medium Scale Farmers</em>. Journal of The Institution of Engineers (India), Springer. <a href="https://doi.org/10.1007/s40030-024-00857-7">https://doi.org/10.1007/s40030-024-00857-7</a></li>
-  <li>Saha, G. et al. (2025). <em>An IoT-Based Smart Plant Monitoring and Irrigation System with Real-Time Environmental Sensing, Automated Alerts, and Cloud Analytics</em>. arXiv Preprint. <a href="https://arxiv.org/pdf/2601.15830">https://arxiv.org/pdf/2601.15830</a></li>
-  <li>Jaywant, A.P. &amp; Desai, A.S. (2024). <em>Cloud-Integrated Precision Agriculture with LoRaWAN and ESP32</em>. Journal of Computer and Creative Technology (JCCT). IEEE ICOSEC 2024. <a href="https://so13.tci-thaijo.org/index.php/jcct/article/view/1560">https://so13.tci-thaijo.org/index.php/jcct/article/view/1560</a></li>
-  <li>Multiple Authors. (2025). <em>Cloud–Edge–Device Collaborative Computing in Smart Agriculture: Architectures, Applications, and Future Perspectives</em>. Frontiers in Plant Science. <a href="https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2025.1668545/full">https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2025.1668545/full</a></li>
-  <li>Imbernon-Mulero, A. et al. (2023). <em>Evaluation of an Autonomous Smart System for Optimal Management of Fertigation with Variable Sources of Irrigation Water</em>. Frontiers in Plant Science. <a href="https://doi.org/10.3389/fpls.2023.1149956">https://doi.org/10.3389/fpls.2023.1149956</a></li>
-  <li>Garcia, L. et al. (2020). <em>IoT-Based Smart Irrigation Systems: An Overview on the Recent Trends on Sensors and IoT Systems for Irrigation in Precision Agriculture</em>. Sensors, MDPI. <a href="https://doi.org/10.3390/s20041042">https://doi.org/10.3390/s20041042</a></li>
-</ol>
