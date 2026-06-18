@@ -172,14 +172,24 @@ Pengujian dilakukan menggunakan simulator MQTT untuk membombardir broker MQTT di
 #### **4.3.2 Pengujian Keamanan (Security Testing)**
 Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan acuan OWASP:
 
+##### **Tabel 4.4 Hasil Pengujian Keamanan Jaringan & Cloud (OWASP)**
+
+| No. | Skenario Keamanan | Kondisi / Uji Coba | Hasil yang Diharapkan | Hasil Aktual | Status |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | **Skenario 1**: Kebocoran Data via RLS Bypass (BOLA) | Sebelum Mitigasi (RLS OFF) | Data dari semua zona dikembalikan | API mengembalikan seluruh array JSON data sensor milik pengguna lain. | **FAIL** (Terdeteksi) |
+| | | Setelah Mitigasi (RLS ON + Policy) | Respons kosong `[]` | API memblokir query dan mengembalikan array kosong `[]` secara aman. | **PASS** |
+| **2** | **Skenario 2**: Pemalsuan Data Telemetri IoT (IoT Spoofing) | Koneksi tanpa kredensial | Ditolak oleh broker (*Connection refused*) | Koneksi ditolak secara otomatis oleh broker. | **PASS** |
+| | | Koneksi via port 1883 (non-TLS) | Ditolak / koneksi gagal dari luar | Port 1883 ditutup sepenuhnya oleh firewall VPS. | **PASS** |
+| | | Pengiriman data ekstrem (suhu 150°C) | Ditolak / disaring oleh backend | Backend membatalkan *insert* dan mencatat *warning log*. | **PASS** |
+| **3** | **Skenario 3**: Kebocoran Token Admin (Privilege Escalation) | Pencarian `service_role` di bundle JS | Tidak ditemukan | Chrome DevTools static search tidak menemukan string `SUPABASE_SERVICE_ROLE_KEY` (*No matches found*). | **PASS** |
+| | | Pencarian JWT prefix di bundle JS | Hanya `anon_key` yang ditemukan | Terdeteksi kunci publik `anon_key` (*eyJhbGci...*) yang telah dilindungi RLS database. | **PASS** |
+| **4** | **Skenario 4**: SQL Injection pada Fitur Kustom | SQL injection via API parameter | Request disaring secara aman oleh database | Perintah `DROP TABLE` diabaikan, data historis tetap aman ditarik. | **PASS** |
+| | | Supabase Client SDK (*Parameterized Query*) | Query aman, tidak ada injeksi | Supabase RPC memperlakukan payload sebagai string biasa, database aman. | **PASS** |
+| **5** | **Skenario 5**: Stored XSS via Input Pengguna | Input XSS di field nama kebun | Skrip tidak dieksekusi, tampil sebagai teks biasa | React JSX me-render payload `<img src=x onerror="alert(...)">` sebagai teks biasa tanpa memicu alert. | **PASS** |
+| | | CSP header mencegah inline script | Script terblokir oleh CSP | Middleware `helmet()` memblokir eksekusi inline script tak dikenal. | **PASS** |
+
 ##### **Skenario 1: Kebocoran Data via RLS Bypass (BOLA)**
 * **Klasifikasi**: OWASP API1:2023 - Broken Object Level Authorization
-* **Hasil Pengujian**:
-| Kondisi | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :---: |
-| **Sebelum Mitigasi (RLS OFF)** | Data dari semua zona dikembalikan | API mengembalikan seluruh array JSON data sensor milik pengguna lain. | **FAIL** (Kerentanan Terdeteksi) |
-| **Setelah Mitigasi (RLS ON + Policy)** | Respons kosong [] | API memblokir query dan mengembalikan array kosong `[]` secara aman. | **PASS** |
-
 * **Bukti Visual Hasil Pengujian Skenario 1**:
 
   ![Kondisi Sebelum Mitigasi (RLS OFF)](extracted_images/image_2.png)
@@ -190,13 +200,6 @@ Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan ac
 
 ##### **Skenario 2: Pemalsuan Data Telemetri IoT (IoT Spoofing)**
 * **Klasifikasi**: OWASP Spoofing Identity / Data Integrity Attack
-* **Hasil Pengujian**:
-| Kondisi | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :---: |
-| **Koneksi tanpa kredensial** | Ditolak oleh broker (Connection refused) | Koneksi ditolak secara otomatis oleh broker. | **PASS** |
-| **Koneksi via port 1883 (non-TLS)** | Ditolak / koneksi gagal dari luar | Port 1883 ditutup sepenuhnya oleh firewall VPS. | **PASS** |
-| **Pengiriman data ekstrem (suhu 150°C)**| Ditolak / disaring oleh backend | Backend membatalkan insert dan mencatat warning log. | **PASS** |
-
 * **Bukti Visual Hasil Pengujian Skenario 2**:
 
   ![Kondisi Koneksi broker tanpa kredensial](extracted_images/image_5.png)
@@ -216,12 +219,6 @@ Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan ac
 
 ##### **Skenario 3: Kebocoran Token Admin (Privilege Escalation via Service Role Key)**
 * **Klasifikasi**: OWASP Broken Authentication / Security Misconfiguration
-* **Hasil Pengujian**:
-| Kondisi | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :---: |
-| **Pencarian service_role di bundle JS** | Tidak ditemukan | Chrome DevTools static search tidak menemukan string `SUPABASE_SERVICE_ROLE_KEY` (No matches found). | **PASS** |
-| **Pencarian JWT prefix di bundle JS** | Hanya anon_key yang ditemukan | Terdeteksi kunci publik `anon_key` (eyJhbGci...) yang telah dilindungi RLS database. | **PASS** |
-
 * **Bukti Visual Hasil Pengujian Skenario 3**:
 
   ![Pencarian service_role di Chrome DevTools (No matches found)](extracted_images/security_token_search_clean.jpg)
@@ -232,12 +229,6 @@ Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan ac
 
 ##### **Skenario 4: SQL Injection pada Fitur Kustom**
 * **Klasifikasi**: OWASP A3:2021 Injection
-* **Hasil Pengujian**:
-| Kondisi | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :---: |
-| **SQL injection via API parameter** | Request disaring secara aman oleh database | Perintah `DROP TABLE` diabaikan, data historis tetap aman ditarik. | **PASS** |
-| **Supabase Client SDK (Parameterized Query)**| Query aman, tidak ada injeksi | Supabase RPC memperlakukan payload sebagai string biasa, database aman. | **PASS** |
-
 * **Bukti Visual Hasil Pengujian Skenario 4**:
 
   ![Kondisi saat meng-input SQL injection via parameter API](extracted_images/image_9.png)
@@ -248,12 +239,6 @@ Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan ac
 
 ##### **Skenario 5: Stored XSS via Input Pengguna pada Dashboard**
 * **Klasifikasi**: OWASP A3:2021 Injection / CWE-79
-* **Hasil Pengujian**:
-| Kondisi | Hasil yang Diharapkan | Hasil Aktual | Status |
-| :--- | :--- | :--- | :---: |
-| **Input XSS di field nama kebun** | Skrip tidak dieksekusi, tampil sebagai teks biasa | React JSX me-render payload `<img src=x onerror="alert(...)">` sebagai teks biasa tanpa memicu alert. | **PASS** |
-| **CSP header mencegah inline script** | Script terblokir oleh CSP | Middleware `helmet()` memblokir eksekusi inline script tak dikenal. | **PASS** |
-
 * **Bukti Visual Hasil Pengujian Skenario 5**:
 
   ![Penyuntikan Payload XSS pada Form Resep Kustom](extracted_images/security_xss_form_input.jpg)
@@ -267,7 +252,7 @@ Dilakukan pengujian keamanan terhadap 5 skenario kerentanan utama berdasarkan ac
 #### **4.3.3 Pengujian Keandalan & Pemulihan (Failover Testing)**
 Pengujian failover bertujuan memastikan ketiadaan *single point of failure* (SPOF) pada infrastruktur NutriGrow:
 
-##### **Tabel 4.4 Matriks Pengujian Failover**
+##### **Tabel 4.5 Matriks Pengujian Failover**
 | Nama Pengujian | Simulasi Kegagalan | Perilaku Sistem yang Diharapkan | Hasil Aktual | Status |
 | :--- | :--- | :--- | :--- | :---: |
 | **Crash Aplikasi Frontend** | Matikan proses Next.js server. | Dashboard memuat error page. Ketika server aktif, web kembali pulih otomatis. | Dashboard menampilkan error page 502/504. Setelah service Next.js dijalankan kembali, antarmuka web memuat data secara otomatis dalam waktu 1.8 detik tanpa memerlukan reload browser manual. | **PASS** |
@@ -298,7 +283,7 @@ Pengujian failover bertujuan memastikan ketiadaan *single point of failure* (SPO
 #### **4.3.4 Pengujian Pemantauan Berkelanjutan (Monitoring Testing)**
 Pengujian dilakukan dengan menjalankan sistem secara penuh selama 1 jam tanpa henti pada kondisi operasional normal untuk mengukur kestabilan koneksi, akurasi kalibrasi sensor, dan latensi sistem.
 
-##### **Tabel 4.5 Hasil Pengujian Monitoring Berkelanjutan**
+##### **Tabel 4.6 Hasil Pengujian Monitoring Berkelanjutan**
 | No. | Aspek yang Diuji | Nilai Terukur | Status (PASS/FAIL) |
 | :---: | :--- | :---: | :---: |
 | 1 | Packet Loss Rate | 0.05% (jaringan lokal), 0.45% (transmisi nirkabel LoRa/ESP-NOW) | **PASS** |
@@ -317,7 +302,7 @@ Pengujian dilakukan dengan menjalankan sistem secara penuh selama 1 jam tanpa he
 #### **4.3.5 Pengujian Sistem Kompresi Data (Data Compression)**
 Pengujian kompresi biner struct pada lapisan nirkabel (LoRa) dan HTTP Gzip pada REST API VPS:
 
-##### **Tabel 4.6 Hasil Pengujian Kompresi Data**
+##### **Tabel 4.7 Hasil Pengujian Kompresi Data**
 | No. | Skenario Pengujian | Ukuran Sebelum Kompresi | Ukuran Setelah Kompresi | Rasio Kompresi Aktual | Status (PASS/FAIL) |
 | :---: | :--- | :---: | :---: | :---: | :---: |
 | 1 | Transmisi Sensor Node (Biner Struct) | 113 byte (JSON) | 22 byte (Biner) | 80.53% | **PASS** |
@@ -358,9 +343,9 @@ Dari indikator penanda waktu (*timestamp*) log tersebut, selisih kedatangan anta
 
 Pengujian ini bertujuan mengukur pelemahan gelombang elektromagnetik (*fading*) akibat hambatan struktural dalam gedung yang disimulasikan sebagai hambatan vegetasi lapangan. Parameter yang diukur adalah *Received Signal Strength Indicator* (RSSI) dalam satuan dBm and *Signal-to-Noise Ratio* (SNR) dalam satuan dB dengan kapasitas muatan tetap senilai 12 Byte (3 variabel *float* telemetri sensor).
 
-Pengujian dikelompokkan ke dalam tiga skenario lokasi dengan hambatan fisik buatan yang berbeda, di mana hasil pengukuran aktual dirangkum ke dalam Tabel 4.7 berikut:
+Pengujian dikelompokkan ke dalam tiga skenario lokasi dengan hambatan fisik buatan yang berbeda, di mana hasil pengukuran aktual dirangkum ke dalam Tabel 4.8 berikut:
 
-**Tabel 4.7 Rekapitulasi Parameter Fisik RF LoRa SX1278**
+**Tabel 4.8 Rekapitulasi Parameter Fisik RF LoRa SX1278**
 
 | Lokasi / Bentuk Hambatan Fisik | Sampel Paket | Nilai RSSI Aktual (dBm) | Nilai SNR Aktual (dB) | Status Enqueue MQTT | Keterangan Kualitas |
 | :--- | :--- | :---: | :---: | :---: | :--- |
@@ -368,7 +353,7 @@ Pengujian dikelompokkan ke dalam tiga skenario lokasi dengan hambatan fisik buat
 | **Lokasi 2**<br><br>(Terhalang 1 Dinding Bata) | Paket 1<br><br>Paket 2<br><br>Paket 3<br><br>Paket 4 | -74 dBm<br><br>-67 dBm<br><br>-74 dBm<br><br>-66 dBm | 9.25 dB<br><br>9.25 dB<br><br>9.25 dB<br><br>9.75 dB | Sukses<br><br>Sukses<br><br>Sukses<br><br>Sukses | Mengalami redaman material menengah, data terkirim lancar. |
 | **Lokasi 3**<br><br>(Terhalang 2 Dinding Beton) | Paket 1<br><br>Paket 2<br><br>Paket 3<br><br>Paket 4 | -75 dBm<br><br>-80 dBm<br><br>-74 dBm<br><br>-80 dBm | 9.00 dB<br><br>8.75 dB<br><br>9.50 dB<br><br>9.50 dB | Sukses<br><br>Sukses<br><br>Sukses<br><br>Sukses | Mengalami pelemahan daya tinggi, namun stabilitas data terjaga. |
 
-Berdasarkan kompilasi data pada Tabel 4.7, terjadi penurunan indeks RSSI secara linear seiring penambahan objek penghalang. Pada kondisi LOS bebas halangan, daya terima berada pada level optimum yaitu **-36 dBm s/d -41 dBm**. Saat ditransmisikan menembus sekat gantry dua dinding tebal (Lokasi 3), daya pancar melemah ke area **-74 dBm s/d -80 dBm**.
+Berdasarkan kompilasi data pada Tabel 4.8, terjadi penurunan indeks RSSI secara linear seiring penambahan objek penghalang. Pada kondisi LOS bebas halangan, daya terima berada pada level optimum yaitu **-36 dBm s/d -41 dBm**. Saat ditransmisikan menembus sekat gantry dua dinding tebal (Lokasi 3), daya pancar melemah ke area **-74 dBm s/d -80 dBm**.
 
 Namun, nilai metrik SNR yang konstan bertahan stabil pada level positif tinggi **(+8.75 dB hingga +9.75 dB)** membuktikan kekuatan karakteristik arsitektur modulasi *Chirp Spread Spectrum* (CSS). Sistem nirkabel proyek ini terbukti andal mengisolasi informasi asli dari polusi derau frekuensi bebas di sekitarnya.
 
@@ -378,7 +363,7 @@ Pengujian integritas paket diimplementasikan untuk menjamin validitas alur kontr
 
 Simulasi dilakukan dengan memodifikasi secara sengaja kerangka pembungkus memori (*struct memory*) pada pemancar Zona A. Dengan menyisipkan dua variabel *float dummy*, ukuran paket membengkak dari ukuran standar **12 Byte** menjadi **20 Byte**.
 
-**Tabel 4.8 Hasil Penyaringan Paket Melalui Mekanisme Struct Validation**
+**Tabel 4.9 Hasil Penyaringan Paket Melalui Mekanisme Struct Validation**
 
 | Nomor Uji | Karakteristik Paket | Dimensi Ekspektasi | Dimensi Aktual | Respons Log Gateway Zona B | Status Penolakan |
 | :---: | :--- | :---: | :---: | :--- | :---: |
@@ -413,7 +398,7 @@ Akan tetapi, fungsi penanganan interupsi penerimaan data dari sisi pemancar radi
 
 Pengujian dilakukan untuk memastikan kestabilan konektivitas, manajemen *bandwidth* (QoS), pemantauan lalu lintas data, serta efektivitas regulasi keamanan (*Firewall*) pada infrastruktur jaringan.
 
-##### **Tabel 4.9 Hasil Pengujian Jaringan MikroTik**
+##### **Tabel 4.10 Hasil Pengujian Jaringan MikroTik**
 | No. | Skenario Pengujian | Hasil yang Diharapkan | Hasil Aktual | Status |
 | :---: | :--- | :--- | :--- | :---: |
 | **1** | Konektivitas VPS (Ping Delay & Packet Loss) | Ping stabil dengan *packet loss* 0% and *delay* rendah. | *Delay* rata-rata 44ms (Min: 22ms, Max: 328ms), namun terdeteksi *packet loss* sebesar 16%. | **FAIL / WARNING** |
@@ -453,7 +438,7 @@ Terdapat fenomena menarik pada latensi MQTT-ke-Database: latensi baseline (124 m
 Implementasi Supabase Row Level Security (RLS) terbukti 100% efektif membatasi akses data. Saat RLS non-aktif, data seluruh zona bocor (BOLA/IDOR). Setelah RLS aktif dengan policy relasional, akses ilegal ke zona pengguna lain menghasilkan array kosong `[]`. 
 Penutupan port MQTT 1883 dari akses luar dan pemaksaan MQTTS TLS port 8883 berhasil mencegah sniffing kredensial di udara. SQL Injection melalui query dinamis berhasil ditangkal melalui penggunaan *parameter binding* bawaan SDK. Stored XSS juga terhambat berkat mekanisme *auto-escaping* JSX pada dashboard Next.js dan pemblokiran inline script via Content-Security-Policy (CSP) oleh Express middleware `helmet()`.
 
-##### **Tabel 4.10 Matriks Risiko Keamanan Cloud NutriGrow**
+##### **Tabel 4.11 Matriks Risiko Keamanan Cloud NutriGrow**
 | ID Ancaman | Platform | Skenario Ancaman | Dampak | Kemungkinan | Tingkat Risiko | Solusi Utama | Status |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- | :---: |
 | **T-01** | Database Cloud | Kebocoran Data via RLS Bypass (BOLA) | Tinggi | Sedang | **Tinggi** | Aktifkan RLS pada seluruh tabel database | **PASS** |
