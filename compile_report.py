@@ -57,15 +57,52 @@ def build_pdf():
     # The markdown outputs images like <p><img src="..." ...></p>
     # And captions like <p><em>Gambar ...</em></p>
     import re
+    # 1. Match images with italic captions
     html_body = re.sub(
-        r'<p>(<img [^>]+>)</p>',
-        r'<p class="image-container">\1</p>',
-        html_body
+        r'<p>\s*(<img [^>]+>)\s*<em>\s*(Gambar [^<]+)</em>\s*</p>',
+        r'<p class="image-container">\1</p>\n<p class="caption-container"><em>\2</em></p>',
+        html_body,
+        flags=re.DOTALL
     )
+
+    # 2. Match images with bold captions
     html_body = re.sub(
-        r'<p><em>(Gambar [^<]+)</em></p>',
+        r'<p>\s*(<img [^>]+>)\s*<strong>\s*(Gambar [^<]+)</strong>\s*</p>',
+        r'<p class="image-container">\1</p>\n<p class="caption-container"><strong>\2</strong></p>',
+        html_body,
+        flags=re.DOTALL
+    )
+
+    # 3. Match images with plain captions
+    html_body = re.sub(
+        r'<p>\s*(<img [^>]+>)\s*(Gambar [^<]+)\s*</p>',
+        r'<p class="image-container">\1</p>\n<p class="caption-container">\2</p>',
+        html_body,
+        flags=re.DOTALL
+    )
+
+    # 4. Match standalone images
+    html_body = re.sub(
+        r'<p>\s*(<img [^>]+>)\s*</p>',
+        r'<p class="image-container">\1</p>',
+        html_body,
+        flags=re.DOTALL
+    )
+
+    # 5. Match standalone italic captions
+    html_body = re.sub(
+        r'<p>\s*<em>\s*(Gambar [^<]+)</em>\s*</p>',
         r'<p class="caption-container"><em>\1</em></p>',
-        html_body
+        html_body,
+        flags=re.DOTALL
+    )
+
+    # 6. Match standalone bold captions
+    html_body = re.sub(
+        r'<p>\s*<strong>\s*(Gambar [^<]+)</strong>\s*</p>',
+        r'<p class="caption-container"><strong>\1</strong></p>',
+        html_body,
+        flags=re.DOTALL
     )
     
     # Wrap in full HTML document
@@ -251,6 +288,8 @@ td.center, th.center {{
 p.image-container {{
     text-align: center;
     margin-bottom: 0.5em;
+    page-break-inside: avoid;
+    page-break-after: avoid;
 }}
 img {{
     display: inline-block;
@@ -275,6 +314,8 @@ p.caption-container {{
     margin-top: 0.3em;
     margin-bottom: 1.5em;
     font-style: italic;
+    page-break-inside: avoid;
+    page-break-before: avoid;
 }}
 
 ul, ol {{
