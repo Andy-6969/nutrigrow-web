@@ -409,7 +409,39 @@ Akan tetapi, fungsi penanganan interupsi penerimaan data dari sisi pemancar radi
 
 ---
 
-### **4.5 Analisis Hasil Pengujian**
+### **4.5 Pengujian Kinerja & Keamanan Jaringan (MikroTik)**
+
+Pengujian dilakukan untuk memastikan kestabilan konektivitas, manajemen *bandwidth* (QoS), pemantauan lalu lintas data, serta efektivitas regulasi keamanan (*Firewall*) pada infrastruktur jaringan.
+
+##### **Tabel 4.9 Hasil Pengujian Jaringan MikroTik**
+| No. | Skenario Pengujian | Hasil yang Diharapkan | Hasil Aktual | Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **1** | Konektivitas VPS (Ping Delay & Packet Loss) | Ping stabil dengan *packet loss* 0% and *delay* rendah. | *Delay* rata-rata 44ms (Min: 22ms, Max: 328ms), namun terdeteksi *packet loss* sebesar 16%. | **FAIL / WARNING** |
+| **2** | Kestabilan Bandwidth (iperf3 Jitter) | Nilai *jitter* sangat rendah untuk mendukung transmisi data yang konsisten. | *Jitter* terukur pada angka yang sangat baik (0.000 ms pada *sender* dan 4.555 ms pada *receiver*). | **PASS** |
+| **3** | Pemantauan Trafik (Torch) | Sistem dapat mendeteksi asal, tujuan, dan protokol data yang lewat. | Fitur Torch berhasil menampilkan alamat IP asal/tujuan serta nilai *Tx/Rx Rate* secara *real-time*. | **PASS** |
+| **4** | Manajemen Bandwidth / QoS (Queue) | Alokasi kecepatan data terbagi sesuai prioritas per-segmen IP. | *Queue* berjalan sesuai konfigurasi: "IoT Priority" (3M) dan "Staff Limit" (2M). | **PASS** |
+| **5** | Keamanan Segregasi (Ping Staff → IoT) | Koneksi lintas *subnet* yang tidak diizinkan diblokir oleh sistem. | Ping/Koneksi dari *subnet* Staff menuju perangkat IoT gagal dijangkau (sesuai *rule drop* pada *Firewall*). | **PASS** |
+
+* **Bukti Visual Hasil Pengujian:**
+
+  ![Hasil Uji Konektivitas VPS (Ping)](extracted_images/network_vps_ping.png)
+  *Gambar 4.13 Hasil Uji Konektivitas VPS (Ping)*
+
+  ![Hasil Uji Kestabilan Bandwidth (iperf3)](extracted_images/network_iperf3_bandwidth.png)
+  *Gambar 4.14 Hasil Uji Kestabilan Bandwidth (iperf3)*
+
+  ![Hasil Pemantauan Trafik Aktif (Torch) - 1](extracted_images/network_torch_traffic1.png)
+  *Gambar 4.15 Hasil Pemantauan Trafik Aktif (Torch) - Sesi Komunikasi MQTT Aktif*
+
+  ![Hasil Pemantauan Trafik Aktif (Torch) - 2](extracted_images/network_torch_traffic2.png)
+  *Gambar 4.16 Hasil Pemantauan Trafik Aktif (Torch) - Sesi Komunikasi Lintas Subnet Terblokir*
+
+  ![Hasil Konfigurasi Limitasi Bandwidth (Simple Queue List)](extracted_images/network_simple_queue.jpeg)
+  *Gambar 4.17 Hasil Konfigurasi Limitasi Bandwidth (Simple Queue List)*
+
+---
+
+### **4.6 Analisis Hasil Pengujian**
 
 #### **1. Analisis Kinerja & Penggunaan Sumber Daya (Load Testing)**
 Penggunaan CPU proses Node.js backend (`app.js`) berada pada tingkat yang sangat rendah dan stabil sebesar 0.0% pada baseline dan hanya memicu lonjakan kecil sebesar 2.2% (13.1% pada core tunggal/Core 0) pada beban ekstrem. Hal ini menunjukkan bahwa proses parsing data sensor dan penghitungan logika fuzzy di backend sangat efisien.
@@ -421,7 +453,7 @@ Terdapat fenomena menarik pada latensi MQTT-ke-Database: latensi baseline (124 m
 Implementasi Supabase Row Level Security (RLS) terbukti 100% efektif membatasi akses data. Saat RLS non-aktif, data seluruh zona bocor (BOLA/IDOR). Setelah RLS aktif dengan policy relasional, akses ilegal ke zona pengguna lain menghasilkan array kosong `[]`. 
 Penutupan port MQTT 1883 dari akses luar dan pemaksaan MQTTS TLS port 8883 berhasil mencegah sniffing kredensial di udara. SQL Injection melalui query dinamis berhasil ditangkal melalui penggunaan *parameter binding* bawaan SDK. Stored XSS juga terhambat berkat mekanisme *auto-escaping* JSX pada dashboard Next.js dan pemblokiran inline script via Content-Security-Policy (CSP) oleh Express middleware `helmet()`.
 
-##### **Tabel 4.9 Matriks Risiko Keamanan Cloud NutriGrow**
+##### **Tabel 4.10 Matriks Risiko Keamanan Cloud NutriGrow**
 | ID Ancaman | Platform | Skenario Ancaman | Dampak | Kemungkinan | Tingkat Risiko | Solusi Utama | Status |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- | :---: |
 | **T-01** | Database Cloud | Kebocoran Data via RLS Bypass (BOLA) | Tinggi | Sedang | **Tinggi** | Aktifkan RLS pada seluruh tabel database | **PASS** |
@@ -436,6 +468,11 @@ Tingkat kehilangan paket (*packet loss*) nirkabel lokal LoRa dan ESP-NOW berada 
 #### **4. Analisis Hasil Kompresi Data Lapis Ganda**
 * **Lapisan Nirkabel Biner (Edge to Gateway)**: Penerapan C-Struct Packing pada firmware ESP32 dan ESP8266 berhasil memotong ukuran paket data sensor sebesar 80.53% (dari JSON 113 byte menjadi biner 22 byte). Hal ini meminimalkan waktu aktif pemancar radio (*airtime* LoRa) yang berbanding lurus dengan penghematan konsumsi arus baterai sensor node di lahan.
 * **Lapisan API Web (VPS to User Device)**: Pada server API Express.js, penggunaan middleware `compression()` berhasil mengompresi payload JSON data historis sensor sebesar 76.67% (dari 120 KB menjadi 28 KB). Mekanisme kompresi Gzip ini memotong waktu muat (*page load time*) grafik analitik secara signifikan.
+
+#### **5. Analisis Hasil Pengujian Kinerja & Keamanan Jaringan (MikroTik)**
+* **Kinerja Jaringan Eksternal**: Pada lapisan transport lokal hingga pengujian `iperf3`, jaringan menunjukkan kualitas transmisi yang sangat prima dengan nilai *jitter* di bawah 5 ms. Namun, perlu dilakukan investigasi lanjutan terhadap tautan (*link*) menuju IP VPS eksternal, dikarenakan adanya temuan *packet loss* sebesar 16% pada pengujian `Ping`. Hal ini dapat disebabkan oleh fluktuasi ISP, kendala medium nirkabel, atau *routing* di luar kendali *router* lokal.
+* **Manajemen dan Pemantauan Trafik**: Implementasi QoS menggunakan fitur *Queue* telah beroperasi secara optimal untuk mencegah kelaparan *bandwidth* (*starvation*), dibuktikan dengan terbaginya batas maksimum secara eksplisit antara zona IoT dan zona Staff. Fitur monitoring `Torch` juga terbukti andal dalam menyajikan inspeksi paket yang berlalu-lalang secara seketika.
+* **Ketahanan Keamanan Isolasi**: Pembatasan konektivitas dari perangkat operasional (Staff) menuju sensor/perangkat kontrol (IoT) berfungsi sempurna. Kegagalan komunikasi ping pada skenario ini (0 bps terkirim/diterima) memvalidasi bahwa aturan *Firewall* yang dikonfigurasi berhasil menutup celah intervensi ke dalam subsistem IoT.
 
 ---
 
