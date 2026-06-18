@@ -331,7 +331,85 @@ Pengujian kompresi biner struct pada lapisan nirkabel (LoRa) dan HTTP Gzip pada 
 
 ---
 
-### **4.4 Analisis Hasil Pengujian**
+### **4.4 Pengujian Integrasi Komunikasi Nirkabel LoRa P2P dan Validasi Jaringan**
+
+Pengujian komunikasi nirkabel dilakukan untuk menguji keandalan arsitektur *point-to-point* (P2P) berbasis modul LoRa SX1278 (frekuensi 433 MHz) yang menjembatani transmisi telemetri dari Zona A (Lahan/Kebun) menuju Gateway Zona B (Pos Jaga). Skenario pengujian dibagi menjadi empat tahapan laboratorium simulasi guna membuktikan performa batas (*stress test*), ketahanan sinyal fisik (*RF performance*), integritas enkapsulasi biner (*packet integrity*), hingga mekanisme ketahanan kegagalan internet (*failover loop*).
+
+#### **4.4.1 Skenario 1: Pengujian Beban Masif (Stress Test) Pada Gateway**
+
+Pengujian *stress test* ditujukan untuk mengevaluasi kemampuan penanganan memori (*buffer reception queue*) pada mikrokontroler Gateway Zona B saat menerima kiriman data biner dari Zona A dengan intensitas frekuensi yang tinggi dan rapat secara simultan. Skenario diuji dengan memaksa interupsi pengiriman paket dengan jeda *Time-on-Air* konstan berkisar antara 100 ms hingga 500 ms selama 5 menit berturut-turut.
+
+Berdasarkan rekaman log *Serial Monitor* waktu nyata pada Gateway Zona B, sistem terbukti mampu melakukan proses *de-serialization* objek JSON serta mengeksekusi fungsi *publish* menuju MQTT Broker di Cloud VPS tanpa mengalami gejala penumpukan memori (*buffer overflow*). Potongan baris aktivitas log selama pengujian masif disajikan pada Gambar 4.12:
+
+```text
+15:11:29.548 -> [RF DEBUG] Sinyal Masuk -> RSSI: -61 dBm | SNR: 9.00 dB | Size: 12 Byte
+15:11:29.548 -> [MQTT] Data Lahan dipublish ke VPS!
+15:11:29.653 -> [RF DEBUG] Sinyal Masuk -> RSSI: -61 dBm | SNR: 9.00 dB | Size: 12 Byte
+15:11:29.653 -> [MQTT] Data Lahan dipublish ke VPS!
+15:11:29.763 -> [RF DEBUG] Sinyal Masuk -> RSSI: -60 dBm | SNR: 9.25 dB | Size: 12 Byte
+15:11:29.763 -> [MQTT] Data Lahan dipublish ke VPS!
+```
+
+**Gambar 4.12** Log Aktivitas Penerimaan Beban Masif pada Gateway Zona B
+
+Dari indikator penanda waktu (*timestamp*) log tersebut, selisih kedatangan antar-paket berada pada angka **0.105 detik (105 ms)**. Gateway Zona B dinyatakan lolos uji ketahanan karena selama periode uji beban ekstrem tidak ditemukan adanya peristiwa malfungsi, memori bocor (*memory leak*), ataupun mati total (*crash/hang*).
+
+#### **4.4.2 Skenario 2: Pengujian Kualitas Sinyal Radio (RF Performance) dan Redaman Dinding**
+
+Pengujian ini bertujuan mengukur pelemahan gelombang elektromagnetik (*fading*) akibat hambatan struktural dalam gedung yang disimulasikan sebagai hambatan vegetasi lapangan. Parameter yang diukur adalah *Received Signal Strength Indicator* (RSSI) dalam satuan dBm and *Signal-to-Noise Ratio* (SNR) dalam satuan dB dengan kapasitas muatan tetap senilai 12 Byte (3 variabel *float* telemetri sensor).
+
+Pengujian dikelompokkan ke dalam tiga skenario lokasi dengan hambatan fisik buatan yang berbeda, di mana hasil pengukuran aktual dirangkum ke dalam Tabel 4.7 berikut:
+
+**Tabel 4.7 Rekapitulasi Parameter Fisik RF LoRa SX1278**
+
+| Lokasi / Bentuk Hambatan Fisik | Sampel Paket | Nilai RSSI Aktual (dBm) | Nilai SNR Aktual (dB) | Status Enqueue MQTT | Keterangan Kualitas |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Lokasi 1**<br><br>(Jarak 1 Meter, *Line of Sight*) | Paket 1<br><br>Paket 2<br><br>Paket 3<br><br>Paket 4 | -41 dBm<br><br>-40 dBm<br><br>-36 dBm<br><br>-36 dBm | 9.25 dB<br><br>7.00 dB<br><br>9.50 dB<br><br>9.75 dB | Sukses<br><br>Sukses<br><br>Sukses<br><br>Sukses | Sinyal sangat kuat, interkoneksi tanpa hambatan redaman. |
+| **Lokasi 2**<br><br>(Terhalang 1 Dinding Bata) | Paket 1<br><br>Paket 2<br><br>Paket 3<br><br>Paket 4 | -74 dBm<br><br>-67 dBm<br><br>-74 dBm<br><br>-66 dBm | 9.25 dB<br><br>9.25 dB<br><br>9.25 dB<br><br>9.75 dB | Sukses<br><br>Sukses<br><br>Sukses<br><br>Sukses | Mengalami redaman material menengah, data terkirim lancar. |
+| **Lokasi 3**<br><br>(Terhalang 2 Dinding Beton) | Paket 1<br><br>Paket 2<br><br>Paket 3<br><br>Paket 4 | -75 dBm<br><br>-80 dBm<br><br>-74 dBm<br><br>-80 dBm | 9.00 dB<br><br>8.75 dB<br><br>9.50 dB<br><br>9.50 dB | Sukses<br><br>Sukses<br><br>Sukses<br><br>Sukses | Mengalami pelemahan daya tinggi, namun stabilitas data terjaga. |
+
+Berdasarkan kompilasi data pada Tabel 4.7, terjadi penurunan indeks RSSI secara linear seiring penambahan objek penghalang. Pada kondisi LOS bebas halangan, daya terima berada pada level optimum yaitu **-36 dBm s/d -41 dBm**. Saat ditransmisikan menembus sekat gantry dua dinding tebal (Lokasi 3), daya pancar melemah ke area **-74 dBm s/d -80 dBm**.
+
+Namun, nilai metrik SNR yang konstan bertahan stabil pada level positif tinggi **(+8.75 dB hingga +9.75 dB)** membuktikan kekuatan karakteristik arsitektur modulasi *Chirp Spread Spectrum* (CSS). Sistem nirkabel proyek ini terbukti andal mengisolasi informasi asli dari polusi derau frekuensi bebas di sekitarnya.
+
+#### **4.4.3 Skenario 3: Pengujian Integritas Paket (Filter Data Rusak/Asing)**
+
+Pengujian integritas paket diimplementasikan untuk menjamin validitas alur kontrol lokal, agar Gateway Zona B tidak memproses data sampah (*garbage data*) atau gelombang asing dari perangkat radio lain yang bekerja pada spektrum yang sama (433 MHz).
+
+Simulasi dilakukan dengan memodifikasi secara sengaja kerangka pembungkus memori (*struct memory*) pada pemancar Zona A. Dengan menyisipkan dua variabel *float dummy*, ukuran paket membengkak dari ukuran standar **12 Byte** menjadi **20 Byte**.
+
+**Tabel 4.8 Hasil Penyaringan Paket Melalui Mekanisme Struct Validation**
+
+| Nomor Uji | Karakteristik Paket | Dimensi Ekspektasi | Dimensi Aktual | Respons Log Gateway Zona B | Status Penolakan |
+| :---: | :--- | :---: | :---: | :--- | :---: |
+| Uji 1 | Paket Struktur Cacat / Asing | 12 Byte | 20 Byte | Kosong (Diabaikan secara background) | **Berhasil (Ditolak)** |
+| Uji 2 | Paket Struktur Cacat / Asing | 12 Byte | 20 Byte | Kosong (Diabaikan secara background) | **Berhasil (Ditolak)** |
+| Uji 3 | Paket Struktur Normal Asli | 12 Byte | 12 Byte | Menguraikan JSON & Memicu Transmisi MQTT | **Berhasil (Diterima)** |
+
+Melalui validasi bersyarat `if (packetSize == sizeof(loraData))` yang ditanamkan pada arsitektur program Gateway, paket biner tiruan berukuran 20 Byte secara otomatis terdeteksi cacat. Hasil uji laboratorium menunjukkan *Serial Monitor* penerima tetap bersih tanpa mencetak data palsu tersebut ke dalam basis data Cloud. Akurasi penyaringan proteksi struktur biner terverifikasi mencapai **100%**.
+
+#### **4.4.4 Skenario 4: Pengujian Mekanisme Penanganan Kegagalan Jaringan (Failover Jaringan MQTT)**
+
+Pengujian skenario terakhir difokuskan untuk menilai tingkat ketahanan operasional jaringan lokal ketika jalur internet utama via WiFi "NutriGrow" terputus total. Gateway Zona B dikonfigurasi menggunakan fungsi pencarian ulang broker nirkabel yang bersifat *non-blocking*.
+
+Hasil rekaman log saat pemutusan koneksi WiFi secara paksa berlangsung ditunjukkan pada rincian berikut:
+
+```text
+Mencoba Koneksi MQTT Broker... Gagal, rc=-2 -> Mencoba lagi secara background...
+Mencoba Koneksi MQTT Broker... Gagal, rc=-2 -> Mencoba lagi secara background...
+Mencoba Koneksi MQTT Broker... Gagal, rc=-2 -> Mencoba lagi secara background...
+[RF DEBUG] Sinyal Masuk -> RSSI: -42 dBm | SNR: 9.50 dB | Size: 12 Byte
+[Peringatan] Data diterima via LoRa, tetapi gagal publish ke MQTT karena jaringan putus (Mode Skenario Failover).
+Mencoba Koneksi MQTT Broker... Gagal, rc=-2 -> Mencoba lagi secara background...
+```
+
+Keluaran log kegagalan koneksi di atas menghasilkan kode penanda error `rc=-2`, yang menegaskan bahwa sambungan soket TCP menuju alamat IP Cloud VPS `103.178.174.100` tidak berhasil dibangun akibat putusnya internet.
+
+Akan tetapi, fungsi penanganan interupsi penerimaan data dari sisi pemancar radio LoRa lokal tetap berjalan normal secara penuh (*stand-alone*). Sinyal biner berukuran 12 Byte dengan indikator kekuatan sinyal memuaskan (-42 dBm) masih dapat diurai sempurna oleh sistem Gateway. Hal ini membuktikan bahwa penanganan kegagalan internet tidak mengunci (*locking*) program inti, sehingga otomasi irigasi lokal pada lahan pertanian tetap terjamin kestabilannya.
+
+---
+
+### **4.5 Analisis Hasil Pengujian**
 
 #### **1. Analisis Kinerja & Penggunaan Sumber Daya (Load Testing)**
 Penggunaan CPU proses Node.js backend (`app.js`) berada pada tingkat yang sangat rendah dan stabil sebesar 0.0% pada baseline dan hanya memicu lonjakan kecil sebesar 2.2% (13.1% pada core tunggal/Core 0) pada beban ekstrem. Hal ini menunjukkan bahwa proses parsing data sensor dan penghitungan logika fuzzy di backend sangat efisien.
@@ -343,7 +421,7 @@ Terdapat fenomena menarik pada latensi MQTT-ke-Database: latensi baseline (124 m
 Implementasi Supabase Row Level Security (RLS) terbukti 100% efektif membatasi akses data. Saat RLS non-aktif, data seluruh zona bocor (BOLA/IDOR). Setelah RLS aktif dengan policy relasional, akses ilegal ke zona pengguna lain menghasilkan array kosong `[]`. 
 Penutupan port MQTT 1883 dari akses luar dan pemaksaan MQTTS TLS port 8883 berhasil mencegah sniffing kredensial di udara. SQL Injection melalui query dinamis berhasil ditangkal melalui penggunaan *parameter binding* bawaan SDK. Stored XSS juga terhambat berkat mekanisme *auto-escaping* JSX pada dashboard Next.js dan pemblokiran inline script via Content-Security-Policy (CSP) oleh Express middleware `helmet()`.
 
-##### **Tabel 4.7 Matriks Risiko Keamanan Cloud NutriGrow**
+##### **Tabel 4.9 Matriks Risiko Keamanan Cloud NutriGrow**
 | ID Ancaman | Platform | Skenario Ancaman | Dampak | Kemungkinan | Tingkat Risiko | Solusi Utama | Status |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- | :---: |
 | **T-01** | Database Cloud | Kebocoran Data via RLS Bypass (BOLA) | Tinggi | Sedang | **Tinggi** | Aktifkan RLS pada seluruh tabel database | **PASS** |
