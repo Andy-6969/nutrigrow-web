@@ -329,6 +329,27 @@ li {{
     text-align: justify;
 }}
 
+/* References specific styling */
+.references-list {{
+    padding-left: 2.2em !important;
+    margin-bottom: 1.5em;
+}}
+
+.references-list li {{
+    text-align: left !important;
+    margin-bottom: 0.8em;
+    line-height: 1.6;
+    word-break: break-word;
+    /* Hanging indent style: indents subsequent lines of each reference entry */
+    padding-left: 1.5em;
+    text-indent: -1.5em;
+}}
+
+.references-list a {{
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}}
+
 /* Page breaks */
 .page-break {{
     page-break-before: always;
