@@ -871,9 +871,9 @@ export default function SplashOnboarding() {
     // Only initialize the phase once on mount
     setPhase((prev) => {
       if (prev !== 'idle') return prev;
-      return session ? 'done' : 'splash';
+      return 'splash';
     });
-  }, [isInitialized, session]);
+  }, [isInitialized]);
 
   const handleSplashDone = () => {
     const onboardingDone = localStorage.getItem(STORAGE_KEY) === 'true';
