@@ -9,6 +9,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
+import type { AuthChangeEvent } from '@supabase/supabase-js';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/shared/lib/supabase';
 import type { UserProfile, AppRole } from '@/shared/types/global.types';
@@ -107,13 +108,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const hasLoadedRef = useRef(false);
+  // Timer untuk debounce signed-out event (menghindari race condition saat token refresh)
+  const signedOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resolveSession = useCallback(async (newSession: Session | null) => {
+  const clearSignedOutTimer = useCallback(() => {
+    if (signedOutTimerRef.current) {
+      clearTimeout(signedOutTimerRef.current);
+      signedOutTimerRef.current = null;
+    }
+  }, []);
+
+  const resolveSession = useCallback(async (newSession: Session | null, event?: AuthChangeEvent) => {
     if (!hasLoadedRef.current) {
       setIsLoading(true);
     }
     try {
       if (newSession) {
+        // Batalkan timer signed-out jika ada session baru (misal: setelah TOKEN_REFRESHED)
+        clearSignedOutTimer();
+
         setSession(newSession);
         setAuthCookie();
         const fallbacks = {
@@ -152,6 +165,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fcmService.requestPermissionAndGetToken(newSession.user.id);
         }
       } else {
+        // Session menjadi null. Bisa terjadi sementara saat Supabase sedang refresh token.
+        // Jika app sudah selesai init, tunggu dulu 2.5 detik sebelum benar-benar logout.
+        // Jika dalam 2.5 detik ada session baru (TOKEN_REFRESHED), timer dibatalkan.
+        if (hasLoadedRef.current && event !== 'SIGNED_OUT') {
+          console.warn('[AuthContext] Session null sementara — menunggu kemungkinan token refresh...');
+          setIsLoading(false);
+          setIsInitialized(true);
+          return; // Jangan clear cookie/session dulu
+        }
+
+        if (hasLoadedRef.current && event === 'SIGNED_OUT') {
+          // Debounce 2.5 detik untuk SIGNED_OUT — hindari race condition
+          clearSignedOutTimer();
+          signedOutTimerRef.current = setTimeout(() => {
+            setSession(null);
+            setProfile(null);
+            clearAuthCookie();
+            signedOutTimerRef.current = null;
+          }, 2500);
+          setIsLoading(false);
+          setIsInitialized(true);
+          return;
+        }
+
+        // Saat initial load dan memang tidak ada session
         setSession(null);
         setProfile(null);
         clearAuthCookie();
@@ -161,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsInitialized(true);
       hasLoadedRef.current = true;
     }
-  }, []);
+  }, [clearSignedOutTimer]);
 
   useEffect(() => {
     // 1. Get initial session on mount
@@ -179,14 +217,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           return;
         }
-        resolveSession(changedSession);
+        // TOKEN_REFRESHED — batalkan timer signed-out jika ada
+        if (_event === 'TOKEN_REFRESHED' && changedSession) {
+          clearSignedOutTimer();
+        }
+        resolveSession(changedSession, _event);
       }
     );
 
     return () => {
       subscription.unsubscribe();
+      clearSignedOutTimer();
     };
-  }, [resolveSession]);
+  }, [resolveSession, clearSignedOutTimer]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();

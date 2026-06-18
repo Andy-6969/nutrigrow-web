@@ -7,16 +7,19 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import compression from 'compression';
 import { mqttClient } from './mqtt/client';
 import { actuatorRouter } from './routes/actuator';
 import { sensorRouter } from './routes/sensor';
 import { healthRouter } from './routes/health';
+import { fuzzyRouter } from './routes/fuzzy';
 import { startScheduler } from './cron/irrigationScheduler';
 
 const app  = express();
 const PORT = Number(process.env.PORT ?? 3001);
 
 // ─── Middleware ───────────────────────────────────────────────
+app.use(compression());
 app.use(helmet());
 app.use(cors({
   origin: [
@@ -32,6 +35,7 @@ app.use(morgan('combined'));
 app.use('/health',    healthRouter);
 app.use('/actuator',  actuatorRouter);
 app.use('/sensor',    sensorRouter);
+app.use('/fuzzy',     fuzzyRouter);
 
 // 404 handler
 app.use((_req, res) => {
