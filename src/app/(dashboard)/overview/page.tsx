@@ -81,6 +81,11 @@ export default function OverviewPage() {
 
   const [scrollY, setScrollY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [confirmModal, setConfirmModal] = useState<{
+    message: string;
+    isStop: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   const t = useT();
 
@@ -859,9 +864,14 @@ export default function OverviewPage() {
                 ? (t('common_lang_code') === 'id' ? `Hentikan penyiraman untuk ${selectedZone?.name}?` : 'Stop watering?')
                 : (t('common_lang_code') === 'id' ? `Mulai penyiraman manual untuk ${selectedZone?.name}?` : 'Start manual watering?');
               
-              if (window.confirm(confirmMsg)) {
-                handleManualOverride();
-              }
+              setConfirmModal({
+                message: confirmMsg,
+                isStop: isRunning,
+                onConfirm: () => {
+                  handleManualOverride();
+                  setConfirmModal(null);
+                }
+              });
             }} disabled={isOverriding}
             className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
               isOverriding ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl',
@@ -960,6 +970,61 @@ export default function OverviewPage() {
 
         </div>
       </div>
+
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          {/* Backdrop click */}
+          <div className="absolute inset-0" onClick={() => setConfirmModal(null)} />
+          
+          <div className="relative z-10 glass-heavy max-w-sm w-full p-6 text-center space-y-5 rounded-3xl border shadow-2xl animate-fade-in-up"
+            style={{
+              background: 'var(--glass-bg)',
+              borderColor: 'var(--glass-border)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            }}>
+            
+            {/* Visual Icon Header */}
+            <div className="flex justify-center">
+              <div className={cn("w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg",
+                confirmModal.isStop ? "bg-red-500/20 text-red-500 border border-red-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30")}>
+                {confirmModal.isStop ? <Power className="w-6 h-6" /> : <Droplets className="w-6 h-6 animate-bounce-subtle" />}
+              </div>
+            </div>
+
+            {/* Content text */}
+            <div className="space-y-2">
+              <h4 className="text-base font-bold" style={textMain}>
+                {confirmModal.isStop 
+                  ? (t('common_lang_code') === 'id' ? 'Konfirmasi Hentikan' : 'Confirm Stop')
+                  : (t('common_lang_code') === 'id' ? 'Konfirmasi Penyiraman' : 'Confirm Irrigation')}
+              </h4>
+              <p className="text-xs leading-relaxed" style={textMuted}>
+                {confirmModal.message}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[var(--surface-border)] text-xs font-semibold hover:bg-white/10 active:scale-[0.98] transition-all duration-200"
+                style={{ color: 'var(--surface-text-muted)' }}
+              >
+                {t('common_lang_code') === 'id' ? 'Batal' : 'Cancel'}
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className={cn("flex-1 py-2.5 text-white text-xs font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200",
+                  confirmModal.isStop 
+                    ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/20 hover:shadow-red-500/35" 
+                    : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/20 hover:shadow-emerald-500/35")}
+              >
+                {t('common_lang_code') === 'id' ? 'Ya, Lanjutkan' : 'Yes, Proceed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
