@@ -13,7 +13,7 @@ import { overrideService } from '@/shared/services/overrideService';
 import { useRBAC } from '@/shared/hooks/useRBAC';
 import { useT } from '@/shared/context/LanguageContext';
 
-type ActuatorTarget = 'pump' | 'pump_pupuk' | 'solenoid';
+type ActuatorTarget = 'pump' | 'pump_pupuk';
 
 export default function OverridePage() {
   const [selectedZone, setSelectedZone] = useState('');
@@ -97,7 +97,6 @@ export default function OverridePage() {
 
   const isPumpActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump') : false;
   const isPupukActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'pump_pupuk') : false;
-  const isSolenoidActive = selectedZone ? !!getActiveOverrideByTarget(selectedZone, 'solenoid') : false;
   const isAnyOverrideActive = activeOverrides.length > 0;
 
   const getRemainingTime = (override: OverrideLog | undefined) => {
@@ -170,7 +169,7 @@ export default function OverridePage() {
           style={{
             animationFillMode: 'forwards',
             transition: 'box-shadow 0.5s ease',
-            boxShadow: (isPumpActive || isPupukActive || isSolenoidActive)
+            boxShadow: (isPumpActive || isPupukActive)
               ? '0 0 28px rgba(16, 185, 129, 0.6), 0 8px 32px rgba(0,0,0,0.45)'
               : undefined,
           }}
@@ -250,7 +249,7 @@ export default function OverridePage() {
               max={120}
               value={duration}
               onChange={e => setDuration(Number(e.target.value))}
-              disabled={isPumpActive && isPupukActive && isSolenoidActive}
+              disabled={isPumpActive && isPupukActive}
               className="w-full h-2 bg-primary-200 rounded-lg cursor-pointer disabled:opacity-50"
             />
             <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
@@ -360,55 +359,6 @@ export default function OverridePage() {
                 >
                   <Square className="w-4 h-4" />
                   {isActivating === 'pump_pupuk' ? t('override_processing') : 'MATIKAN POMPA PUPUK'}
-                </button>
-              )}
-            </div>
-
-            {/* SOLENOID Control (ESP-NOW → ESP32 Relay GPIO25) */}
-            <div className={cn(
-              'p-4 rounded-xl border-2 transition-all',
-              isSolenoidActive ? 'border-amber-500 bg-amber-50/30' : 'border-transparent',
-            )} style={{ borderColor: isSolenoidActive ? undefined : 'var(--surface-border)' }}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🚿</span>
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: 'var(--surface-text)' }}>Solenoid Valve</p>
-                    <p className="text-[10px]" style={{ color: 'var(--surface-text-muted)' }}>MQTT → ESP-NOW → ESP32 (GPIO25)</p>
-                  </div>
-                </div>
-                {isSolenoidActive && (
-                  <div className="text-right">
-                    <p className="text-lg font-mono font-bold text-amber-500">
-                      {formatTimer(getRemainingTime(getActiveOverrideByTarget(selectedZone, 'solenoid')))}
-                    </p>
-                    <p className="text-[10px] text-amber-400">{t('override_remaining')}</p>
-                  </div>
-                )}
-              </div>
-              
-              {!isSolenoidActive ? (
-                <button
-                  onClick={() => handleActivate('solenoid')}
-                  disabled={!selectedZone || isActivating === 'solenoid' || isLoading}
-                  className={cn(
-                    'w-full py-2.5 rounded-xl font-bold text-white text-sm transition-all duration-300 flex justify-center items-center gap-2',
-                    selectedZone && isActivating !== 'solenoid'
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg glow-sm hover:glow-md active:scale-[0.98]'
-                      : 'bg-gray-300 cursor-not-allowed'
-                  )}
-                >
-                  <Play className="w-4 h-4" />
-                  {isActivating === 'solenoid' ? t('override_processing') : 'BUKA SOLENOID'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleDeactivate('solenoid')}
-                  disabled={isActivating === 'solenoid'}
-                  className="w-full py-2.5 rounded-xl font-bold text-white text-sm bg-danger-500 hover:bg-danger-600 shadow-lg transition-all active:scale-[0.98] glow-danger flex justify-center items-center gap-2"
-                >
-                  <Square className="w-4 h-4" />
-                  {isActivating === 'solenoid' ? t('override_processing') : 'TUTUP SOLENOID'}
                 </button>
               )}
             </div>

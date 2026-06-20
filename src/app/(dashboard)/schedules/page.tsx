@@ -731,7 +731,6 @@ export default function SchedulesPage() {
                     <span>⏱️ {schedule.duration_minutes} {t('override_minutes')}</span>
                     {schedule.mode === 'fertilizer' && <span className="text-purple-600 font-medium">🧪 {t('overview_fertilizer_liquid')}</span>}
                     {(!schedule.mode || schedule.mode === 'water') && <span className="text-blue-600 font-medium">💧 Air Biasa</span>}
-                    <span className="text-emerald-600 font-medium text-[10px]">⚡ Solenoid Otomatis</span>
                   </div>
                 </div>
 
@@ -835,9 +834,6 @@ export default function SchedulesPage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--surface-text-muted)' }}>
-                  ⚡ Solenoid valve terbuka otomatis saat jadwal berjalan
-                </p>
               </div>
 
               <div className="flex gap-3 pt-2">

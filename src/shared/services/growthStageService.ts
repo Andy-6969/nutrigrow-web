@@ -180,7 +180,7 @@ export function generateScheduleNames(
   zoneName: string,
   zoneId: string,
   _plantCount: number
-): Array<{ name: string; cron_expression: string; duration_minutes: number; zone_id: string; is_active: boolean; mode: 'water' | 'fertilizer' | 'solenoid' }> {
+): Array<{ name: string; cron_expression: string; duration_minutes: number; zone_id: string; is_active: boolean; mode: 'water' | 'fertilizer' }> {
   return phase.irrigationTimes.map((time, i) => {
     const [hour, minute] = time.split(':').map(Number);
     const cron = `${minute} ${hour} * * *`;

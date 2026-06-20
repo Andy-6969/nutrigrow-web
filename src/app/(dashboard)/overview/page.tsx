@@ -66,7 +66,7 @@ export default function OverviewPage() {
   const [animKey, setAnimKey] = useState(0);
   const [isOverriding, setIsOverriding] = useState(false);
   const [activeOverrides, setActiveOverrides] = useState<import('@/shared/types/global.types').OverrideLog[]>([]);
-  const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer' | 'solenoid'>('water');
+  const [irrigationMode, setIrrigationMode] = useState<'water' | 'fertilizer'>('water');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; admin1: string; country: string; latitude: number; longitude: number }>>([]);
@@ -92,7 +92,6 @@ export default function OverviewPage() {
   const IRRIGATION_MODES = [
     { id: 'water' as const,       label: t('override_mode_water'), emoji: '💧', desc: t('overview_water_desc'),    color: '#38bdf8', glowColor: 'rgba(56,189,248,0.35)',  borderColor: 'rgba(56,189,248,0.5)',  bgColor: 'rgba(56,189,248,0.08)'  },
     { id: 'fertilizer' as const,  label: t('overview_fertilizer_liquid'),emoji: '🧪', desc: t('overview_fertilizer_desc'), color: '#a78bfa', glowColor: 'rgba(167,139,250,0.35)', borderColor: 'rgba(167,139,250,0.5)', bgColor: 'rgba(167,139,250,0.08)' },
-    { id: 'solenoid' as const,    label: t('override_solenoid'),   emoji: '🚿', desc: t('overview_solenoid_desc'),     color: '#fbbf24', glowColor: 'rgba(251,191,36,0.35)',  borderColor: 'rgba(251,191,36,0.5)',  bgColor: 'rgba(251,191,36,0.08)'  },
   ];
   const selectedMode = IRRIGATION_MODES.find(m => m.id === irrigationMode)!;
 
@@ -345,7 +344,7 @@ export default function OverviewPage() {
         );
       } else {
         // Mode: START
-        const target = irrigationMode === 'water' ? 'pump' : irrigationMode === 'fertilizer' ? 'pump_pupuk' : 'solenoid';
+        const target = irrigationMode === 'water' ? 'pump' : 'pump_pupuk';
         await overrideService.startOverride(selectedZone.id, 5, t('overview_manual_hud'), 'water', target);
       }
       
@@ -812,13 +811,12 @@ export default function OverviewPage() {
 
           <div style={card} className="p-4 animate-card-entrance animate-delay-3">
             <p className="text-[10px] font-mono tracking-widest mb-3 uppercase" style={textMuted}>{t('override_mode_label').toUpperCase()}</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {IRRIGATION_MODES.map(mode => {
                 const isModeRunning = activeOverrides.some(o => 
                   o.zone_id === selectedZone?.id && (
                     (mode.id === 'water' && o.mode === 'pump') ||
-                    (mode.id === 'fertilizer' && (o.mode === 'pump_pupuk' || o.mode === 'fertigation')) ||
-                    (mode.id === 'solenoid' && o.mode === 'solenoid')
+                    (mode.id === 'fertilizer' && (o.mode === 'pump_pupuk' || o.mode === 'fertigation'))
                   )
                 );
                 const isActive = isRunning ? isModeRunning : irrigationMode === mode.id;
