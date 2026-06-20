@@ -297,7 +297,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {navItems.find(n => n.href === pathname)?.label || t('nav_dashboard')}
               </h2>
               <p className="text-xs hidden sm:block" style={{ color: 'var(--topbar-text-muted)' }}>
-                Bitanic Pro V4 — Smart Fertigation Monitoring
+                Bitanic Pro V4 Smart Fertigation Monitoring
               </p>
             </div>
           </div>
