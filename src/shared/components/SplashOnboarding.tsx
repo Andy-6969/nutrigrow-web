@@ -180,7 +180,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         </div>
 
         <h1 className="text-4xl md:text-5xl font-black tracking-[-0.02em] text-[#ECFDF5]">
-          NutriGrow <span className="text-emerald-400">Web</span>
+          NutriGrow
         </h1>
 
         <p className="text-sm text-emerald-300/60 tracking-wider font-medium">

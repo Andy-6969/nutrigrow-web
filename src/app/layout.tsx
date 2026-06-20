@@ -25,14 +25,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Nutrigrow Web",
+  title: "NutriGrow",
   description: "Sistem pemantau lahan pertanian dan smart fertigation terintegrasi dengan IoT, Fuzzy Logic, dan prediksi cuaca untuk pertanian presisi Indonesia.",
   keywords: ["NutriGrow", "smart fertigation", "IoT", "pertanian", "irigasi", "dashboard"],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Nutrigrow Web',
+    title: 'NutriGrow',
   },
   icons: {
     icon: '/logo-bitanic-round.png',

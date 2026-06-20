@@ -160,19 +160,6 @@ export default function GreenhouseAnimation({ condition = 'idle' }: Props) {
         .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
       `}</style>
 
-      {/* ─── Status Label ─────────────────────────── */}
-      <div
-        className="absolute top-2 left-1/2 -translate-x-1/2 z-30 px-3 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-widest border"
-        style={{
-          color: t.labelColor,
-          borderColor: `${t.labelColor}44`,
-          background: `${t.labelColor}10`,
-          backdropFilter: 'blur(8px)',
-        }}
-      >
-        {t.label}
-      </div>
-
       {/* ─── 3D Scene ─────────────────────────────── */}
       <div className="scene-rock" style={{ transformStyle: 'preserve-3d', width: 320, height: 310 }}>
         <svg viewBox="0 0 320 310" width="320" height="310" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible', filter: `drop-shadow(${t.filterGlow})` }}>
