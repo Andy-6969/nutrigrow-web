@@ -31,7 +31,6 @@ const DEVICE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   'TDS':           { emoji: '🧪', gradient: 'from-teal-400 to-teal-600' },
   'pH':            { emoji: '⚗️', gradient: 'from-indigo-400 to-indigo-600' },
   'Relay':         { emoji: '🔌', gradient: 'from-amber-400 to-amber-600' },
-  'Solenoid Valve':{ emoji: '🚰', gradient: 'from-blue-400 to-blue-600' },
   'Pompa Air':     { emoji: '💦', gradient: 'from-sky-400 to-sky-600' },
   'Pompa Pupuk':   { emoji: '🧴', gradient: 'from-lime-500 to-green-600' },
 };
@@ -177,7 +176,6 @@ export default function DevicesPage() {
         // Individual actuator definitions (per zone)
         const ACTUATOR_DEFS = [
           { suffix: 'rly', name: 'Relay',          fw: '1.1.0' },
-          { suffix: 'sol', name: 'Solenoid Valve', fw: '1.1.0' },
           { suffix: 'pa',  name: 'Pompa Air',      fw: '1.1.0' },
           { suffix: 'pp',  name: 'Pompa Pupuk',    fw: '1.1.0' },
         ];

@@ -222,7 +222,7 @@ export interface Schedule {
   duration_minutes: number;
   is_active: boolean;
   include_fertigation?: boolean;
-  mode: 'water' | 'fertilizer' | 'solenoid';
+  mode: 'water' | 'fertilizer';
   created_at?: string;
   updated_at?: string;
   
