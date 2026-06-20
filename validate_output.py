@@ -2,7 +2,7 @@ import docx
 import os
 
 def validate():
-    path = "Laporan_Akhir_NutriGrow_Baru.docx"
+    path = "Laporan_Akhir_NutriGrow_Baru_v2.docx"
     if not os.path.exists(path):
         print(f"Error: {path} not found.")
         return

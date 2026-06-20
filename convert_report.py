@@ -1,5 +1,28 @@
 import docx
 import os
+from docx.text.paragraph import Paragraph
+
+# Monkeypatch Paragraph.text setter to split newlines into separate paragraphs automatically
+original_text_setter = Paragraph.text.fset
+
+def patched_text_setter(self, value):
+    if isinstance(value, str) and '\n' in value:
+        lines = value.split('\n')
+        original_text_setter(self, lines[0])
+        current_p = self
+        for line in lines[1:]:
+            p_element = docx.oxml.shared.OxmlElement('w:p')
+            current_p._element.addnext(p_element)
+            new_para = Paragraph(p_element, self._parent)
+            if line:
+                original_text_setter(new_para, line)
+            if self.style:
+                new_para.style = self.style
+            current_p = new_para
+    else:
+        original_text_setter(self, value)
+
+Paragraph.text = property(Paragraph.text.fget, patched_text_setter, Paragraph.text.fdel)
 
 def insert_paragraph_after(paragraph, text, style=None):
     """
@@ -57,7 +80,7 @@ def insert_row_before(table, row_idx):
 
 def convert_report():
     template_path = "Template PBL (1).docx"
-    output_path = "Laporan_Akhir_NutriGrow_Baru.docx"
+    output_path = "Laporan_Akhir_NutriGrow_Baru_v2.docx"
     
     if not os.path.exists(template_path):
         print(f"Error: Template {template_path} not found.")
