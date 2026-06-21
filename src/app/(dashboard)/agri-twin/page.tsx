@@ -9,6 +9,7 @@ import { cn } from '@/shared/lib/utils';
 import { ZONE_STATUS } from '@/shared/lib/constants';
 import { sensorService } from '@/shared/services/sensorService';
 import { useT } from '@/shared/context/LanguageContext';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 import type { Zone, SensorData } from '@/shared/types/global.types';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
@@ -42,6 +43,8 @@ function ZoneBlock({
   isSelected: boolean; onClick: () => void;
   onLayoutChange: (l: ZoneLayout) => void;
 }) {
+  const { role } = useRBAC();
+  const isViewer = role === 'viewer';
   const status = ZONE_STATUS[zone.status as keyof typeof ZONE_STATUS] || ZONE_STATUS.idle;
   const isActive = zone.status === 'irrigating' || zone.status === 'fertigating';
   const isFertigating = zone.status === 'fertigating';
@@ -57,6 +60,7 @@ function ZoneBlock({
     if ((e.target as HTMLElement).dataset.resizeHandle) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     onClick();
+    if (isViewer) return;
     dragStart.current = { mx: e.clientX, my: e.clientY, ox: layoutRef.current.x, oy: layoutRef.current.y };
   };
   const onDragMove = (e: React.PointerEvent) => {
@@ -94,7 +98,7 @@ function ZoneBlock({
         left: layout.x, top: layout.y, width: layout.w, height: layout.h,
         borderColor: status.color,
         background: `linear-gradient(135deg, ${status.color}15, ${status.color}08)`,
-        cursor: 'grab',
+        cursor: isViewer ? 'default' : 'grab',
         userSelect: 'none',
         zIndex: isSelected ? 20 : 10,
         overflow: 'visible',
@@ -132,7 +136,7 @@ function ZoneBlock({
         </div>
       </div>
 
-      {isSelected && RESIZE_DIRS.map(dir => (
+      {isSelected && !isViewer && RESIZE_DIRS.map(dir => (
         <div
           key={dir}
           data-resize-handle={dir}

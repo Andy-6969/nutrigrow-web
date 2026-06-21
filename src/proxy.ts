@@ -20,9 +20,10 @@ const authPaths = ['/login', '/register', '/forgot-password'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isViewer = request.nextUrl.searchParams.get('mode') === 'viewer';
 
-  // Check for our auth marker cookie
-  const isAuthenticated = request.cookies.has('ng-auth');
+  // Check for our auth marker cookie or viewer parameter
+  const isAuthenticated = request.cookies.has('ng-auth') || isViewer;
 
   const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
   const isAuthPath = authPaths.some((p) => pathname.startsWith(p));
@@ -36,14 +37,31 @@ export function proxy(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (isAuthPath && isAuthenticated) {
-    return NextResponse.redirect(new URL('/overview', request.url));
+    const redirectUrl = new URL('/overview', request.url);
+    if (isViewer) redirectUrl.searchParams.set('mode', 'viewer');
+    const response = NextResponse.redirect(redirectUrl);
+    if (isViewer) {
+      response.cookies.set('ng-auth', '1', { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 });
+    }
+    return response;
   }
 
   // Redirect root "/" based on auth state
   if (pathname === '/') {
-    return NextResponse.redirect(
-      new URL(isAuthenticated ? '/overview' : '/login', request.url)
-    );
+    const redirectUrl = new URL(isAuthenticated ? '/overview' : '/login', request.url);
+    if (isViewer) redirectUrl.searchParams.set('mode', 'viewer');
+    const response = NextResponse.redirect(redirectUrl);
+    if (isViewer) {
+      response.cookies.set('ng-auth', '1', { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 });
+    }
+    return response;
+  }
+
+  // If in viewer mode on other protected pages, ensure cookie is set
+  if (isViewer) {
+    const response = NextResponse.next();
+    response.cookies.set('ng-auth', '1', { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 });
+    return response;
   }
 
   return NextResponse.next();

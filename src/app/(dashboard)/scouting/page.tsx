@@ -29,7 +29,8 @@ const SEVERITY_COLORS: Record<ScoutingSeverity, string> = {
 
 export default function ScoutingPage() {
   const t = useT();
-  const { canAccess, user, isLoading: isAuthLoading } = useRBAC();
+  const { canAccess, user, isLoading: isAuthLoading, role } = useRBAC();
+  const isViewer = role === 'viewer';
   const { success, error: showError } = useToast();
 
   const [logs, setLogs] = useState<ScoutingLog[]>([]);
@@ -76,7 +77,7 @@ export default function ScoutingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.zone_id || !form.notes) return;
+    if (!form.zone_id || !form.notes || isViewer) return;
     
     setModalLoading(true);
 
@@ -111,6 +112,7 @@ export default function ScoutingPage() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: ScoutingStatus) => {
+    if (isViewer) return;
     const { error } = await scoutingService.updateLogStatus(id, newStatus);
     if (!error) {
       setLogs(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
@@ -121,6 +123,7 @@ export default function ScoutingPage() {
   };
 
   const handleDeleteLog = async (id: string) => {
+    if (isViewer) return;
     if (!confirm('Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.')) return;
     
     const { error } = await scoutingService.deleteLog(id);
@@ -172,12 +175,14 @@ export default function ScoutingPage() {
               Export
             </button>
           )}
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all"
-          >
-            <Camera className="w-4 h-4" /> Laporan Baru
-          </button>
+          {!isViewer && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all"
+            >
+              <Camera className="w-4 h-4" /> Laporan Baru
+            </button>
+          )}
         </div>
       </div>
 

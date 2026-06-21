@@ -46,28 +46,19 @@ export function useRBAC() {
     if (!role || role === 'guest') return false;
 
     switch (feature) {
-      // Operational features — both active roles
+      // Operational features — active roles + viewer
       case 'monitoring':
       case 'override':
       case 'schedules':
       case 'eco_savings':
       case 'notifications':
-        return hasRole('super_admin', 'pemilik_kebun');
+      case 'devices':
+      case 'farms':
+        return hasRole('super_admin', 'pemilik_kebun', 'viewer');
 
       // Admin-only features
       case 'user_management':
       case 'settings':
-        return hasRole('super_admin');
-
-      // Devices — super_admin full manage, pemilik_kebun read-only / export
-      case 'devices':
-        return hasRole('super_admin', 'pemilik_kebun');
-
-      // Farms — semua role aktif bisa lihat, hanya super_admin bisa manage
-      case 'farms':
-        return hasRole('super_admin', 'pemilik_kebun');
-
-      // Farm management (CRUD) — super_admin only
       case 'farm_management':
         return hasRole('super_admin');
       default:
@@ -79,10 +70,10 @@ export function useRBAC() {
    * Check if user can issue commands to a specific zone.
    * super_admin → all zones
    * pemilik_kebun → only their assigned_zones
-   * guest → none
+   * guest/viewer → none
    */
   const canControlZone = useCallback((zoneId: string): boolean => {
-    if (!role || role === 'guest') return false;
+    if (!role || role === 'guest' || role === 'viewer') return false;
     if (role === 'super_admin') return true;
     return profile?.assigned_zones?.includes(zoneId) ?? false;
   }, [role, profile?.assigned_zones]);

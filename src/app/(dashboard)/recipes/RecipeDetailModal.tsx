@@ -5,6 +5,7 @@ import { X, Edit, Trash2, FlaskConical, Droplet, Sprout, Save, AlertTriangle, Ch
 import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
 import { recipeService } from '@/shared/services/recipeService';
 import { cn } from '@/shared/lib/utils';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 
 interface RecipeDetailModalProps {
   recipe: NutrientRecipe;
@@ -15,6 +16,8 @@ interface RecipeDetailModalProps {
 }
 
 export default function RecipeDetailModal({ recipe, isOpen, onClose, onDelete, onUpdate }: RecipeDetailModalProps) {
+  const { role } = useRBAC();
+  const isViewer = role === 'viewer';
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,6 +39,7 @@ export default function RecipeDetailModal({ recipe, isOpen, onClose, onDelete, o
   };
 
   const handleSave = async () => {
+    if (isViewer) return;
     setIsSaving(true);
     try {
       // Update name/description
@@ -54,6 +58,7 @@ export default function RecipeDetailModal({ recipe, isOpen, onClose, onDelete, o
   };
 
   const handleDelete = async () => {
+    if (isViewer) return;
     setIsDeleting(true);
     try {
       const { error } = await recipeService.deleteRecipe(recipe.id);
@@ -97,7 +102,7 @@ export default function RecipeDetailModal({ recipe, isOpen, onClose, onDelete, o
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {!isEditing ? (
+            {!isEditing && !isViewer && (
               <>
                 <button onClick={() => setIsEditing(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-500/10 text-primary-600 hover:bg-primary-500/20 transition-colors">
@@ -108,7 +113,8 @@ export default function RecipeDetailModal({ recipe, isOpen, onClose, onDelete, o
                   <Trash2 className="w-3.5 h-3.5" /> Hapus
                 </button>
               </>
-            ) : (
+            )}
+            {isEditing && (
               <>
                 <button onClick={() => setIsEditing(false)}
                   className="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"

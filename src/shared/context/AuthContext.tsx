@@ -123,6 +123,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
     }
     try {
+      // ─── CHECK VIEWER MODE FIRST ────────────────────────────────
+      const isViewerMode = typeof window !== 'undefined' && (
+        sessionStorage.getItem('ng-viewer') === 'true' ||
+        new URLSearchParams(window.location.search).get('mode') === 'viewer'
+      );
+
+      if (isViewerMode) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('ng-viewer', 'true');
+          // set ng-auth cookie in client
+          document.cookie = `${AUTH_COOKIE}=1; path=/; SameSite=Lax; max-age=${COOKIE_MAX_AGE}`;
+        }
+        setSession({
+          access_token: 'viewer-token',
+          token_type: 'bearer',
+          expires_in: 3600,
+          refresh_token: 'viewer-refresh-token',
+          user: {
+            id: 'viewer-id',
+            aud: 'authenticated',
+            role: 'authenticated',
+            email: 'viewer@nutrigrow.my.id',
+            app_metadata: {},
+            user_metadata: { full_name: 'Peninjau Expo (Read-Only)' },
+            created_at: new Date().toISOString(),
+          }
+        } as unknown as Session);
+        setProfile({
+          id: 'viewer-id',
+          email: 'viewer@nutrigrow.my.id',
+          full_name: 'Peninjau Expo (Read-Only)',
+          role: 'viewer',
+          is_active: true,
+          assigned_zones: [],
+          farm_id: null,
+          created_at: new Date().toISOString(),
+        });
+        setIsLoading(false);
+        setIsInitialized(true);
+        hasLoadedRef.current = true;
+        return;
+      }
+
       if (newSession) {
         // Batalkan timer signed-out jika ada session baru (misal: setelah TOKEN_REFRESHED)
         clearSignedOutTimer();
@@ -232,6 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resolveSession, clearSignedOutTimer]);
 
   const logout = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('ng-viewer');
+    }
     await supabase.auth.signOut();
     clearAuthCookie();
     // State update happens automatically via onAuthStateChange

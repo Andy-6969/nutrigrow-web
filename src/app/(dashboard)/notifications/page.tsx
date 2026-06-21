@@ -6,6 +6,7 @@ import { mockNotifications } from '@/shared/lib/mockData';
 import { cn, formatRelativeTime } from '@/shared/lib/utils';
 import type { Notification } from '@/shared/types/global.types';
 import { useT } from '@/shared/context/LanguageContext';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 
 const typeConfig: Record<Notification['type'], { icon: React.ElementType; color: string; bg: string }> = {
   smart_delay:    { icon: CloudRain,      color: 'text-accent-600',    bg: 'bg-accent-200/30' },
@@ -16,6 +17,8 @@ const typeConfig: Record<Notification['type'], { icon: React.ElementType; color:
 
 export default function NotificationsPage() {
   const t = useT();
+  const { role } = useRBAC();
+  const isViewer = role === 'viewer';
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState<'all' | Notification['type']>('all');
 
@@ -23,14 +26,17 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const markAsRead = (id: string) => {
+    if (isViewer) return;
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
   };
 
   const markAllRead = () => {
+    if (isViewer) return;
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
   const deleteNotification = (id: string) => {
+    if (isViewer) return;
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
@@ -46,7 +52,7 @@ export default function NotificationsPage() {
             </span>
           )}
         </h2>
-        {unreadCount > 0 && (
+        {unreadCount > 0 && !isViewer && (
           <button
             onClick={markAllRead}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium glass-sm hover:scale-105 transition-transform text-primary-600"
@@ -102,24 +108,26 @@ export default function NotificationsPage() {
                   <p className={cn('text-sm font-semibold', !notification.is_read && 'font-bold')} style={{ color: 'var(--surface-text)' }}>
                     {notification.title}
                   </p>
-                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!notification.is_read && (
+                  {!isViewer && (
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!notification.is_read && (
+                        <button
+                          onClick={() => markAsRead(notification.id)}
+                          className="p-1 rounded-md hover:bg-primary-50 transition-colors"
+                          title={t('notifications_mark_read')}
+                        >
+                          <Check className="w-3.5 h-3.5 text-primary-500" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => markAsRead(notification.id)}
-                        className="p-1 rounded-md hover:bg-primary-50 transition-colors"
-                        title={t('notifications_mark_read')}
+                        onClick={() => deleteNotification(notification.id)}
+                        className="p-1 rounded-md hover:bg-danger-50 transition-colors"
+                        title={t('notifications_delete')}
                       >
-                        <Check className="w-3.5 h-3.5 text-primary-500" />
+                        <Trash2 className="w-3.5 h-3.5 text-danger-500" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => deleteNotification(notification.id)}
-                      className="p-1 rounded-md hover:bg-danger-50 transition-colors"
-                      title={t('notifications_delete')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-danger-500" />
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--surface-text-muted)' }}>{notification.body}</p>
                 <div className="flex items-center gap-3 mt-2">

@@ -15,6 +15,7 @@ import GreenhouseAnimation, { type GreenhouseCondition } from '@/shared/componen
 import { fetchWeather } from '@/shared/services/weatherService';
 import { useT } from '@/shared/context/LanguageContext';
 import { overrideService } from '@/shared/services/overrideService';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 
 
 // Static particle data — defined outside component to avoid re-creation
@@ -50,6 +51,9 @@ function toCondition(status?: string): GreenhouseCondition {
 }
 
 export default function OverviewPage() {
+  const { role } = useRBAC();
+  const isViewer = role === 'viewer';
+
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensorDataMap, setSensorDataMap] = useState<Record<string, SensorData>>({});
@@ -332,7 +336,7 @@ export default function OverviewPage() {
   const isRunning = !!activeOverride;
 
   const handleManualOverride = async () => {
-    if (!selectedZone) return;
+    if (!selectedZone || isViewer) return;
     setIsOverriding(true);
     
     try {
@@ -386,6 +390,23 @@ export default function OverviewPage() {
       className="min-h-[calc(100vh-4rem)] relative overflow-hidden p-6 -m-4 lg:-m-6"
       style={{ background: 'var(--surface-bg)' }}
     >
+      {/* Viewer Mode Banner */}
+      {isViewer && (
+        <div className="relative z-[90] w-full mb-6 p-4 rounded-2xl border flex items-center justify-between shadow-lg backdrop-blur-md animate-fade-in-up"
+          style={{
+            background: 'rgba(16, 185, 129, 0.08)',
+            borderColor: 'rgba(16, 185, 129, 0.25)',
+            color: '#10b981',
+          }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">👁️</span>
+            <div>
+              <p className="text-xs font-bold font-display uppercase tracking-widest">Mode Peninjau (Read-Only) Aktif</p>
+              <p className="text-[10px] opacity-80 mt-0.5">Anda hanya dapat memantau data sensor secara real-time tanpa mengubah konfigurasi/pompa.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes slideInRight { from{opacity:0;transform:translateX(48px)} to{opacity:1;transform:translateX(0)} }
         @keyframes slideInLeft  { from{opacity:0;transform:translateX(-48px)} to{opacity:1;transform:translateX(0)} }
@@ -825,12 +846,15 @@ export default function OverviewPage() {
                   <button 
                     key={mode.id} 
                     onClick={() => {
-                      if (!isRunning) {
+                      if (!isRunning && !isViewer) {
                         setIrrigationMode(mode.id);
                       }
                     }}
-                    disabled={isRunning}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200"
+                    disabled={isRunning || isViewer}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200",
+                      isViewer ? "cursor-not-allowed opacity-50" : ""
+                    )}
                     style={isActive ? {
                       background: mode.bgColor,
                       border: `1px solid ${mode.borderColor}`,
@@ -870,11 +894,11 @@ export default function OverviewPage() {
                   setConfirmModal(null);
                 }
               });
-            }} disabled={isOverriding}
+            }} disabled={isOverriding || isViewer}
             className={cn('relative w-full aspect-video rounded-3xl p-[2px] overflow-hidden transition-all duration-300 group animate-card-entrance animate-delay-5',
-              isOverriding ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl',
-              isRunning && !isOverriding && 'border-red-500/50 hover:shadow-red-500/20')}
-            style={!isOverriding && !isRunning ? { borderColor: selectedMode.borderColor } : undefined}
+              (isOverriding || isViewer) ? 'cursor-not-allowed opacity-80 border-2' : 'cursor-pointer hover:scale-[1.02] active:scale-95 shadow-xl border-2 hover:shadow-2xl',
+              isRunning && !(isOverriding || isViewer) && 'border-red-500/50 hover:shadow-red-500/20')}
+            style={!(isOverriding || isViewer) && !isRunning ? { borderColor: selectedMode.borderColor } : undefined}
           >
             <div className={cn("absolute inset-0 transition-opacity duration-500", 
               isRunning ? "opacity-30 bg-red-600" : "opacity-20 group-hover:opacity-100")}

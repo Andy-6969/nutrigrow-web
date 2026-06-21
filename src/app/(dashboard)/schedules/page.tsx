@@ -40,7 +40,8 @@ export default function SchedulesPage() {
     duration_minutes: 15, mode: 'water' as 'water' | 'fertilizer',
   });
 
-  const { canControlZone } = useRBAC();
+  const { canControlZone, role } = useRBAC();
+  const isViewer = role === 'viewer';
   const t = useT();
 
   // ── Growth Stage State ──
@@ -203,13 +204,13 @@ export default function SchedulesPage() {
 
   // ── Generate jadwal otomatis dari fase pertumbuhan ──
   const handleGenerateAutoSchedule = async () => {
-    if (!growthZoneId) return;
+    if (!growthZoneId || isViewer) return;
 
     // ── MODE MANUAL / CUSTOM ──────────────────────────────────────────
     if (scheduleMode === 'manual' || plantType === 'custom') {
       // Tentukan fase aktif dari customPhases berdasarkan hari sekarang
       const activeCustomPhase = plantType === 'custom' && plantingDate
-        ? customPhases.find(p => currentDay >= p.dayStart && currentDay <= p.dayEnd) ?? customPhases[0]
+        ? customPhases.find((p: any) => currentDay >= p.dayStart && currentDay <= p.dayEnd) ?? customPhases[0]
         : null;
 
       // Ambil waktu penyiraman — prioritaskan dari fase kustom jika ada
@@ -300,12 +301,14 @@ export default function SchedulesPage() {
           <Calendar className="w-5 h-5 text-primary-500" />
           {t('schedules_title')}
         </h2>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all shadow-lg glow-sm hover:glow-md active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" /> {t('schedules_new')}
-        </button>
+        {!isViewer && (
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl font-medium text-sm hover:bg-primary-600 transition-all shadow-lg glow-sm hover:glow-md active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" /> {t('schedules_new')}
+          </button>
+        )}
       </div>
 
       {/* ── GROWTH STAGE PANEL ── */}
@@ -329,8 +332,9 @@ export default function SchedulesPage() {
               type="date"
               value={plantingDate}
               onChange={e => setPlantingDate(e.target.value)}
+              disabled={isViewer}
               max={new Date().toISOString().slice(0, 10)}
-              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ color: 'var(--surface-text)' }}
             />
           </div>
@@ -345,7 +349,8 @@ export default function SchedulesPage() {
                 if (val === 'custom') setScheduleMode('manual');
                 else setScheduleMode('auto');
               }}
-              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={isViewer}
+              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ color: 'var(--surface-text)' }}
             >
               {Object.values(PLANT_PROFILES).filter(p => p.type !== 'custom').map(p => (
@@ -361,7 +366,8 @@ export default function SchedulesPage() {
               type="number" min={1} max={10000}
               value={plantCount}
               onChange={e => setPlantCount(Number(e.target.value))}
-              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={isViewer}
+              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ color: 'var(--surface-text)' }}
             />
           </div>
@@ -378,7 +384,8 @@ export default function SchedulesPage() {
             <select
               value={growthZoneId}
               onChange={e => handleZoneSelect(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={isViewer}
+              className="w-full px-3 py-2.5 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ color: 'var(--surface-text)' }}
             >
               <option value="">-- Pilih Zona --</option>
@@ -405,14 +412,15 @@ export default function SchedulesPage() {
               <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider">⚙️ Pengaturan Fase Kustom</h4>
               <button
                 onClick={addPhase}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-bold hover:bg-amber-600 transition-all shadow-md"
+                disabled={isViewer}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-bold hover:bg-amber-600 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-3 h-3" /> Tambah Fase
               </button>
             </div>
             
             <div className="space-y-3">
-              {customPhases.map((phase, idx) => (
+              {customPhases.map((phase: any, idx: number) => (
                 <div key={phase.id} className="grid grid-cols-12 gap-3 items-end glass-sm p-3 rounded-xl border-amber-500/10">
                   <div className="col-span-4">
                     <label className="block text-[9px] font-bold mb-1 text-amber-500/60 uppercase">Nama Fase</label>
@@ -424,7 +432,8 @@ export default function SchedulesPage() {
                         newPhases[idx].name = e.target.value;
                         setCustomPhases(newPhases);
                       }}
-                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10 focus:border-amber-500/40"
+                      disabled={isViewer}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10 focus:border-amber-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div className="col-span-3">
@@ -437,7 +446,8 @@ export default function SchedulesPage() {
                         newPhases[idx].dayStart = Number(e.target.value);
                         setCustomPhases(newPhases);
                       }}
-                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10"
+                      disabled={isViewer}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div className="col-span-3">
@@ -450,14 +460,15 @@ export default function SchedulesPage() {
                         newPhases[idx].dayEnd = Number(e.target.value);
                         setCustomPhases(newPhases);
                       }}
-                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10"
+                      disabled={isViewer}
+                      className="w-full px-2 py-1.5 rounded-lg glass-sm text-[11px] outline-none border border-amber-500/10 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div className="col-span-2 flex justify-end">
                     <button
-                      onClick={() => setCustomPhases(customPhases.filter(p => p.id !== phase.id))}
-                      disabled={customPhases.length <= 1}
-                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-30"
+                      onClick={() => setCustomPhases(customPhases.filter((p: any) => p.id !== phase.id))}
+                      disabled={customPhases.length <= 1 || isViewer}
+                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -515,7 +526,8 @@ export default function SchedulesPage() {
                     type="time"
                     value={manualParams.irrigationTimes[0]}
                     onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [e.target.value, p.irrigationTimes[1]] }))}
-                    className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                    disabled={isViewer}
+                    className="w-full px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                     style={{ color: 'var(--surface-text)' }}
                   />
                 </div>
@@ -527,13 +539,15 @@ export default function SchedulesPage() {
                         type="time"
                         value={manualParams.irrigationTimes[1]}
                         onChange={e => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], e.target.value] }))}
-                        className="flex-1 px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                        disabled={isViewer}
+                        className="flex-1 px-3 py-2 rounded-xl glass-sm text-sm outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         style={{ color: 'var(--surface-text)' }}
                       />
                       <button
                         type="button"
                         onClick={() => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], ''] }))}
-                        className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
+                        disabled={isViewer}
+                        className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Hapus sesi 2"
                       >
                         <X className="w-4 h-4" />
@@ -543,7 +557,8 @@ export default function SchedulesPage() {
                     <button
                       type="button"
                       onClick={() => setManualParams(p => ({ ...p, irrigationTimes: [p.irrigationTimes[0], '17:00'] }))}
-                      className="w-full py-2 rounded-xl glass-sm text-[11px] font-medium border border-dashed border-amber-500/30 text-amber-500/60 hover:border-amber-500 hover:text-amber-500 transition-all"
+                      disabled={isViewer}
+                      className="w-full py-2 rounded-xl glass-sm text-[11px] font-medium border border-dashed border-amber-500/30 text-amber-500/60 hover:border-amber-500 hover:text-amber-500 transition-all disabled:opacity-55 disabled:cursor-not-allowed"
                     >
                       + Tambah sesi ke-2
                     </button>
@@ -557,7 +572,8 @@ export default function SchedulesPage() {
                     type="range" min={1} max={120}
                     value={manualParams.duration_minutes}
                     onChange={e => setManualParams(p => ({ ...p, duration_minutes: Number(e.target.value) }))}
-                    className="w-full accent-amber-500"
+                    disabled={isViewer}
+                    className="w-full accent-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -568,7 +584,8 @@ export default function SchedulesPage() {
                     type="range" min={0.1} max={5} step={0.1}
                     value={manualParams.waterVolumeLiters}
                     onChange={e => setManualParams(p => ({ ...p, waterVolumeLiters: Number(e.target.value) }))}
-                    className="w-full accent-amber-500"
+                    disabled={isViewer}
+                    className="w-full accent-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -576,17 +593,19 @@ export default function SchedulesPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setManualParams(p => ({ ...p, usesFertilizer: false }))}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      onClick={() => !isViewer && setManualParams(p => ({ ...p, usesFertilizer: false }))}
+                      disabled={isViewer}
+                      className={cn(`flex-1 py-2 rounded-xl text-xs font-bold border transition-all disabled:cursor-not-allowed`,
                         !manualParams.usesFertilizer ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'glass-sm border-transparent'
-                      }`}
+                      )}
                     >💧 Air Biasa</button>
                     <button
                       type="button"
-                      onClick={() => setManualParams(p => ({ ...p, usesFertilizer: true }))}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      onClick={() => !isViewer && setManualParams(p => ({ ...p, usesFertilizer: true }))}
+                      disabled={isViewer}
+                      className={cn(`flex-1 py-2 rounded-xl text-xs font-bold border transition-all disabled:cursor-not-allowed`,
                         manualParams.usesFertilizer ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'glass-sm border-transparent'
-                      }`}
+                      )}
                     >🧪 Pupuk Cair</button>
                   </div>
                 </div>
@@ -598,16 +617,16 @@ export default function SchedulesPage() {
         {/* Action buttons */}
         <div className="space-y-3">
           {/* Replace toggle */}
-          <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+          <label className={cn("flex items-center gap-2.5 w-fit", isViewer ? "opacity-50 cursor-not-allowed" : "cursor-pointer")}>
             <div
-              onClick={() => setReplaceOld(r => !r)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${
+              onClick={() => !isViewer && setReplaceOld(r => !r)}
+              className={cn(`relative w-9 h-5 rounded-full transition-colors`,
                 replaceOld ? 'bg-red-500' : 'bg-white/10'
-              }`}
+              )}
             >
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+              <div className={cn(`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform`,
                 replaceOld ? 'translate-x-4' : 'translate-x-0.5'
-              }`} />
+              )} />
             </div>
             <span className="text-[11px] font-medium" style={{ color: replaceOld ? '#f87171' : 'var(--surface-text-muted)' }}>
               {replaceOld ? '🗑️ Hapus jadwal lama zona ini sebelum buat baru' : 'Tambahkan ke jadwal yang ada'}
@@ -617,7 +636,7 @@ export default function SchedulesPage() {
           <div className="flex flex-wrap gap-3 items-center">
             <button
               onClick={handleGenerateAutoSchedule}
-              disabled={!growthZoneId || (scheduleMode === 'auto' && plantType !== 'custom' ? (!plantingDate || !activePhase) : false) || isGenerating}
+              disabled={!growthZoneId || (scheduleMode === 'auto' && plantType !== 'custom' ? (!plantingDate || !activePhase) : false) || isGenerating || isViewer}
               className={cn(
                 'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all',
                 plantType === 'custom' || scheduleMode === 'manual'
@@ -636,7 +655,8 @@ export default function SchedulesPage() {
             </button>
             <button
               onClick={() => { setPlantingDate(''); setGrowthZoneId(''); setPlantType('tomato'); setPlantCount(100); setScheduleMode('auto'); setReplaceOld(false); }}
-              className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all glass-sm hover:scale-105"
+              disabled={isViewer}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all glass-sm hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: 'var(--surface-text-muted)' }}
             >
               🔄 Reset
@@ -671,9 +691,10 @@ export default function SchedulesPage() {
                     {slots.map(slot => (
                       <button
                         key={slot.id}
-                        onClick={() => openEdit(slot)}
+                        onClick={() => !isViewer && openEdit(slot)}
                         className={cn(
                           'w-full text-[9px] px-1 py-0.5 rounded truncate text-left transition-all',
+                          isViewer ? 'cursor-not-allowed' : '',
                           slot.is_active
                             ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm'
                             : 'bg-gray-300 text-gray-600 hover:bg-gray-400'

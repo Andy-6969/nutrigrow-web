@@ -2,7 +2,7 @@
 
 // ─── Auth & RBAC ──────────────────────────────────────────────
 /** The three valid roles stored in user_profiles.role */
-export type AppRole = 'super_admin' | 'pemilik_kebun' | 'guest';
+export type AppRole = 'super_admin' | 'pemilik_kebun' | 'guest' | 'viewer';
 
 /** Row shape from the public.roles table */
 export interface RolesRow {

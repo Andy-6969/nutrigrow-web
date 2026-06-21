@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FlaskConical, Plus, Search, MoreVertical, Droplet, Sprout, Download } from 'lucide-react';
-import { useAuth } from '@/shared/context/AuthContext';
+import { useRBAC } from '@/shared/hooks/useRBAC';
 import { useT } from '@/shared/context/LanguageContext';
 import { recipeService } from '@/shared/services/recipeService';
 import type { NutrientRecipe, RecipePhase } from '@/shared/types/global.types';
@@ -16,7 +16,8 @@ import { exportRecipesToCSV } from '@/shared/utils/exportUtils';
 export default function RecipesPage() {
   const t = useT();
   const router = useRouter();
-  const { profile } = useAuth();
+  const { user: profile, role } = useRBAC();
+  const isViewer = role === 'viewer';
   const [recipes, setRecipes] = useState<NutrientRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +46,7 @@ export default function RecipesPage() {
     recipePayload: Omit<NutrientRecipe, 'id' | 'created_at' | 'updated_at' | 'phases'>,
     phasesPayload: Omit<RecipePhase, 'id' | 'recipe_id'>[]
   ) => {
+    if (isViewer) return;
     const { data, error } = await recipeService.createRecipe(recipePayload, phasesPayload);
     if (error) throw new Error(error);
     if (data) setRecipes([data, ...recipes]);
@@ -73,13 +75,15 @@ export default function RecipesPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="btn-premium px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2 shadow-lg shadow-primary-500/20 bg-primary-600 hover:bg-primary-500"
-          >
-            <Plus className="w-5 h-5" />
-            Buat Resep Baru
-          </button>
+          {!isViewer && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="btn-premium px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2 shadow-lg shadow-primary-500/20 bg-primary-600 hover:bg-primary-500"
+            >
+              <Plus className="w-5 h-5" />
+              Buat Resep Baru
+            </button>
+          )}
           {recipes.length > 0 && (
             <button
               onClick={() => exportRecipesToCSV(filteredRecipes)}
@@ -130,12 +134,14 @@ export default function RecipesPage() {
           <p className="max-w-md text-sm mb-6" style={{ color: 'var(--surface-text-muted)' }}>
             Anda belum memiliki profil resep nutrisi. Klik "Buat Resep Baru" untuk mengatur target EC dan pH secara spesifik per fase pertumbuhan.
           </p>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2 rounded-xl bg-primary-500/20 text-primary-600 font-semibold hover:bg-primary-500/30 transition-colors"
-          >
-            Buat Resep Pertama
-          </button>
+          {!isViewer && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-2 rounded-xl bg-primary-500/20 text-primary-600 font-semibold hover:bg-primary-500/30 transition-colors"
+            >
+              Buat Resep Pertama
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -200,12 +206,14 @@ export default function RecipesPage() {
                   >
                     Lihat Detail
                   </button>
-                  <button 
-                    onClick={() => router.push('/farms')}
-                    className="px-4 py-2 text-sm font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors" style={{ color: 'var(--surface-text)' }}
-                  >
-                    Gunakan
-                  </button>
+                  {!isViewer && (
+                    <button 
+                      onClick={() => router.push('/farms')}
+                      className="px-4 py-2 text-sm font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors" style={{ color: 'var(--surface-text)' }}
+                    >
+                      Gunakan
+                    </button>
+                  )}
                 </div>
               </div>
             );

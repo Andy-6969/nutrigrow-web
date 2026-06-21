@@ -26,7 +26,8 @@ export default function OverridePage() {
   const [isActivating, setIsActivating] = useState<ActuatorTarget | null>(null);
   const [now, setNow] = useState(Date.now());
   const [statusMsg, setStatusMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
-  const { canControlZone } = useRBAC();
+  const { canControlZone, role } = useRBAC();
+  const isViewer = role === 'viewer';
   const t = useT();
 
   // Global Timer Tick
@@ -249,7 +250,7 @@ export default function OverridePage() {
               max={120}
               value={duration}
               onChange={e => setDuration(Number(e.target.value))}
-              disabled={isPumpActive && isPupukActive}
+              disabled={(isPumpActive && isPupukActive) || isViewer}
               className="w-full h-2 bg-primary-200 rounded-lg cursor-pointer disabled:opacity-50"
             />
             <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--surface-text-muted)' }}>
