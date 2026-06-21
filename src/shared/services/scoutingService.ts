@@ -21,14 +21,13 @@ export const scoutingService = {
         .from('scouting_logs')
         .select(`
           *,
-          zones ( name, farm_id ),
-          user_profiles ( nama )
+          zones ( name, farm_id )
         `)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('[scoutingService] getLogs DB error:', JSON.stringify(error));
-        // Coba lagi tanpa join jika ada error relasi
+        // Fallback to absolute simple select if zones table fails
         const { data: simple, error: err2 } = await supabase
           .from('scouting_logs')
           .select('*')
@@ -44,12 +43,27 @@ export const scoutingService = {
         })) as ScoutingLog[];
       }
 
+      // Fetch user profiles in a separate query to avoid missing foreign key relation issues
+      const userIds = Array.from(new Set((data || []).map((row: any) => row.user_id).filter(Boolean)));
+      const userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, nama')
+          .in('id', userIds);
+        if (profiles) {
+          profiles.forEach((p: any) => {
+            userMap[p.id] = p.nama;
+          });
+        }
+      }
+
       console.log(`[scoutingService] Raw rows fetched: ${data?.length ?? 0}`);
 
       let logs = (data || []).map((row: any) => ({
         ...row,
         zone_name: row.zones?.name ?? 'Zona Tidak Diketahui',
-        user_name: row.user_profiles?.nama ?? 'Operator Lapangan',
+        user_name: userMap[row.user_id] ?? 'Operator Lapangan',
       })) as ScoutingLog[];
 
       if (farmId) {
