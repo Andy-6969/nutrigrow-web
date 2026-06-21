@@ -315,24 +315,15 @@ export default function OverviewPage() {
   };
 
   const selectedZone = zones[zoneIndex] ?? null;
-
-  // Mock data for screenshot (forcing online state and healthy values)
-  const mockSensor = {
-    soil_moisture: 65,
-    temperature: 28.5,
-    ph: 6.2,
-    humidity: 70,
-    tds: 1.85,
-    recorded_at: new Date().toISOString()
-  };
-  const liveSensor = selectedZone ? (sensorDataMap[selectedZone.id] || mockSensor) : mockSensor;
-
-  // Override status to idle (Standby) if it is currently error, to look clean and online
-  const rawStatus = selectedZone ? (selectedZone.status === 'error' ? 'idle' : selectedZone.status) : 'idle';
-  const zoneStatus = ZONE_STATUS[rawStatus as keyof typeof ZONE_STATUS] ?? ZONE_STATUS.idle;
-
-  // Force sensor to be online for screenshot purposes
-  const isSensorOnline = true;
+  const liveSensor  = selectedZone ? (sensorDataMap[selectedZone.id] ?? null) : null;
+  const zoneStatus  = selectedZone ? (ZONE_STATUS[selectedZone.status as keyof typeof ZONE_STATUS] ?? ZONE_STATUS.idle) : null;
+  
+  // Check if sensor is online (data received in last 10 minutes)
+  const isSensorOnline = !!(
+    liveSensor &&
+    liveSensor.recorded_at &&
+    (new Date().getTime() - new Date(liveSensor.recorded_at).getTime() < 10 * 60 * 1000)
+  );
 
   const animCondition = isSensorOnline ? toCondition(selectedZone?.status) : 'offline';
   const multiZone   = zones.length > 1;
